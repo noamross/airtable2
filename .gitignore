@@ -1,8 +1,8 @@
 .Rproj.user
 .Rhistory
 .RData
-readme.html
-testing_script.R
-.env
-/doc/
-/Meta/
+.DS_Store
+.Renviron
+.vscode/
+doc/
+Meta/

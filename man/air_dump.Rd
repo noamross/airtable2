@@ -2,54 +2,24 @@
 % Please edit documentation in R/air_dump.R
 \name{air_dump}
 \alias{air_dump}
-\title{Dump all tables from a base into R}
+\title{Dump an entire base (schema + data) for backup}
 \usage{
-air_dump(
-  base,
-  metadata = NULL,
-  description = NULL,
-  add_missing_fields = TRUE,
-  download_attachments = TRUE,
-  attachment_fields = NULL,
-  polite_downloads = TRUE,
-  field_names_to_snakecase = TRUE,
-  ...
-)
+air_dump(base_id, dir = NULL, format = c("list", "json"), .token = NULL)
 }
 \arguments{
-\item{base}{String. ID for your base from Airtable. Generally 'appXXXXXXXXXXXXXX'}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
-\item{metadata}{Data.frame.Data frame with structural metadata - describes relationship between tables and fields.
-Can be left as NULL if base already contains a table called meta data.}
+\item{dir}{Directory to write JSON files to (when \code{format = "json"}).
+If \code{NULL} and format is \code{"json"}, uses a temp directory.}
 
-\item{description}{Data.frame. Data frame with descriptive metadata - describes whats in your base and who made it.
-Can be left as NULL if base already contains a table called description.}
+\item{format}{Either \code{"list"} (return as R list) or \code{"json"} (write files).}
 
-\item{add_missing_fields}{Logical. Should fields described in the metadata data.frame be added to corresponding tables?}
-
-\item{download_attachments}{Logical. Should attached files be downloaded?}
-
-\item{attachment_fields}{Optional. character vector.
-What field(s) should files be downloaded from? Default is to download all fields
-with type multipleAttachments in metadata.}
-
-\item{polite_downloads}{Logical. Use if downloading many files. Sets a delay
-so that server is not overwhelmed by requests.}
-
-\item{field_names_to_snakecase}{Logical. Should field names be
-converted to snake case?}
-
-\item{...}{Additional arguments to pass to air_download_attachments}
+\item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
-List of data.frames. All tables from metadata plus the
-description and metadata tables.
+For \code{format = "list"}: a named list with \code{schema} and a tibble per
+table. For \code{format = "json"}: the directory path (invisibly).
 }
 \description{
-Dump all tables from a base into R
-}
-\note{
-To facilitate joining on ids, see purrr::as_vector for converting list
- type columns to vectors and
-tidyr::unnest for expanding list columns.
+Exports the full schema and all table data from a base.
 }

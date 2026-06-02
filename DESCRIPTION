@@ -1,37 +1,39 @@
-Package: airtabler
-Type: Package
-Title: Interface to the Airtable API
-Version: 0.2.16
-Date: 2023-08-17
-Author: Darko Bergant
-Maintainer: Collin Schwantes <schwantes@ecohealthalliance.org>
-Description: Fork from Darko Bergant's package. Provides access to the Airtable (airtable.com) API.
-Depends:
-    R (>= 3.2.0)
+Package: airtable2
+Title: Pure R Client for the Airtable REST API
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Noam", "Ross", , "noam.ross@gmail.com", role = c("aut", "cre")),
+    person("Darko", "Bergant", role = "aut",
+           comment = "Original airtabler package"),
+    person("Collin", "Schwantes", role = "aut",
+           comment = "airtabler fork maintainer")
+    )
+Description: A modern R client for the Airtable REST API. Provides low-level
+    wrappers for all API endpoints, high-level functions for reading, writing,
+    upserting, and syncing records, and a DBI-compliant interface for
+    RStudio/Positron connection pane integration.
 License: MIT + file LICENSE
 URL: https://github.com/ecohealthalliance/airtabler
-LazyData: TRUE
-Encoding: UTF-8
+BugReports: https://github.com/ecohealthalliance/airtabler/issues
+Depends:
+    R (>= 4.1.0)
 Imports:
-    glue,
-    dplyr,
-    httr,
-    jsonlite,
-    readxl,
+    cli,
     curl,
-    purrr,
-    utils,
-    snakecase,
-    tidyselect,
-    rlang,
-    stringr,
-    tibble,
-    deposits,
-    assertthat
-Remotes: 
-    ropenscilabs/deposits
-RoxygenNote: 7.2.3
-Suggests: 
+    digest,
+    glue,
+    httr2,
+    jsonlite,
+    rlang (>= 1.0.0),
+    tibble
+Suggests:
+    DBI,
+    httptest2,
     knitr,
-    rmarkdown
-VignetteBuilder: knitr
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Config/roxygen2/version: 8.0.0

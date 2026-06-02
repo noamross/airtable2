@@ -1,0 +1,24 @@
+{
+  "permission": {
+    "bash": {
+      "find *": "allow",
+      "head *": "allow",
+      "cd *": "allow",
+      "wc *": "allow",
+      "echo *": "allow",
+      "du *": "allow",
+      "ls *": "allow",
+      "mkdir *": "allow"
+    },
+    "edit": {
+      "*.md": "allow",
+      "*/DESCRIPTION": "allow"
+    },
+    "executeCode": {
+      "*": "allow"
+    }
+  },
+  "sandbox": {
+    "enabled": false
+  }
+}

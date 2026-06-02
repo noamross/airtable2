@@ -7,7 +7,7 @@
 air_sync_attachments(base_id, table, field, data, key, .token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{table}{Table name or ID.}
 

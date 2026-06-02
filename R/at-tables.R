@@ -10,8 +10,13 @@
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created table object (list with `id`, `name`, `fields`).
 #' @export
-at_create_table <- function(base_id, name, fields,
-                            description = NULL, token = NULL) {
+at_create_table <- function(
+  base_id,
+  name,
+  fields,
+  description = NULL,
+  token = NULL
+) {
   check_string(base_id)
   check_string(name)
 
@@ -37,14 +42,21 @@ at_create_table <- function(base_id, name, fields,
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The updated table object.
 #' @export
-at_update_table <- function(base_id, table_id,
-                            name = NULL, description = NULL, token = NULL) {
+at_update_table <- function(
+  base_id,
+  table_id,
+  name = NULL,
+  description = NULL,
+  token = NULL
+) {
   check_string(base_id)
   check_string(table_id)
 
   body <- compact(list(name = name, description = description))
   if (length(body) == 0L) {
-    cli_abort("At least one of {.arg name} or {.arg description} must be provided.")
+    cli_abort(
+      "At least one of {.arg name} or {.arg description} must be provided."
+    )
   }
 
   req <- air_req(
@@ -68,9 +80,15 @@ at_update_table <- function(base_id, table_id,
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created field object.
 #' @export
-at_create_field <- function(base_id, table_id, name, type,
-                            description = NULL, options = NULL,
-                            token = NULL) {
+at_create_field <- function(
+  base_id,
+  table_id,
+  name,
+  type,
+  description = NULL,
+  options = NULL,
+  token = NULL
+) {
   check_string(base_id)
   check_string(table_id)
   check_string(name)
@@ -103,15 +121,23 @@ at_create_field <- function(base_id, table_id, name, type,
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The updated field object.
 #' @export
-at_update_field <- function(base_id, table_id, field_id,
-                            name = NULL, description = NULL, token = NULL) {
+at_update_field <- function(
+  base_id,
+  table_id,
+  field_id,
+  name = NULL,
+  description = NULL,
+  token = NULL
+) {
   check_string(base_id)
   check_string(table_id)
   check_string(field_id)
 
   body <- compact(list(name = name, description = description))
   if (length(body) == 0L) {
-    cli_abort("At least one of {.arg name} or {.arg description} must be provided.")
+    cli_abort(
+      "At least one of {.arg name} or {.arg description} must be provided."
+    )
   }
 
   req <- air_req(

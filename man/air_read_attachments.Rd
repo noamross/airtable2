@@ -15,7 +15,7 @@ air_read_attachments(
 )
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{table}{Table name or ID.}
 

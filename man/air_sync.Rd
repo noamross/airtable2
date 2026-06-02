@@ -54,3 +54,11 @@ would cause spurious "changed" detections on every sync)
 \item Excluded from the upload payload (the API rejects writes to them)
 }
 }
+\examples{
+\dontrun{
+desired <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 26))
+result <- air_sync("appXXXXXX", "Contacts", desired, key = "Name")
+result$created
+result$unchanged
+}
+}

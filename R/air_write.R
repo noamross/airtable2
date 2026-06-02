@@ -5,15 +5,18 @@
 #' autoNumber, createdTime, lastModifiedTime, etc.) are automatically excluded
 #' from the upload.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param data A data frame of records to create. Should not contain
 #'   `airtable_id` (those would be ignored). Computed field columns are
 #'   silently dropped.
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values
 #'   to match field types.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A character vector of the created record IDs (invisibly).
+#' @examples
+#' \dontrun{
+#' data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
+#' ids <- air_write("appXXXXXX", "Contacts", data)
+#' }
 #' @export
 air_write <- function(base_id, table, data, typecast = TRUE, .token = NULL) {
   check_string(base_id)

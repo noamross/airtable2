@@ -44,8 +44,12 @@ test_that("tibble_to_records respects exclude parameter", {
     Formula = "computed",
     Modified = "2024-01-01"
   )
-  records <- tibble_to_records(data, id_col = NULL, exclude = c("Formula", "Modified"))
-  expect_equal(names(records[[1]]$fields), c("Name", "Age"))
+  records <- tibble_to_records(
+    data,
+    id_col = NULL,
+    exclude = c("Formula", "Modified")
+  )
+  expect_named(records[[1]]$fields, c("Name", "Age"))
 })
 
 test_that("tibble_to_records with exclude still handles airtable_id", {
@@ -54,7 +58,11 @@ test_that("tibble_to_records with exclude still handles airtable_id", {
     Name = "Alice",
     Formula = "computed"
   )
-  records <- tibble_to_records(data, id_col = "airtable_id", exclude = "Formula")
+  records <- tibble_to_records(
+    data,
+    id_col = "airtable_id",
+    exclude = "Formula"
+  )
   expect_equal(records[[1]]$id, "rec123")
-  expect_equal(names(records[[1]]$fields), "Name")
+  expect_named(records[[1]]$fields, "Name")
 })

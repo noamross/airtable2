@@ -57,3 +57,11 @@ Computed fields (formulas, rollups, autoNumber, createdTime,
 lastModifiedTime, etc.) are automatically excluded from the upload payload.
 Optionally creates missing columns.
 }
+\examples{
+\dontrun{
+data <- data.frame(Name = c("Alice", "Bob"), Age = c(31, 26))
+result <- air_upsert("appXXXXXX", "Contacts", data, merge_on = "Name")
+result$created
+result$updated
+}
+}

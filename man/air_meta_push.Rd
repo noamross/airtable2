@@ -7,7 +7,7 @@
 air_meta_push(base_id, meta, .token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{meta}{A tibble from \code{\link[=air_meta]{air_meta()}} with modifications to \code{field_name}
 or \code{description}.}

@@ -18,3 +18,10 @@ A tibble with columns \code{table_id}, \code{table_name}, and \code{fields}
 \description{
 Returns table and field metadata in a structured tibble format.
 }
+\examples{
+\dontrun{
+schema <- air_schema("appXXXXXX")
+schema$table_name
+schema$fields[[1]]
+}
+}

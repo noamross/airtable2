@@ -7,7 +7,7 @@
 air_meta_sync(base_id, meta_table = "_Meta Data", .token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{meta_table}{Name of the table to store metadata in.
 Default \code{"_Meta Data"}.}

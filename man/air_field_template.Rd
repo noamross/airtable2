@@ -24,3 +24,10 @@ A list suitable for use in \code{\link[=air_table_template]{air_table_template()
 \description{
 Convenience function for constructing field configurations.
 }
+\examples{
+air_field_template("Status", "singleSelect",
+  options = list(choices = list(
+    list(name = "Active"), list(name = "Inactive")
+  ))
+)
+}

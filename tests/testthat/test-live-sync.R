@@ -20,8 +20,11 @@ test_that("air_sync creates, updates, deletes, and detects unchanged", {
   )
 
   result <- air_sync(
-    base_id, "Contacts", desired,
-    key = "Name", hash_fields = c("Age"),
+    base_id,
+    "Contacts",
+    desired,
+    key = "Name",
+    hash_fields = "Age",
     delete_missing = TRUE
   )
 
@@ -48,8 +51,11 @@ test_that("air_sync with delete_missing=FALSE preserves extra records", {
   # Sync with only Alice (Bob should remain)
   desired <- tibble::tibble(Name = "Alice", Age = 30L)
   result <- air_sync(
-    base_id, "Contacts", desired,
-    key = "Name", delete_missing = FALSE
+    base_id,
+    "Contacts",
+    desired,
+    key = "Name",
+    delete_missing = FALSE
   )
 
   expect_equal(result$deleted, 0L)
@@ -66,8 +72,11 @@ test_that("air_sync is idempotent (no changes on second run)", {
   air_write(base_id, "Contacts", data)
 
   result <- air_sync(
-    base_id, "Contacts", data,
-    key = "Name", hash_fields = c("Age"),
+    base_id,
+    "Contacts",
+    data,
+    key = "Name",
+    hash_fields = "Age",
     delete_missing = TRUE
   )
 
@@ -156,8 +165,11 @@ test_that("air_sync excludes computed fields from hash", {
   # The formula field should be excluded from hash comparison automatically.
   desired <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
   result <- air_sync(
-    base_id, "Contacts", desired,
-    key = "Name", hash_fields = NULL
+    base_id,
+    "Contacts",
+    desired,
+    key = "Name",
+    hash_fields = NULL
   )
 
   expect_equal(result$unchanged, 2L)

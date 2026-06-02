@@ -4,15 +4,15 @@
 \name{airtable2-package}
 \alias{airtable2}
 \alias{airtable2-package}
-\title{airtable2: Pure R Client for the Airtable REST API}
+\title{airtable2: Pure R Client for the 'Airtable' REST API}
 \description{
-A modern R client for the Airtable REST API. Provides low-level wrappers for all API endpoints, high-level functions for reading, writing, upserting, and syncing records, and a DBI-compliant interface for RStudio/Positron connection pane integration.
+A modern R client for the 'Airtable' REST API. Provides low-level wrappers for all API endpoints, high-level functions for reading, writing, upserting, and syncing records, and a DBI-compliant interface for RStudio/Positron connection pane integration.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/ecohealthalliance/airtabler}
-  \item Report bugs at \url{https://github.com/ecohealthalliance/airtabler/issues}
+  \item \url{https://github.com/noamross/airtable2}
+  \item Report bugs at \url{https://github.com/noamross/airtable2/issues}
 }
 
 }

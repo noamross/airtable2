@@ -11,12 +11,15 @@
 test_that("at_create_table returns created table object", {
   local_mocked_bindings(
     air_perform = function(req) {
-      list(id = "tblNEW123", name = "Projects",
-           fields = list(
-             list(id = "fldTITLE1", name = "Title", type = "singleLineText"),
-             list(id = "fldBUDGET1", name = "Budget", type = "number")
-           ),
-           description = "Test projects table")
+      list(
+        id = "tblNEW123",
+        name = "Projects",
+        fields = list(
+          list(id = "fldTITLE1", name = "Title", type = "singleLineText"),
+          list(id = "fldBUDGET1", name = "Budget", type = "number")
+        ),
+        description = "Test projects table"
+      )
     }
   )
 
@@ -38,8 +41,11 @@ test_that("at_create_table returns created table object", {
 test_that("at_update_table returns updated table object", {
   local_mocked_bindings(
     air_perform = function(req) {
-      list(id = "tblTEST123", name = "People",
-           description = "Renamed from Contacts")
+      list(
+        id = "tblTEST123",
+        name = "People",
+        description = "Renamed from Contacts"
+      )
     }
   )
 
@@ -58,8 +64,12 @@ test_that("at_update_table returns updated table object", {
 test_that("at_create_field returns created field object", {
   local_mocked_bindings(
     air_perform = function(req) {
-      list(id = "fldWEB1", name = "Website", type = "url",
-           description = "Personal website")
+      list(
+        id = "fldWEB1",
+        name = "Website",
+        type = "url",
+        description = "Personal website"
+      )
     }
   )
 
@@ -80,8 +90,12 @@ test_that("at_create_field returns created field object", {
 test_that("at_update_field returns updated field object", {
   local_mocked_bindings(
     air_perform = function(req) {
-      list(id = "fldEMAIL1", name = "EmailAddress", type = "email",
-           description = "Primary email")
+      list(
+        id = "fldEMAIL1",
+        name = "EmailAddress",
+        type = "email",
+        description = "Primary email"
+      )
     }
   )
 
@@ -132,8 +146,8 @@ test_that("live: at_create_table creates a table in schema base", {
   )
 
   expect_equal(new_table$name, table_name)
-  expect_true(!is.null(new_table$id))
-  expect_true(grepl("^tbl", new_table$id))
+  expect_false(is.null(new_table$id))
+  expect_match(new_table$id, "^tbl")
 
   # Verify it appears in schema
   schema <- at_get_schema(base_id)
@@ -149,7 +163,9 @@ test_that("live: at_create_field adds a field to schema base", {
   # Get the Scratch table ID
   schema <- at_get_schema(base_id)
   scratch <- Filter(function(t) t$name == "Scratch", schema)
-  if (length(scratch) == 0L) skip("Scratch table not found in schema base")
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
   table_id <- scratch[[1]]$id
 
   field_name <- paste0("Field_", format(Sys.time(), "%H%M%S"))
@@ -164,7 +180,7 @@ test_that("live: at_create_field adds a field to schema base", {
 
   expect_equal(new_field$name, field_name)
   expect_equal(new_field$type, "singleLineText")
-  expect_true(!is.null(new_field$id))
+  expect_false(is.null(new_field$id))
 })
 
 test_that("live: at_update_table changes table name", {
@@ -199,7 +215,9 @@ test_that("live: at_update_field changes field name", {
   # Get the Scratch table
   schema <- at_get_schema(base_id)
   scratch <- Filter(function(t) t$name == "Scratch", schema)
-  if (length(scratch) == 0L) skip("Scratch table not found in schema base")
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
   table_id <- scratch[[1]]$id
 
   # Create a field to rename
@@ -230,15 +248,15 @@ test_that("live: air_schema returns structured schema tibble", {
 
   result <- air_schema(base_id)
   expect_s3_class(result, "tbl_df")
-  expect_true(nrow(result) >= 1L)
+  expect_gte(nrow(result), 1L)
   expect_true("Scratch" %in% result$table_name)
-  expect_true(!is.na(result$table_id[result$table_name == "Scratch"]))
+  expect_false(is.na(result$table_id[result$table_name == "Scratch"]))
 
   # Check nested fields tibble
   scratch_row <- result[result$table_name == "Scratch", ]
   fields <- scratch_row$fields[[1]]
   expect_s3_class(fields, "tbl_df")
-  expect_true(nrow(fields) >= 1L)
+  expect_gte(nrow(fields), 1L)
   expect_true(all(c("id", "name", "type") %in% names(fields)))
 })
 
@@ -249,7 +267,9 @@ test_that("live: air_meta returns flat field metadata", {
 
   result <- air_meta(base_id)
   expect_s3_class(result, "tbl_df")
-  expect_true(nrow(result) >= 1L)
-  expect_true(all(c("table_name", "table_id", "field_name",
-                    "field_id", "field_type") %in% names(result)))
+  expect_gte(nrow(result), 1L)
+  expect_true(all(
+    c("table_name", "table_id", "field_name", "field_id", "field_type") %in%
+      names(result)
+  ))
 })

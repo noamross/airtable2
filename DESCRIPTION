@@ -1,5 +1,5 @@
 Package: airtable2
-Title: Pure R Client for the Airtable REST API
+Title: Pure R Client for the 'Airtable' REST API
 Version: 0.0.0.9000
 Authors@R: c(
     person("Noam", "Ross", , "noam.ross@gmail.com", role = c("aut", "cre")),
@@ -8,13 +8,13 @@ Authors@R: c(
     person("Collin", "Schwantes", role = "aut",
            comment = "airtabler fork maintainer")
     )
-Description: A modern R client for the Airtable REST API. Provides low-level
+Description: A modern R client for the 'Airtable' REST API. Provides low-level
     wrappers for all API endpoints, high-level functions for reading, writing,
     upserting, and syncing records, and a DBI-compliant interface for
     RStudio/Positron connection pane integration.
 License: MIT + file LICENSE
-URL: https://github.com/ecohealthalliance/airtabler
-BugReports: https://github.com/ecohealthalliance/airtabler/issues
+URL: https://github.com/noamross/airtable2
+BugReports: https://github.com/noamross/airtable2/issues
 Depends:
     R (>= 4.1.0)
 Imports:

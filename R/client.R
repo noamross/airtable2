@@ -7,6 +7,14 @@
 #'
 #' @param token A personal access token string, or `NULL` to use defaults.
 #' @return A string (the token).
+#' @examples
+#' \dontrun{
+#' # Uses AIRTABLE_API_KEY env var by default
+#' token <- air_token()
+#'
+#' # Or pass explicitly
+#' token <- air_token("patXXXXXXXX")
+#' }
 #' @export
 air_token <- function(token = NULL) {
   token <- token %||%
@@ -53,22 +61,16 @@ air_req <- function(endpoint, token = NULL) {
 #' Perform a request and parse the JSON response
 #' @noRd
 air_perform <- function(req, call = rlang::caller_env()) {
-  resp <- tryCatch(
-    httr2::req_perform(req),
-    httr2_http_error = function(cnd) {
-      # Extract Airtable error info if available
-      body <- tryCatch(
-        httr2::resp_body_json(cnd$resp),
-        error = function(e) NULL
-      )
-      msg <- body$error$message %||% httr2::resp_status_desc(cnd$resp)
-      cli_abort(
-        c("Airtable API error ({httr2::resp_status(cnd$resp)}).", x = msg),
-        call = call,
-        parent = cnd
-      )
-    }
-  )
+  resp <- tryCatch(httr2::req_perform(req), httr2_http_error = function(cnd) {
+    # Extract Airtable error info if available
+    body <- tryCatch(httr2::resp_body_json(cnd$resp), error = function(e) NULL)
+    msg <- body$error$message %||% httr2::resp_status_desc(cnd$resp)
+    cli_abort(
+      c("Airtable API error ({httr2::resp_status(cnd$resp)}).", x = msg),
+      call = call,
+      parent = cnd
+    )
+  })
   httr2::resp_body_json(resp)
 }
 
@@ -100,13 +102,11 @@ air_paginate <- function(
 
     if (!is.null(page_size)) {
       this_size <- min(page_size, remaining)
-      page_req <- page_req |>
-        httr2::req_url_query(pageSize = this_size)
+      page_req <- page_req |> httr2::req_url_query(pageSize = this_size)
     }
 
     if (!is.null(offset)) {
-      page_req <- page_req |>
-        httr2::req_url_query(offset = offset)
+      page_req <- page_req |> httr2::req_url_query(offset = offset)
     }
 
     body <- air_perform(page_req)

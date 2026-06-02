@@ -11,3 +11,4 @@
 ^\.vscode$
 ^\.DS_Store$
 ^\.Renviron$
+^air\.toml$

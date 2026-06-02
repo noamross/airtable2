@@ -19,3 +19,9 @@ A tibble with columns: \code{table_name}, \code{table_id}, \code{field_name},
 Returns one row per field across all tables, useful for inspecting and
 editing base structure as a data frame.
 }
+\examples{
+\dontrun{
+meta <- air_meta("appXXXXXX")
+meta
+}
+}

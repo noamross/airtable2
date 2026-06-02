@@ -21,3 +21,8 @@ Invisible \code{NULL}. Side effect: deletes records.
 \description{
 A convenience wrapper around \code{\link[=at_delete_records]{at_delete_records()}} with messaging.
 }
+\examples{
+\dontrun{
+air_delete("appXXXXXX", "Contacts", c("recABC", "recDEF"))
+}
+}

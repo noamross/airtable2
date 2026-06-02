@@ -8,14 +8,16 @@
 #'   [air_field_template()]).
 #' @param description Optional table description.
 #' @return A list suitable for passing to the Airtable API.
+#' @examples
+#' fields <- list(
+#'   air_field_template("Name", "singleLineText"),
+#'   air_field_template("Score", "number", options = list(precision = 2))
+#' )
+#' air_table_template("Results", fields, description = "Exam results")
 #' @export
 air_table_template <- function(name, fields, description = NULL) {
   check_string(name)
-  compact(list(
-    name = name,
-    description = description,
-    fields = fields
-  ))
+  compact(list(name = name, description = description, fields = fields))
 }
 
 #' Build a field template specification
@@ -30,6 +32,12 @@ air_table_template <- function(name, fields, description = NULL) {
 #'   for available options per type.
 #' @return A list suitable for use in [air_table_template()] or
 #'   [at_create_field()].
+#' @examples
+#' air_field_template("Status", "singleSelect",
+#'   options = list(choices = list(
+#'     list(name = "Active"), list(name = "Inactive")
+#'   ))
+#' )
 #' @export
 air_field_template <- function(name, type, description = NULL, options = NULL) {
   check_string(name)

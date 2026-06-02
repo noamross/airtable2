@@ -12,8 +12,7 @@
 #' lastModifiedTime, etc.) are automatically excluded from the upload payload.
 #' Optionally creates missing columns.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param data A data frame of records to upsert. May include an `airtable_id`
 #'   column for direct record matching. Computed field columns are silently
 #'   dropped.
@@ -24,9 +23,15 @@
 #'   - `"error"` (default): error if unknown columns exist.
 #'   - `"warn"`: warn and drop unknown columns.
 #'   - `"yes"`: create missing fields before upserting (as `singleLineText`).
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list with `created` and `updated` character vectors of record IDs
 #'   (invisibly).
+#' @examples
+#' \dontrun{
+#' data <- data.frame(Name = c("Alice", "Bob"), Age = c(31, 26))
+#' result <- air_upsert("appXXXXXX", "Contacts", data, merge_on = "Name")
+#' result$created
+#' result$updated
+#' }
 #' @export
 air_upsert <- function(
   base_id,
@@ -44,10 +49,7 @@ air_upsert <- function(
 
   # Fetch schema once for field validation + computed field detection
   tables <- at_get_schema(base_id, token = .token)
-  tbl_schema <- Find(
-    function(t) t$name == table || t$id == table,
-    tables
-  )
+  tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
 
   # Identify and drop computed fields
   computed <- if (!is.null(tbl_schema)) {

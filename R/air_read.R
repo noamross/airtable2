@@ -17,29 +17,39 @@
 #' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A tibble with columns `airtable_id`, `airtable_created_time`, and
 #'   one column per field.
+#' @examples
+#' \dontrun{
+#' # Read all records from a table
+#' df <- air_read("appXXXXXX", "Contacts")
+#'
+#' # Read specific fields with a filter
+#' df <- air_read("appXXXXXX", "Contacts",
+#'   fields = c("Name", "Email"),
+#'   formula = "{Age} > 30"
+#' )
+#' }
 #' @export
-air_read <- function(base_id,
-                     table,
-                     view = NULL,
-                     fields = NULL,
-                     formula = NULL,
-                     sort = NULL,
-                     max_records = Inf,
-                     page_size = 100L,
-                     coerce = TRUE,
-                     .token = NULL) {
+air_read <- function(
+  base_id,
+  table,
+  view = NULL,
+  fields = NULL,
+  formula = NULL,
+  sort = NULL,
+  max_records = Inf,
+  page_size = 100L,
+  coerce = TRUE,
+  .token = NULL
+) {
   check_string(base_id)
   check_string(table)
   check_bool(coerce)
 
   # Fetch schema for type coercion if requested
- schema <- NULL
+  schema <- NULL
   if (coerce) {
     tables <- at_get_schema(base_id, token = .token)
-    tbl_schema <- Find(
-      function(t) t$name == table || t$id == table,
-      tables
-    )
+    tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
     if (!is.null(tbl_schema)) {
       schema <- tbl_schema$fields
     }

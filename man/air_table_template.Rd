@@ -21,3 +21,10 @@ A list suitable for passing to the Airtable API.
 Convenience function for constructing table configurations suitable for
 \code{\link[=at_create_table]{at_create_table()}} or \code{\link[=at_create_base]{at_create_base()}}.
 }
+\examples{
+fields <- list(
+  air_field_template("Name", "singleLineText"),
+  air_field_template("Score", "number", options = list(precision = 2))
+)
+air_table_template("Results", fields, description = "Exam results")
+}

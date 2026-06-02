@@ -20,3 +20,12 @@ Looks for a token in this order:
 \item \code{Sys.getenv("AIRTABLE_API_KEY")}
 }
 }
+\examples{
+\dontrun{
+# Uses AIRTABLE_API_KEY env var by default
+token <- air_token()
+
+# Or pass explicitly
+token <- air_token("patXXXXXXXX")
+}
+}

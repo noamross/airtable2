@@ -29,3 +29,9 @@ Automatically batches in groups of 10. Computed fields (formulas, rollups,
 autoNumber, createdTime, lastModifiedTime, etc.) are automatically excluded
 from the upload.
 }
+\examples{
+\dontrun{
+data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
+ids <- air_write("appXXXXXX", "Contacts", data)
+}
+}

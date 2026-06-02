@@ -7,7 +7,7 @@
 air_write_attachments(base_id, table, field, data, .token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{table}{Table name or ID.}
 

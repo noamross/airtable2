@@ -3,29 +3,29 @@
 #' Downloads attachment files from a specified field, returning them as either
 #' in-memory blobs or saved files.
 #'
-#' @param base_id Base ID.
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param field Name of the attachment field.
 #' @param record_ids Optional character vector of specific record IDs to fetch.
 #'   If `NULL`, fetches all records.
 #' @param dest Either `"blob"` (return raw content as list-column) or `"file"`
 #'   (save to disk).
 #' @param dir Directory to save files to (required if `dest = "file"`).
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A tibble with `airtable_id`, `filename`, `url`, and either `blob`
 #'   (raw list-column) or `local_path` (character).
 #' @export
-air_read_attachments <- function(base_id,
-                                 table,
-                                 field,
-                                 record_ids = NULL,
-                                 dest = c("blob", "file"),
-                                 dir = NULL,
-                                 .token = NULL) {
+air_read_attachments <- function(
+  base_id,
+  table,
+  field,
+  record_ids = NULL,
+  dest = c("blob", "file"),
+  dir = NULL,
+  .token = NULL
+) {
   check_string(base_id)
   check_string(table)
   check_string(field)
- dest <- match.arg(dest)
+  dest <- match.arg(dest)
 
   if (dest == "file" && is.null(dir)) {
     cli_abort("{.arg dir} is required when {.code dest = \"file\"}.")
@@ -44,7 +44,9 @@ air_read_attachments <- function(base_id,
   rows <- list()
   for (rec in records) {
     attachments <- rec$fields[[field]]
-    if (is.null(attachments) || length(attachments) == 0L) next
+    if (is.null(attachments) || length(attachments) == 0L) {
+      next
+    }
     for (att in attachments) {
       rows[[length(rows) + 1L]] <- list(
         airtable_id = rec$id,
@@ -64,8 +66,11 @@ air_read_attachments <- function(base_id,
       size = integer(),
       type = character()
     )
-    if (dest == "blob") tbl$blob <- list()
-    else tbl$local_path <- character()
+    if (dest == "blob") {
+      tbl$blob <- list()
+    } else {
+      tbl$local_path <- character()
+    }
     return(tbl)
   }
 
@@ -80,19 +85,29 @@ air_read_attachments <- function(base_id,
   # Download content
   if (dest == "blob") {
     tbl$blob <- lapply(tbl$url, function(u) {
-      if (is.na(u)) return(raw())
+      if (is.na(u)) {
+        return(raw())
+      }
       resp <- httr2::request(u) |> httr2::req_perform()
       httr2::resp_body_raw(resp)
     })
   } else {
-    if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
-    tbl$local_path <- vapply(seq_len(nrow(tbl)), function(i) {
-      if (is.na(tbl$url[i])) return(NA_character_)
-      dest_path <- file.path(dir, tbl$filename[i])
-      resp <- httr2::request(tbl$url[i]) |>
-        httr2::req_perform(path = dest_path)
-      dest_path
-    }, character(1))
+    if (!dir.exists(dir)) {
+      dir.create(dir, recursive = TRUE)
+    }
+    tbl$local_path <- vapply(
+      seq_len(nrow(tbl)),
+      function(i) {
+        if (is.na(tbl$url[i])) {
+          return(NA_character_)
+        }
+        dest_path <- file.path(dir, tbl$filename[i])
+        resp <- httr2::request(tbl$url[i]) |>
+          httr2::req_perform(path = dest_path)
+        dest_path
+      },
+      character(1)
+    )
   }
 
   cli_inform("Downloaded {nrow(tbl)} attachment{?s}.")
@@ -101,11 +116,9 @@ air_read_attachments <- function(base_id,
 
 #' Upload attachments to records
 #'
-#' @param base_id Base ID.
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param field Name of the attachment field.
 #' @param data A tibble with `airtable_id` and `file_path` columns.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return Invisible `NULL`. Side effect: uploads attachments.
 #' @export
 air_write_attachments <- function(base_id, table, field, data, .token = NULL) {
@@ -114,7 +127,9 @@ air_write_attachments <- function(base_id, table, field, data, .token = NULL) {
   check_string(field)
 
   if (!"airtable_id" %in% names(data) || !"file_path" %in% names(data)) {
-    cli_abort("{.arg data} must contain {.field airtable_id} and {.field file_path} columns.")
+    cli_abort(
+      "{.arg data} must contain {.field airtable_id} and {.field file_path} columns."
+    )
   }
 
   n <- nrow(data)
@@ -140,37 +155,51 @@ air_write_attachments <- function(base_id, table, field, data, .token = NULL) {
 #' Compares filenames between local data and remote records, uploads
 #' new/changed files, skips unchanged.
 #'
-#' @param base_id Base ID.
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param field Name of the attachment field.
 #' @param data A tibble with a key column and `file_path` column.
 #' @param key Column name that identifies which record to attach to.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list with counts: `uploaded`, `skipped` (invisibly).
 #' @export
-air_sync_attachments <- function(base_id, table, field, data, key,
-                                 .token = NULL) {
+air_sync_attachments <- function(
+  base_id,
+  table,
+  field,
+  data,
+  key,
+  .token = NULL
+) {
   check_string(base_id)
   check_string(table)
   check_string(field)
   check_string(key)
 
   # Read existing attachments
-  existing <- air_read(base_id, table, fields = c(key, field),
-                       coerce = FALSE, .token = .token)
+  existing <- air_read(
+    base_id,
+    table,
+    fields = c(key, field),
+    coerce = FALSE,
+    .token = .token
+  )
 
   # Build lookup: key value → existing filenames
   existing_files <- stats::setNames(
     lapply(seq_len(nrow(existing)), function(i) {
       atts <- existing[[field]][[i]]
-      if (is.null(atts)) return(character())
+      if (is.null(atts)) {
+        return(character())
+      }
       vapply(atts, function(a) a$filename %||% "", character(1))
     }),
     as.character(existing[[key]])
   )
 
   # Map key values to record IDs
-  key_to_id <- stats::setNames(existing$airtable_id, as.character(existing[[key]]))
+  key_to_id <- stats::setNames(
+    existing$airtable_id,
+    as.character(existing[[key]])
+  )
 
   n_uploaded <- 0L
   n_skipped <- 0L

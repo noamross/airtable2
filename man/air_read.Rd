@@ -48,3 +48,15 @@ one column per field.
 High-level function that auto-paginates, fetches schema for type coercion,
 and returns a properly typed tibble.
 }
+\examples{
+\dontrun{
+# Read all records from a table
+df <- air_read("appXXXXXX", "Contacts")
+
+# Read specific fields with a filter
+df <- air_read("appXXXXXX", "Contacts",
+  fields = c("Name", "Email"),
+  formula = "{Age} > 30"
+)
+}
+}

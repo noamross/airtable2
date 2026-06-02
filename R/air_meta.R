@@ -3,10 +3,14 @@
 #' Returns one row per field across all tables, useful for inspecting and
 #' editing base structure as a data frame.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
+#' @inheritParams air_read
 #' @return A tibble with columns: `table_name`, `table_id`, `field_name`,
 #'   `field_id`, `field_type`, `description`.
+#' @examples
+#' \dontrun{
+#' meta <- air_meta("appXXXXXX")
+#' meta
+#' }
 #' @export
 air_meta <- function(base_id, .token = NULL) {
   check_string(base_id)
@@ -14,14 +18,24 @@ air_meta <- function(base_id, .token = NULL) {
   tables <- at_get_schema(base_id, token = .token)
 
   rows <- lapply(tables, function(t) {
-    if (length(t$fields) == 0L) return(NULL)
+    if (length(t$fields) == 0L) {
+      return(NULL)
+    }
     tibble::tibble(
       table_name = t$name,
       table_id = t$id,
-      field_name = vapply(t$fields, function(f) f$name, character(1)),
-      field_id = vapply(t$fields, function(f) f$id, character(1)),
-      field_type = vapply(t$fields, function(f) f$type %||% NA_character_, character(1)),
-      description = vapply(t$fields, function(f) f$description %||% NA_character_, character(1))
+      field_name = vapply(t$fields, \(f) f$name, character(1)),
+      field_id = vapply(t$fields, \(f) f$id, character(1)),
+      field_type = vapply(
+        t$fields,
+        \(f) f$type %||% NA_character_,
+        character(1)
+      ),
+      description = vapply(
+        t$fields,
+        \(f) f$description %||% NA_character_,
+        character(1)
+      )
     )
   })
 
@@ -33,14 +47,13 @@ air_meta <- function(base_id, .token = NULL) {
 #' Compares a modified metadata tibble (from [air_meta()]) against the current
 #' schema and applies name/description changes via PATCH.
 #'
-#' @param base_id Base ID.
+#' @inheritParams air_read
 #' @param meta A tibble from [air_meta()] with modifications to `field_name`
 #'   or `description`.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return Invisible `NULL`. Side effect: updates field names/descriptions.
 #' @export
 air_meta_push <- function(base_id, meta, .token = NULL) {
- check_string(base_id)
+  check_string(base_id)
 
   # Get current schema for comparison
   current <- air_meta(base_id, .token = .token)
@@ -53,7 +66,9 @@ air_meta_push <- function(base_id, meta, .token = NULL) {
 
     # Find matching row in current
     cur_row <- current[current$field_id == field_id, ]
-    if (nrow(cur_row) == 0L) next
+    if (nrow(cur_row) == 0L) {
+      next
+    }
 
     new_name <- if (!identical(meta$field_name[i], cur_row$field_name[1])) {
       meta$field_name[i]
@@ -84,10 +99,9 @@ air_meta_push <- function(base_id, meta, .token = NULL) {
 #' Makes the base self-documenting by upserting the metadata tibble into a
 #' designated table within the same base.
 #'
-#' @param base_id Base ID.
+#' @inheritParams air_read
 #' @param meta_table Name of the table to store metadata in.
 #'   Default `"_Meta Data"`.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return Invisible upsert result.
 #' @export
 air_meta_sync <- function(base_id, meta_table = "_Meta Data", .token = NULL) {

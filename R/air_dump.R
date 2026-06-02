@@ -2,18 +2,19 @@
 #'
 #' Exports the full schema and all table data from a base.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
+#' @inheritParams air_read
 #' @param dir Directory to write JSON files to (when `format = "json"`).
 #'   If `NULL` and format is `"json"`, uses a temp directory.
 #' @param format Either `"list"` (return as R list) or `"json"` (write files).
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return For `format = "list"`: a named list with `schema` and a tibble per
 #'   table. For `format = "json"`: the directory path (invisibly).
 #' @export
-air_dump <- function(base_id,
-                     dir = NULL,
-                     format = c("list", "json"),
-                     .token = NULL) {
+air_dump <- function(
+  base_id,
+  dir = NULL,
+  format = c("list", "json"),
+  .token = NULL
+) {
   check_string(base_id)
   format <- match.arg(format)
 
@@ -38,18 +39,27 @@ air_dump <- function(base_id,
   }
 
   # Write JSON files
-  if (is.null(dir)) dir <- tempfile("air_dump_")
-  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
+  if (is.null(dir)) {
+    dir <- tempfile("air_dump_")
+  }
+  if (!dir.exists(dir)) {
+    dir.create(dir, recursive = TRUE)
+  }
 
-  jsonlite::write_json(tables, file.path(dir, "schema.json"),
-                       auto_unbox = TRUE, pretty = TRUE)
+  jsonlite::write_json(
+    tables,
+    file.path(dir, "schema.json"),
+    auto_unbox = TRUE,
+    pretty = TRUE
+  )
 
   for (tbl_name in names(table_data)) {
     safe_name <- gsub("[^a-zA-Z0-9_-]", "_", tolower(tbl_name))
     jsonlite::write_json(
       table_data[[tbl_name]],
       file.path(dir, paste0(safe_name, ".json")),
-      auto_unbox = TRUE, pretty = TRUE
+      auto_unbox = TRUE,
+      pretty = TRUE
     )
   }
 
@@ -65,37 +75,20 @@ air_dump <- function(base_id,
 #'   a dump directory (from `air_dump(format = "json")`).
 #' @param base_name Name for the new base. If `NULL`, uses a generated name.
 #' @param workspace_id Workspace ID to create the base in.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
+#' @inheritParams air_read
 #' @return The new base ID (invisibly).
 #' @export
-air_restore <- function(dump,
-                        base_name = NULL,
-                        workspace_id,
-                        .token = NULL) {
+air_restore <- function(dump, base_name = NULL, workspace_id, .token = NULL) {
   check_string(workspace_id)
 
-  # Load dump if it's a path
-  if (is.character(dump) && length(dump) == 1L && dir.exists(dump)) {
-    schema <- jsonlite::read_json(file.path(dump, "schema.json"))
-    json_files <- list.files(dump, pattern = "\\.json$", full.names = TRUE)
-    json_files <- json_files[basename(json_files) != "schema.json"]
-    table_data <- stats::setNames(
-      lapply(json_files, function(f) {
-        jsonlite::read_json(f, simplifyVector = TRUE)
-      }),
-      tools::file_path_sans_ext(basename(json_files))
-    )
-  } else if (is.list(dump)) {
-    schema <- dump$schema
-    table_data <- dump[setdiff(names(dump), "schema")]
-  } else {
-    cli_abort("{.arg dump} must be a list or a path to a dump directory.")
-  }
+  loaded <- load_dump(dump)
+  schema <- loaded$schema
+  table_data <- loaded$table_data
 
-  base_name <- base_name %||% paste0("Restored_", format(Sys.time(), "%Y%m%d_%H%M%S"))
+  base_name <- base_name %||%
+    paste0("Restored_", format(Sys.time(), "%Y%m%d_%H%M%S"))
 
   # Build table configs for base creation (first table + field only)
-  # Airtable requires at least 1 table with 1 field to create a base
   table_configs <- lapply(schema, function(t) {
     fields <- lapply(t$fields[1], function(f) {
       compact(list(
@@ -105,11 +98,7 @@ air_restore <- function(dump,
         options = f$options
       ))
     })
-    compact(list(
-      name = t$name,
-      description = t$description,
-      fields = fields
-    ))
+    compact(list(name = t$name, description = t$description, fields = fields))
   })
 
   # Create the base with minimal schema
@@ -124,11 +113,71 @@ air_restore <- function(dump,
 
   # Add remaining fields to each table
   cli_inform("Adding fields...")
+  restore_fields(schema, new_base_id, .token)
+
+  # Insert records
+  cli_inform("Inserting records...")
+  for (tbl_name in names(table_data)) {
+    data <- table_data[[tbl_name]]
+    if (is.data.frame(data) && nrow(data) > 0L) {
+      data <- data[setdiff(
+        names(data),
+        c("airtable_id", "airtable_created_time")
+      )]
+      tryCatch(
+        air_write(
+          new_base_id,
+          tbl_name,
+          data,
+          typecast = TRUE,
+          .token = .token
+        ),
+        error = function(e) {
+          cli_warn(
+            "Could not write to {.val {tbl_name}}: {conditionMessage(e)}"
+          )
+        }
+      )
+    }
+  }
+
+  cli_inform("Restore complete. New base ID: {.val {new_base_id}}.")
+  invisible(new_base_id)
+}
+
+# --- Internal helpers ---
+
+#' Load a dump from path or list
+#' @noRd
+load_dump <- function(dump) {
+  if (is.character(dump) && length(dump) == 1L && dir.exists(dump)) {
+    schema <- jsonlite::read_json(file.path(dump, "schema.json"))
+    json_files <- list.files(dump, pattern = "\\.json$", full.names = TRUE)
+    json_files <- json_files[basename(json_files) != "schema.json"]
+    table_data <- stats::setNames(
+      lapply(json_files, jsonlite::read_json, simplifyVector = TRUE),
+      tools::file_path_sans_ext(basename(json_files))
+    )
+    list(schema = schema, table_data = table_data)
+  } else if (is.list(dump)) {
+    list(
+      schema = dump$schema,
+      table_data = dump[setdiff(names(dump), "schema")]
+    )
+  } else {
+    cli_abort("{.arg dump} must be a list or a path to a dump directory.")
+  }
+}
+
+#' Add fields from schema to a newly created base
+#' @noRd
+restore_fields <- function(schema, new_base_id, .token) {
   for (tbl_schema in schema) {
-    # Find table ID in new base
     new_tables <- at_get_schema(new_base_id, token = .token)
     new_tbl <- Find(function(t) t$name == tbl_schema$name, new_tables)
-    if (is.null(new_tbl)) next
+    if (is.null(new_tbl)) {
+      next
+    }
 
     # Skip first field (already created with table)
     if (length(tbl_schema$fields) > 1L) {
@@ -144,29 +193,12 @@ air_restore <- function(dump,
             token = .token
           ),
           error = function(e) {
-            cli_warn("Could not create field {.field {f$name}}: {conditionMessage(e)}")
+            cli_warn(
+              "Could not create field {.field {f$name}}: {conditionMessage(e)}"
+            )
           }
         )
       }
     }
   }
-
-  # Insert records
-  cli_inform("Inserting records...")
-  for (tbl_name in names(table_data)) {
-    data <- table_data[[tbl_name]]
-    if (is.data.frame(data) && nrow(data) > 0L) {
-      # Remove metadata columns
-      data <- data[setdiff(names(data), c("airtable_id", "airtable_created_time"))]
-      tryCatch(
-        air_write(new_base_id, tbl_name, data, typecast = TRUE, .token = .token),
-        error = function(e) {
-          cli_warn("Could not write to {.val {tbl_name}}: {conditionMessage(e)}")
-        }
-      )
-    }
-  }
-
-  cli_inform("Restore complete. New base ID: {.val {new_base_id}}.")
-  invisible(new_base_id)
 }

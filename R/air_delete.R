@@ -2,11 +2,13 @@
 #'
 #' A convenience wrapper around [at_delete_records()] with messaging.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
-#' @param table Table name or ID.
+#' @inheritParams air_read
 #' @param record_ids Character vector of record IDs to delete.
-#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return Invisible `NULL`. Side effect: deletes records.
+#' @examples
+#' \dontrun{
+#' air_delete("appXXXXXX", "Contacts", c("recABC", "recDEF"))
+#' }
 #' @export
 air_delete <- function(base_id, table, record_ids, .token = NULL) {
   check_string(base_id)

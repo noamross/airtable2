@@ -20,8 +20,14 @@ at_whoami <- function(token = NULL) {
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The attachment object returned by the API.
 #' @export
-at_upload_attachment <- function(base_id, table_id, record_id, field_id,
-                                 file, token = NULL) {
+at_upload_attachment <- function(
+  base_id,
+  table_id,
+  record_id,
+  field_id,
+  file,
+  token = NULL
+) {
   check_string(base_id)
   check_string(table_id)
   check_string(record_id)
@@ -32,18 +38,27 @@ at_upload_attachment <- function(base_id, table_id, record_id, field_id,
     cli_abort("File {.file {file}} does not exist.")
   }
 
-  endpoint <- paste0(base_id, "/", table_id, "/", record_id, "/",
-                     field_id, "/uploadAttachment")
+  endpoint <- paste0(
+    base_id,
+    "/",
+    table_id,
+    "/",
+    record_id,
+    "/",
+    field_id,
+    "/uploadAttachment"
+  )
   token_resolved <- air_token(token)
 
+  ua <- paste0("airtable2/", utils::packageVersion("airtable2"))
   req <- httr2::request(base_url()) |>
     httr2::req_url_path_append(endpoint) |>
     httr2::req_auth_bearer_token(token_resolved) |>
-    httr2::req_user_agent(paste0("airtable2/", utils::packageVersion("airtable2"))) |>
+    httr2::req_user_agent(ua) |>
     httr2::req_retry(
       max_tries = 3,
       is_transient = function(resp) httr2::resp_status(resp) == 429L,
-      backoff = ~ 30
+      backoff = ~30
     ) |>
     httr2::req_method("POST") |>
     httr2::req_body_multipart(file = curl::form_file(file))

@@ -12,7 +12,8 @@ air_write(base_id, table, data, typecast = TRUE, .token = NULL)
 \item{table}{Table name or ID.}
 
 \item{data}{A data frame of records to create. Should not contain
-\code{airtable_id} (those would be ignored).}
+\code{airtable_id} (those would be ignored). Computed field columns are
+silently dropped.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values
 to match field types.}
@@ -24,5 +25,7 @@ A character vector of the created record IDs (invisibly).
 }
 \description{
 Converts a data frame into records and creates them in the specified table.
-Automatically batches in groups of 10.
+Automatically batches in groups of 10. Computed fields (formulas, rollups,
+autoNumber, createdTime, lastModifiedTime, etc.) are automatically excluded
+from the upload.
 }

@@ -77,6 +77,35 @@ df$Active[is.na(df$Active)] <- FALSE
 
 ---
 
+## Formula Field Options Key Is `formula`, Not `expression` (2026-06-02)
+
+When creating a formula field via the API, the correct options key is `formula`:
+
+```r
+at_create_field(base_id, table_id, "MyFormula", "formula",
+  options = list(formula = "UPPER({Name})"))
+```
+
+Using `expression` instead of `formula` will give a schema validation error.
+
+---
+
+## Some Field Types Cannot Be Created via API (2026-06-02)
+
+The following field types cannot be created via the Meta API and return
+`UNSUPPORTED_FIELD_TYPE_FOR_CREATE`:
+
+- `lastModifiedTime`
+- `lastModifiedBy`
+- `createdTime`
+- `createdBy`
+- `autoNumber`
+
+These must be created via the Airtable web UI or are generated automatically
+when a base is created.
+
+---
+
 ## `GET /meta/whoami` Does Not Return Scopes or Collaborations (2026-06-02)
 
 Despite what some documentation suggests, the whoami endpoint only returns `id`

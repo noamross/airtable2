@@ -20,13 +20,15 @@ air_sync(
 
 \item{table}{Table name or ID.}
 
-\item{data}{A data frame representing the desired state of the table.}
+\item{data}{A data frame representing the desired state of the table.
+May contain computed field columns (they are ignored).}
 
 \item{key}{Column name in \code{data} that uniquely identifies records (used as
 the merge field for upsert). Must be a single field.}
 
 \item{hash_fields}{Character vector of fields to include in the change-
-detection hash. If \code{NULL} (default), all non-key fields are used.}
+detection hash. If \code{NULL} (default), all non-key, non-computed fields are
+used. Computed fields are always excluded even if explicitly listed.}
 
 \item{delete_missing}{If \code{TRUE} (default), records in Airtable that are not
 in \code{data} will be deleted.}
@@ -42,4 +44,13 @@ A list with counts: \code{created}, \code{updated}, \code{deleted}, \code{unchan
 \description{
 Compares local data against the current table contents using a hash of
 specified fields, then creates/updates/deletes as needed.
+}
+\details{
+Computed fields (formulas, rollups, autoNumber, createdTime,
+lastModifiedTime, createdBy, lastModifiedBy, etc.) are automatically:
+\itemize{
+\item Excluded from the change-detection hash (they change server-side and
+would cause spurious "changed" detections on every sync)
+\item Excluded from the upload payload (the API rejects writes to them)
+}
 }

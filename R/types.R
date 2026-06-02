@@ -3,6 +3,68 @@
 # Uses schema info to determine how to coerce each field.
 # When schema is unavailable, falls back to best-guess heuristics.
 
+#' Field types that are computed/read-only and cannot be written
+#' @noRd
+computed_field_types <- function() {
+  c(
+    "formula",
+    "rollup",
+    "count",
+    "lookup",
+    "autoNumber",
+    "createdTime",
+    "lastModifiedTime",
+    "createdBy",
+    "lastModifiedBy",
+    "externalSyncSource",
+    "aiText",
+    "button"
+  )
+}
+
+#' Identify computed field names from a schema
+#'
+#' Given a list of field definitions (from [at_get_schema()]), returns the
+#' names of fields that are computed/read-only and should not be included in
+#' write or upsert operations.
+#'
+#' @param schema List of field definitions (each with `name` and `type`).
+#' @return Character vector of computed field names.
+#' @noRd
+computed_fields_from_schema <- function(schema) {
+  if (is.null(schema)) {
+    return(character())
+  }
+  computed_types <- computed_field_types()
+  vapply(
+    Filter(function(f) (f$type %||% "") %in% computed_types, schema),
+    function(f) f$name,
+    character(1)
+  )
+}
+
+#' Get computed field names for a table (internal helper)
+#'
+#' Fetches schema and returns names of computed/read-only fields.
+#' Used by [air_write()], [air_upsert()], and [air_sync()].
+#'
+#' @param base_id Base ID.
+#' @param table Table name or ID.
+#' @param .token Token.
+#' @return Character vector of computed field names.
+#' @noRd
+get_computed_fields <- function(base_id, table, .token = NULL) {
+  tables <- at_get_schema(base_id, token = .token)
+  tbl_schema <- Find(
+    function(t) t$name == table || t$id == table,
+    tables
+  )
+  if (is.null(tbl_schema)) {
+    return(character())
+  }
+  computed_fields_from_schema(tbl_schema$fields)
+}
+
 #' Map Airtable field types to R coercion functions
 #' @noRd
 airtable_type_map <- function() {
@@ -193,17 +255,24 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
 #'
 #' Converts a tibble/data.frame into the list-of-lists format expected
 #' by the Airtable API. Handles `airtable_id` as the record ID if present.
+#' Automatically excludes computed/read-only columns.
 #'
 #' @param data A data frame.
 #' @param id_col Name of the column containing record IDs (set to `NULL` to
 #'   omit IDs, e.g., for creating new records).
+#' @param exclude Character vector of column names to exclude from the
+#'   `fields` payload (e.g., computed fields). These are silently dropped.
 #' @return A list of record objects suitable for [at_create_records()] or
 #'   [at_update_records()].
 #' @noRd
-tibble_to_records <- function(data, id_col = "airtable_id") {
+tibble_to_records <- function(
+  data,
+  id_col = "airtable_id",
+  exclude = character()
+) {
   # Identify which columns are fields vs metadata
   meta_cols <- c("airtable_id", "airtable_created_time")
-  field_cols <- setdiff(names(data), meta_cols)
+  field_cols <- setdiff(names(data), c(meta_cols, exclude))
 
   has_id <- !is.null(id_col) && id_col %in% names(data)
 

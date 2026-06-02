@@ -20,7 +20,8 @@ air_upsert(
 \item{table}{Table name or ID.}
 
 \item{data}{A data frame of records to upsert. May include an \code{airtable_id}
-column for direct record matching.}
+column for direct record matching. Computed field columns are silently
+dropped.}
 
 \item{merge_on}{Character vector of 1-3 field names to match on (for records
 without an \code{airtable_id}).}
@@ -52,5 +53,7 @@ updated directly by record ID (more efficient).
 the \code{merge_on} field(s) via Airtable's upsert mechanism.
 }
 
+Computed fields (formulas, rollups, autoNumber, createdTime,
+lastModifiedTime, etc.) are automatically excluded from the upload payload.
 Optionally creates missing columns.
 }

@@ -3,13 +3,21 @@
 #' Compares local data against the current table contents using a hash of
 #' specified fields, then creates/updates/deletes as needed.
 #'
+#' Computed fields (formulas, rollups, autoNumber, createdTime,
+#' lastModifiedTime, createdBy, lastModifiedBy, etc.) are automatically:
+#' - Excluded from the change-detection hash (they change server-side and
+#'   would cause spurious "changed" detections on every sync)
+#' - Excluded from the upload payload (the API rejects writes to them)
+#'
 #' @param base_id Base ID (e.g., `"appXXXXXX"`).
 #' @param table Table name or ID.
 #' @param data A data frame representing the desired state of the table.
+#'   May contain computed field columns (they are ignored).
 #' @param key Column name in `data` that uniquely identifies records (used as
 #'   the merge field for upsert). Must be a single field.
 #' @param hash_fields Character vector of fields to include in the change-
-#'   detection hash. If `NULL` (default), all non-key fields are used.
+#'   detection hash. If `NULL` (default), all non-key, non-computed fields are
+#'   used. Computed fields are always excluded even if explicitly listed.
 #' @param delete_missing If `TRUE` (default), records in Airtable that are not
 #'   in `data` will be deleted.
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
@@ -17,16 +25,14 @@
 #' @return A list with counts: `created`, `updated`, `deleted`, `unchanged`
 #'   (invisibly).
 #' @export
-air_sync <- function(
-  base_id,
-  table,
-  data,
-  key,
-  hash_fields = NULL,
-  delete_missing = TRUE,
-  typecast = TRUE,
-  .token = NULL
-) {
+air_sync <- function(base_id,
+                     table,
+                     data,
+                     key,
+                     hash_fields = NULL,
+                     delete_missing = TRUE,
+                     typecast = TRUE,
+                     .token = NULL) {
   check_string(base_id)
   check_string(table)
   check_string(key)
@@ -37,14 +43,26 @@ air_sync <- function(
     cli_abort("Key column {.field {key}} not found in {.arg data}.")
   }
 
-  meta_cols <- c("airtable_id", "airtable_created_time")
-  data_fields <- setdiff(names(data), meta_cols)
+  # Identify computed fields from schema
+  computed <- get_computed_fields(base_id, table, .token)
 
+  meta_cols <- c("airtable_id", "airtable_created_time")
+  data_fields <- setdiff(names(data), c(meta_cols, computed))
+
+  # Determine hash fields (exclude computed fields even if user listed them)
   if (is.null(hash_fields)) {
     hash_fields <- setdiff(data_fields, key)
+  } else {
+    removed <- intersect(hash_fields, computed)
+    if (length(removed) > 0L) {
+      cli_inform(
+        "Excluding computed field{?s} from hash: {.field {removed}}."
+      )
+    }
+    hash_fields <- setdiff(hash_fields, computed)
   }
 
-  # 1. Read existing records
+  # 1. Read existing records (without type coercion for consistent hashing)
   existing <- air_read(base_id, table, coerce = FALSE, .token = .token)
 
   # 2. Compute hashes for existing data
@@ -82,10 +100,8 @@ air_sync <- function(
   }
 
   # 4. Determine what changed
-  # Records to create: keys in data but not in existing
   to_create_idx <- which(!new_keys %in% existing_keys)
 
-  # Records to potentially update: keys in both
   shared_new_idx <- which(new_keys %in% existing_keys)
   to_update_idx <- integer()
   for (i in shared_new_idx) {
@@ -96,7 +112,6 @@ air_sync <- function(
   }
   n_unchanged <- length(shared_new_idx) - length(to_update_idx)
 
-  # Records to delete: keys in existing but not in data
   to_delete_keys <- setdiff(existing_keys, new_keys)
 
   # 5. Perform operations
@@ -104,30 +119,21 @@ air_sync <- function(
   n_updated <- 0L
   n_deleted <- 0L
 
-  # Upsert new + changed records together
+  # Upsert new + changed records (computed fields excluded by air_upsert)
   upsert_idx <- c(to_create_idx, to_update_idx)
   if (length(upsert_idx) > 0L) {
     upsert_data <- data[upsert_idx, data_fields, drop = FALSE]
 
-    # For records being updated, attach airtable_id from existing data so
-    # the upsert can use direct record ID matching (more efficient).
-    upsert_ids <- vapply(
-      upsert_idx,
-      function(i) {
-        ex_pos <- match(new_keys[i], existing_keys)
-        if (!is.na(ex_pos)) existing$airtable_id[ex_pos] else NA_character_
-      },
-      character(1)
-    )
+    # Attach airtable_id from existing data for direct record ID matching
+    upsert_ids <- vapply(upsert_idx, function(i) {
+      ex_pos <- match(new_keys[i], existing_keys)
+      if (!is.na(ex_pos)) existing$airtable_id[ex_pos] else NA_character_
+    }, character(1))
     upsert_data$airtable_id <- upsert_ids
 
     result <- air_upsert(
-      base_id,
-      table,
-      upsert_data,
-      merge_on = key,
-      typecast = typecast,
-      add_fields = "error",
+      base_id, table, upsert_data,
+      merge_on = key, typecast = typecast, add_fields = "error",
       .token = .token
     )
     n_created <- length(result$created)

@@ -14,6 +14,8 @@ air_read(
   max_records = Inf,
   page_size = 100L,
   coerce = TRUE,
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
   .token = NULL
 )
 }
@@ -38,6 +40,14 @@ values = \code{"asc"} or \code{"desc"}).}
 \item{coerce}{If \code{TRUE} (default), fetches schema and coerces types. If
 \code{FALSE}, returns raw values (faster but untyped).}
 
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
+
+\item{attachment_dir}{Directory for downloading attachments (required when
+\code{attachments = "file"}). Files are saved as
+\code{{attachment_dir}/{record_id}/{filename}}.}
+
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
@@ -57,6 +67,12 @@ df <- air_read("appXXXXXX", "Contacts")
 df <- air_read("appXXXXXX", "Contacts",
   fields = c("Name", "Email"),
   formula = "{Age} > 30"
+)
+
+# Download attachments to disk
+df <- air_read("appXXXXXX", "Projects",
+  attachments = "file",
+  attachment_dir = "downloads/"
 )
 }
 }

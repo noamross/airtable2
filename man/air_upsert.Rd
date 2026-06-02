@@ -11,6 +11,8 @@ air_upsert(
   merge_on,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
   .token = NULL
 )
 }
@@ -20,8 +22,8 @@ air_upsert(
 \item{table}{Table name or ID.}
 
 \item{data}{A data frame of records to upsert. May include an \code{airtable_id}
-column for direct record matching. Computed field columns are silently
-dropped.}
+column for direct record matching. Computed field columns and attachment
+field columns are silently dropped from the record payload.}
 
 \item{merge_on}{Character vector of 1-3 field names to match on (for records
 without an \code{airtable_id}).}
@@ -34,6 +36,14 @@ without an \code{airtable_id}).}
 \item \code{"warn"}: warn and drop unknown columns.
 \item \code{"yes"}: create missing fields before upserting (as \code{singleLineText}).
 }}
+
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
+
+\item{attachment_dir}{Directory for downloading attachments (required when
+\code{attachments = "file"}). Files are saved as
+\code{{attachment_dir}/{record_id}/{filename}}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -54,7 +64,9 @@ the \code{merge_on} field(s) via Airtable's upsert mechanism.
 }
 
 Computed fields (formulas, rollups, autoNumber, createdTime,
-lastModifiedTime, etc.) are automatically excluded from the upload payload.
+lastModifiedTime, etc.) and attachment fields are automatically excluded
+from the upload payload. When \code{attachments} is \code{"file"} or \code{"blob"},
+attachment content is uploaded separately after record creation/update.
 Optionally creates missing columns.
 }
 \examples{

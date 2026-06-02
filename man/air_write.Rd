@@ -4,7 +4,15 @@
 \alias{air_write}
 \title{Write (create) records in an Airtable table}
 \usage{
-air_write(base_id, table, data, typecast = TRUE, .token = NULL)
+air_write(
+  base_id,
+  table,
+  data,
+  typecast = TRUE,
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
+  .token = NULL
+)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -12,11 +20,19 @@ air_write(base_id, table, data, typecast = TRUE, .token = NULL)
 \item{table}{Table name or ID.}
 
 \item{data}{A data frame of records to create. Should not contain
-\code{airtable_id} (those would be ignored). Computed field columns are
-silently dropped.}
+\code{airtable_id} (those would be ignored). Computed field columns and
+attachment field columns are silently dropped from the record payload.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values
 to match field types.}
+
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
+
+\item{attachment_dir}{Directory for downloading attachments (required when
+\code{attachments = "file"}). Files are saved as
+\code{{attachment_dir}/{record_id}/{filename}}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -26,12 +42,20 @@ A character vector of the created record IDs (invisibly).
 \description{
 Converts a data frame into records and creates them in the specified table.
 Automatically batches in groups of 10. Computed fields (formulas, rollups,
-autoNumber, createdTime, lastModifiedTime, etc.) are automatically excluded
-from the upload.
+autoNumber, createdTime, lastModifiedTime, etc.) and attachment fields are
+automatically excluded from the upload payload. When \code{attachments} is
+\code{"file"} or \code{"blob"}, attachment content is uploaded separately after record
+creation using the dedicated upload endpoint.
 }
 \examples{
 \dontrun{
 data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
 ids <- air_write("appXXXXXX", "Contacts", data)
+
+# Write records and upload attachments from list-column
+ids <- air_write("appXXXXXX", "Projects", data,
+  attachments = "file",
+  attachment_dir = "files/"
+)
 }
 }

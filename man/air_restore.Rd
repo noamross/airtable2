@@ -4,7 +4,14 @@
 \alias{air_restore}
 \title{Restore a base from a dump}
 \usage{
-air_restore(dump, base_name = NULL, workspace_id, .token = NULL)
+air_restore(
+  dump,
+  base_name = NULL,
+  workspace_id,
+  attachments = c("file", "meta"),
+  attachment_dir = NULL,
+  .token = NULL
+)
 }
 \arguments{
 \item{dump}{Either a list (from \code{air_dump(format = "list")}) or a path to
@@ -14,11 +21,27 @@ a dump directory (from \code{air_dump(format = "json")}).}
 
 \item{workspace_id}{Workspace ID to create the base in.}
 
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
+
+\item{attachment_dir}{Directory for downloading attachments (required when
+\code{attachments = "file"}). Files are saved as
+\code{{attachment_dir}/{record_id}/{filename}}.}
+
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
 The new base ID (invisibly).
 }
 \description{
-Recreates a base from output of \code{\link[=air_dump]{air_dump()}}.
+Recreates a base from output of \code{\link[=air_dump]{air_dump()}}. When \code{attachments} is
+\code{"file"}, uploads attachment files from the dump directory after record
+creation.
+}
+\examples{
+\dontrun{
+# Restore from a directory dump
+air_restore("backup/", workspace_id = "wspXXXXXX")
+}
 }

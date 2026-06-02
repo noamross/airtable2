@@ -236,3 +236,161 @@ air_sync_attachments <- function(
   cli_inform("Attachment sync: {n_uploaded} uploaded, {n_skipped} skipped.")
   invisible(list(uploaded = n_uploaded, skipped = n_skipped))
 }
+
+# --- Internal helpers for broad attachment strategy ---
+
+#' Download attachment content for attachment list-columns in a tibble
+#'
+#' Modifies attachment list-columns in place to add downloaded content.
+#' Used by `air_read(..., attachments = "file"|"blob")`.
+#'
+#' @param tbl Tibble from `records_to_tibble()`.
+#' @param att_fields Character vector of attachment field names.
+#' @param mode `"file"` or `"blob"`.
+#' @param dir Directory for file downloads (required for `"file"` mode).
+#' @return Modified tibble with downloaded content added to attachment objects.
+#' @noRd
+download_attachments_in_tibble <- function(tbl, att_fields, mode, dir = NULL) {
+  if (mode == "file" && (is.null(dir) || !nzchar(dir))) {
+    cli_abort(
+      "{.arg attachment_dir} is required when {.code attachments = \"file\"}."
+    )
+  }
+  if (mode == "file" && !dir.exists(dir)) {
+    dir.create(dir, recursive = TRUE)
+  }
+
+  for (field in att_fields) {
+    if (!field %in% names(tbl)) {
+      next
+    }
+    tbl[[field]] <- lapply(seq_len(nrow(tbl)), function(i) {
+      atts <- tbl[[field]][[i]]
+      if (is.null(atts) || length(atts) == 0L) {
+        return(NULL)
+      }
+      record_id <- tbl$airtable_id[i]
+      lapply(atts, function(att) {
+        url <- att$url
+        if (is.null(url) || is.na(url)) {
+          return(att)
+        }
+        if (mode == "blob") {
+          resp <- httr2::request(url) |> httr2::req_perform()
+          att$content <- httr2::resp_body_raw(resp)
+        } else {
+          rec_dir <- file.path(dir, record_id)
+          if (!dir.exists(rec_dir)) {
+            dir.create(rec_dir, recursive = TRUE)
+          }
+          dest_path <- file.path(rec_dir, att$filename %||% "unnamed")
+          httr2::request(url) |> httr2::req_perform(path = dest_path)
+          att$local_path <- dest_path
+        }
+        att
+      })
+    })
+  }
+  tbl
+}
+
+#' Upload attachments from tibble list-columns after record creation
+#'
+#' For each record that has attachment data, upload files using
+#' `at_upload_attachment()`. Handles both "file" mode (local_path in
+#' attachment objects) and "blob" mode (content raw vectors).
+#'
+#' @param base_id Base ID.
+#' @param table Table name or ID.
+#' @param record_ids Character vector of created/updated record IDs.
+#' @param data Original data frame with attachment list-columns.
+#' @param att_fields Character vector of attachment field names.
+#' @param mode `"file"` or `"blob"`.
+#' @param attachment_dir Optional directory to resolve filenames from.
+#' @param .token Token.
+#' @return Invisible NULL.
+#' @noRd
+upload_attachments_from_tibble <- function(
+  base_id,
+  table,
+  record_ids,
+  data,
+
+  att_fields,
+  mode,
+  attachment_dir = NULL,
+  .token = NULL
+) {
+  n_uploaded <- 0L
+  for (field in att_fields) {
+    if (!field %in% names(data)) {
+      next
+    }
+    for (i in seq_along(record_ids)) {
+      atts <- data[[field]][[i]]
+      if (is.null(atts) || length(atts) == 0L) {
+        next
+      }
+      for (att in atts) {
+        file_path <- resolve_attachment_file(att, mode, attachment_dir)
+        if (is.null(file_path)) {
+          next
+        }
+        at_upload_attachment(
+          base_id = base_id,
+          table_id = table,
+          record_id = record_ids[i],
+          field_id = field,
+          file = file_path,
+          token = .token
+        )
+        # Clean up temp file from blob mode
+        if (mode == "blob" && grepl("^.*/airtable2_blob_", file_path)) {
+          unlink(file_path)
+        }
+        n_uploaded <- n_uploaded + 1L
+      }
+    }
+  }
+  if (n_uploaded > 0L) {
+    cli_inform("Uploaded {n_uploaded} attachment{?s}.")
+  }
+  invisible(NULL)
+}
+
+#' Resolve a file path from an attachment object
+#'
+#' Given an attachment list element and mode, return the local file path
+#' to upload. For "blob" mode, writes content to a temp file.
+#'
+#' @param att Attachment list (with `local_path`, `content`, or `filename`).
+#' @param mode `"file"` or `"blob"`.
+#' @param attachment_dir Directory to resolve filenames from (file mode).
+#' @return File path string, or NULL if no uploadable content.
+#' @noRd
+resolve_attachment_file <- function(att, mode, attachment_dir = NULL) {
+  if (mode == "blob") {
+    content <- att$content
+    if (is.null(content) || !is.raw(content)) {
+      return(NULL)
+    }
+    filename <- att$filename %||% "unnamed"
+    tmp <- tempfile(
+      pattern = "airtable2_blob_",
+      fileext = paste0(".", tools::file_ext(filename))
+    )
+    writeBin(content, tmp)
+    return(tmp)
+  }
+
+  # File mode: try local_path, then attachment_dir/filename
+
+  if (!is.null(att$local_path) && file.exists(att$local_path)) {
+    return(att$local_path)
+  }
+  if (!is.null(attachment_dir) && !is.null(att$filename)) {
+    candidate <- file.path(attachment_dir, att$filename)
+    if (file.exists(candidate)) return(candidate)
+  }
+  NULL
+}

@@ -55,14 +55,37 @@ computed_fields_from_schema <- function(schema) {
 #' @noRd
 get_computed_fields <- function(base_id, table, .token = NULL) {
   tables <- at_get_schema(base_id, token = .token)
-  tbl_schema <- Find(
-    function(t) t$name == table || t$id == table,
-    tables
-  )
+  tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
   if (is.null(tbl_schema)) {
     return(character())
   }
   computed_fields_from_schema(tbl_schema$fields)
+}
+
+#' Get attachment field names for a table (internal helper)
+#'
+#' Fetches schema and returns names of `multipleAttachments` fields.
+#' Used to exclude attachment columns from write payloads and hashing.
+#'
+#' @param base_id Base ID.
+#' @param table Table name or ID.
+#' @param .token Token.
+#' @return Character vector of attachment field names.
+#' @noRd
+get_attachment_fields <- function(base_id, table, .token = NULL) {
+  tables <- at_get_schema(base_id, token = .token)
+  tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
+  if (is.null(tbl_schema)) {
+    return(character())
+  }
+  vapply(
+    Filter(
+      function(f) (f$type %||% "") == "multipleAttachments",
+      tbl_schema$fields
+    ),
+    \(f) f$name,
+    character(1)
+  )
 }
 
 #' Map Airtable field types to R coercion functions
@@ -224,10 +247,7 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
   if (!is.null(coerce_fn) && !identical(coerce_fn, identity)) {
     # Replace NULLs with NA before coercion
     values[is_null] <- list(NA)
-    scalar <- tryCatch(
-      coerce_fn(unlist(values)),
-      error = function(e) NULL
-    )
+    scalar <- tryCatch(coerce_fn(unlist(values)), error = function(e) NULL)
     if (!is.null(scalar) && length(scalar) == length(values)) {
       return(scalar)
     }

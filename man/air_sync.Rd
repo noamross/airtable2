@@ -12,6 +12,8 @@ air_sync(
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
   .token = NULL
 )
 }
@@ -27,13 +29,22 @@ May contain computed field columns (they are ignored).}
 the merge field for upsert). Must be a single field.}
 
 \item{hash_fields}{Character vector of fields to include in the change-
-detection hash. If \code{NULL} (default), all non-key, non-computed fields are
-used. Computed fields are always excluded even if explicitly listed.}
+detection hash. If \code{NULL} (default), all non-key, non-computed,
+non-attachment fields are used. Computed and attachment fields are always
+excluded even if explicitly listed.}
 
 \item{delete_missing}{If \code{TRUE} (default), records in Airtable that are not
 in \code{data} will be deleted.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values.}
+
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
+
+\item{attachment_dir}{Directory for downloading attachments (required when
+\code{attachments = "file"}). Files are saved as
+\code{{attachment_dir}/{record_id}/{filename}}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -53,6 +64,11 @@ lastModifiedTime, createdBy, lastModifiedBy, etc.) are automatically:
 would cause spurious "changed" detections on every sync)
 \item Excluded from the upload payload (the API rejects writes to them)
 }
+
+Attachment fields (\code{multipleAttachments}) are always excluded from the
+change-detection hash because their URLs are volatile (expire hourly).
+When \code{attachments} is \code{"file"} or \code{"blob"}, attachment content is uploaded
+for newly created records after the sync completes.
 }
 \examples{
 \dontrun{

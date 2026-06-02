@@ -9,14 +9,20 @@
 #'   would cause spurious "changed" detections on every sync)
 #' - Excluded from the upload payload (the API rejects writes to them)
 #'
+#' Attachment fields (`multipleAttachments`) are always excluded from the
+#' change-detection hash because their URLs are volatile (expire hourly).
+#' When `attachments` is `"file"` or `"blob"`, attachment content is uploaded
+#' for newly created records after the sync completes.
+#'
 #' @inheritParams air_read
 #' @param data A data frame representing the desired state of the table.
 #'   May contain computed field columns (they are ignored).
 #' @param key Column name in `data` that uniquely identifies records (used as
 #'   the merge field for upsert). Must be a single field.
 #' @param hash_fields Character vector of fields to include in the change-
-#'   detection hash. If `NULL` (default), all non-key, non-computed fields are
-#'   used. Computed fields are always excluded even if explicitly listed.
+#'   detection hash. If `NULL` (default), all non-key, non-computed,
+#'   non-attachment fields are used. Computed and attachment fields are always
+#'   excluded even if explicitly listed.
 #' @param delete_missing If `TRUE` (default), records in Airtable that are not
 #'   in `data` will be deleted.
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
@@ -38,6 +44,8 @@ air_sync <- function(
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
   .token = NULL
 ) {
   check_string(base_id)
@@ -45,26 +53,31 @@ air_sync <- function(
   check_string(key)
   check_bool(delete_missing)
   check_bool(typecast)
+  attachments <- match.arg(attachments)
 
   if (!key %in% names(data)) {
     cli_abort("Key column {.field {key}} not found in {.arg data}.")
   }
 
-  # Identify computed fields from schema
+  # Identify computed and attachment fields from schema
   computed <- get_computed_fields(base_id, table, .token)
+  att_fields <- get_attachment_fields(base_id, table, .token)
 
   meta_cols <- c("airtable_id", "airtable_created_time")
   data_fields <- setdiff(names(data), c(meta_cols, computed))
 
-  # Determine hash fields (exclude computed fields even if user listed them)
+  # Determine hash fields (exclude computed AND attachment fields)
+  exclude_from_hash <- union(computed, att_fields)
   if (is.null(hash_fields)) {
-    hash_fields <- setdiff(data_fields, key)
+    hash_fields <- setdiff(data_fields, c(key, att_fields))
   } else {
-    removed <- intersect(hash_fields, computed)
+    removed <- intersect(hash_fields, exclude_from_hash)
     if (length(removed) > 0L) {
-      cli_inform("Excluding computed field{?s} from hash: {.field {removed}}.")
+      cli_inform(
+        "Excluding field{?s} from hash: {.field {removed}}."
+      )
     }
-    hash_fields <- setdiff(hash_fields, computed)
+    hash_fields <- setdiff(hash_fields, exclude_from_hash)
   }
 
   # 1. Read existing records (without type coercion for consistent hashing)
@@ -101,7 +114,7 @@ air_sync <- function(
   n_updated <- 0L
   n_deleted <- 0L
 
-  # Upsert new + changed records (computed fields excluded by air_upsert)
+  # Upsert new + changed records (computed + attachment fields excluded)
   upsert_idx <- c(to_create_idx, to_update_idx)
   if (length(upsert_idx) > 0L) {
     upsert_data <- data[upsert_idx, data_fields, drop = FALSE]
@@ -124,10 +137,30 @@ air_sync <- function(
       merge_on = key,
       typecast = typecast,
       add_fields = "error",
+      # Pass "meta" here; we handle attachment upload ourselves below
+      attachments = "meta",
       .token = .token
     )
     n_created <- length(result$created)
     n_updated <- length(result$updated)
+
+    # Upload attachments for newly created records
+    if (attachments != "meta" && n_created > 0L) {
+      data_att_fields <- intersect(att_fields, names(data))
+      if (length(data_att_fields) > 0L) {
+        created_data <- data[to_create_idx, , drop = FALSE]
+        upload_attachments_from_tibble(
+          base_id = base_id,
+          table = table,
+          record_ids = result$created,
+          data = created_data,
+          att_fields = data_att_fields,
+          mode = attachments,
+          attachment_dir = attachment_dir,
+          .token = .token
+        )
+      }
+    }
   }
 
   # Delete missing records

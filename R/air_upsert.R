@@ -9,13 +9,15 @@
 #'   the `merge_on` field(s) via Airtable's upsert mechanism.
 #'
 #' Computed fields (formulas, rollups, autoNumber, createdTime,
-#' lastModifiedTime, etc.) are automatically excluded from the upload payload.
+#' lastModifiedTime, etc.) and attachment fields are automatically excluded
+#' from the upload payload. When `attachments` is `"file"` or `"blob"`,
+#' attachment content is uploaded separately after record creation/update.
 #' Optionally creates missing columns.
 #'
 #' @inheritParams air_read
 #' @param data A data frame of records to upsert. May include an `airtable_id`
-#'   column for direct record matching. Computed field columns are silently
-#'   dropped.
+#'   column for direct record matching. Computed field columns and attachment
+#'   field columns are silently dropped from the record payload.
 #' @param merge_on Character vector of 1-3 field names to match on (for records
 #'   without an `airtable_id`).
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
@@ -36,18 +38,22 @@
 air_upsert <- function(
   base_id,
   table,
+
   data,
   merge_on,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  attachments = c("meta", "file", "blob"),
+  attachment_dir = NULL,
   .token = NULL
 ) {
   check_string(base_id)
   check_string(table)
   check_bool(typecast)
   add_fields <- match.arg(add_fields)
+  attachments <- match.arg(attachments)
 
-  # Fetch schema once for field validation + computed field detection
+  # Fetch schema once for field validation + computed/attachment field detection
   tables <- at_get_schema(base_id, token = .token)
   tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
 
@@ -62,7 +68,21 @@ air_upsert <- function(
     cli_inform("Dropping computed field{?s}: {.field {dropped}}.")
   }
 
-  # Check for unknown columns (excluding computed + metadata)
+  # Identify attachment fields (always excluded from payload)
+  att_fields <- if (!is.null(tbl_schema)) {
+    vapply(
+      Filter(
+        function(f) (f$type %||% "") == "multipleAttachments",
+        tbl_schema$fields
+      ),
+      \(f) f$name,
+      character(1)
+    )
+  } else {
+    character()
+  }
+
+  # Check for unknown columns (excluding computed + attachment + metadata)
   if (!is.null(tbl_schema)) {
     existing_fields <- vapply(
       tbl_schema$fields,
@@ -70,7 +90,7 @@ air_upsert <- function(
       character(1)
     )
     meta_cols <- c("airtable_id", "airtable_created_time")
-    data_fields <- setdiff(names(data), c(meta_cols, computed))
+    data_fields <- setdiff(names(data), c(meta_cols, computed, att_fields))
     unknown <- setdiff(data_fields, existing_fields)
 
     if (length(unknown) > 0L) {
@@ -101,11 +121,11 @@ air_upsert <- function(
     }
   }
 
+  # Exclude both computed and attachment fields from the record payload
+  exclude <- union(computed, intersect(att_fields, names(data)))
+
   # Use airtable_id for direct matching when available, merge_on otherwise.
-  # Records with airtable_id get their id set on the record body, which tells
-  # the API to update that specific record. Records without airtable_id rely on
-  # performUpsert.fieldsToMergeOn for matching.
-  records <- tibble_to_records(data, id_col = "airtable_id", exclude = computed)
+  records <- tibble_to_records(data, id_col = "airtable_id", exclude = exclude)
 
   result <- at_update_records(
     base_id = base_id,
@@ -120,6 +140,28 @@ air_upsert <- function(
   n_created <- length(result$createdRecords %||% character())
   n_updated <- length(result$updatedRecords %||% character())
   cli_inform("Upsert complete: {n_created} created, {n_updated} updated.")
+
+  # Upload attachments after upsert
+  if (attachments != "meta") {
+    data_att_fields <- intersect(att_fields, names(data))
+    if (length(data_att_fields) > 0L) {
+      # Get all record IDs from the upsert response
+      all_records <- result$records %||% list()
+      all_ids <- vapply(all_records, function(r) r$id, character(1))
+      if (length(all_ids) == nrow(data)) {
+        upload_attachments_from_tibble(
+          base_id = base_id,
+          table = table,
+          record_ids = all_ids,
+          data = data,
+          att_fields = data_att_fields,
+          mode = attachments,
+          attachment_dir = attachment_dir,
+          .token = .token
+        )
+      }
+    }
+  }
 
   invisible(list(
     created = result$createdRecords %||% character(),

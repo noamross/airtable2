@@ -4,15 +4,29 @@
 \alias{air_dump}
 \title{Dump an entire base (schema + data) for backup}
 \usage{
-air_dump(base_id, dir = NULL, format = c("list", "json"), .token = NULL)
+air_dump(
+  base_id,
+  dir = NULL,
+  format = c("list", "json"),
+  attachments = c("file", "meta", "blob"),
+  .token = NULL
+)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
-\item{dir}{Directory to write JSON files to (when \code{format = "json"}).
+\item{dir}{Directory to write JSON/attachment files to. When
+\code{format = "json"}, schema and data files are written here. When
+\code{attachments = "file"}, attachment files are saved under
+
+\code{{dir}/attachments/{table_name}/{record_id}/{filename}}.
 If \code{NULL} and format is \code{"json"}, uses a temp directory.}
 
 \item{format}{Either \code{"list"} (return as R list) or \code{"json"} (write files).}
+
+\item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
+only metadata (filename, url, size, type); \code{"file"} downloads to
+\code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -21,5 +35,16 @@ For \code{format = "list"}: a named list with \code{schema} and a tibble per
 table. For \code{format = "json"}: the directory path (invisibly).
 }
 \description{
-Exports the full schema and all table data from a base.
+Exports the full schema and all table data from a base. By default,
+attachments are downloaded to disk (\code{attachments = "file"}) since the
+purpose of a dump is to create a full backup.
+}
+\examples{
+\dontrun{
+# Full backup with attachments
+air_dump("appXXXXXX", dir = "backup/")
+
+# Quick dump without downloading attachments
+air_dump("appXXXXXX", dir = "backup/", attachments = "meta")
+}
 }

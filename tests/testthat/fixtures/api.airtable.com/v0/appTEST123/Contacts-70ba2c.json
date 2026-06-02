@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "id": "recALICE1",
+      "createdTime": "2024-01-01T00:00:00.000Z",
+      "fields": {
+        "Name": "Alice",
+        "Email": "alice@example.com",
+        "Age": 31,
+        "Active": true,
+        "Tags": [
+          "R",
+          "Python"
+        ]
+      }
+    },
+    {
+      "id": "recBOB1",
+      "createdTime": "2024-01-02T00:00:00.000Z",
+      "fields": {
+        "Name": "Bob",
+        "Email": "bob@example.com",
+        "Age": 26,
+        "Active": true,
+        "Tags": [
+          "Julia"
+        ]
+      }
+    }
+  ]
+}

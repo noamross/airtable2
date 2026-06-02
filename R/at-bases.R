@@ -9,9 +9,8 @@ at_list_bases <- function(token = NULL) {
   req <- air_req("meta/bases", token = token)
   records <- air_paginate(
     req,
-    page_size = 1000L,
+    page_size = NULL,
     record_accessor = function(body) body$bases
-
   )
 
   tibble::tibble(
@@ -42,7 +41,10 @@ at_get_schema <- function(base_id, token = NULL) {
 #' @export
 at_get_collaborators <- function(base_id, token = NULL) {
   check_string(base_id)
-  req <- air_req(paste0("meta/bases/", base_id, "/collaborators"), token = token)
+  req <- air_req(
+    paste0("meta/bases/", base_id, "/collaborators"),
+    token = token
+  )
   air_perform(req)
 }
 
@@ -56,7 +58,6 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #' @return The created base object (list with `id`, `name`, `tables`).
 #' @export
 at_create_base <- function(name, workspace_id, tables, token = NULL) {
-
   check_string(name)
   check_string(workspace_id)
 

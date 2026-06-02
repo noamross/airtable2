@@ -6,7 +6,7 @@
 #' Map Airtable field types to R coercion functions
 #' @noRd
 airtable_type_map <- function() {
- list(
+  list(
     singleLineText = as.character,
     multilineText = as.character,
     richText = as.character,
@@ -79,7 +79,11 @@ records_to_tibble <- function(records, schema = NULL) {
 
   # Extract metadata
   ids <- vapply(records, function(r) r$id %||% NA_character_, character(1))
-  created <- vapply(records, function(r) r$createdTime %||% NA_character_, character(1))
+  created <- vapply(
+    records,
+    function(r) r$createdTime %||% NA_character_,
+    character(1)
+  )
 
   # Collect all field names across records
   all_fields <- unique(unlist(lapply(records, function(r) names(r$fields))))
@@ -114,6 +118,15 @@ records_to_tibble <- function(records, schema = NULL) {
     airtable_created_time = coerce_datetime(created)
   )
   tbl[all_fields] <- cols
+
+  # Post-process: Airtable omits unchecked checkboxes; fill with FALSE
+  if (!is.null(type_lookup)) {
+    checkbox_fields <- names(type_lookup)[type_lookup == "checkbox"]
+    for (f in intersect(checkbox_fields, names(tbl))) {
+      tbl[[f]][is.na(tbl[[f]])] <- FALSE
+    }
+  }
+
   tbl
 }
 
@@ -127,9 +140,17 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
   is_null <- vapply(values, is.null, logical(1))
 
   # Determine if this is a list-column type
-  list_types <- c("multipleSelects", "multipleRecordLinks",
-                  "multipleAttachments", "lookup", "collaborator",
-                  "barcode", "button", "createdBy", "lastModifiedBy")
+  list_types <- c(
+    "multipleSelects",
+    "multipleRecordLinks",
+    "multipleAttachments",
+    "lookup",
+    "collaborator",
+    "barcode",
+    "button",
+    "createdBy",
+    "lastModifiedBy"
+  )
 
   if (!is.null(field_type) && field_type %in% list_types) {
     # Keep as list-column; replace NULLs with typed NAs
@@ -151,9 +172,13 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
   }
 
   # Fallback: attempt to unlist if all scalars, otherwise keep as list
-  scalar_check <- vapply(values, function(v) {
-    is.null(v) || (is.atomic(v) && length(v) == 1L)
-  }, logical(1))
+  scalar_check <- vapply(
+    values,
+    function(v) {
+      is.null(v) || (is.atomic(v) && length(v) == 1L)
+    },
+    logical(1)
+  )
 
   if (all(scalar_check)) {
     values[is_null] <- list(NA)
@@ -177,7 +202,7 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
 #' @noRd
 tibble_to_records <- function(data, id_col = "airtable_id") {
   # Identify which columns are fields vs metadata
- meta_cols <- c("airtable_id", "airtable_created_time")
+  meta_cols <- c("airtable_id", "airtable_created_time")
   field_cols <- setdiff(names(data), meta_cols)
 
   has_id <- !is.null(id_col) && id_col %in% names(data)

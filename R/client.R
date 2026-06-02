@@ -38,11 +38,14 @@ air_req <- function(endpoint, token = NULL) {
   httr2::request(base_url()) |>
     httr2::req_url_path_append(endpoint) |>
     httr2::req_auth_bearer_token(token) |>
-    httr2::req_user_agent(paste0("airtable2/", utils::packageVersion("airtable2"))) |>
+    httr2::req_user_agent(paste0(
+      "airtable2/",
+      utils::packageVersion("airtable2")
+    )) |>
     httr2::req_retry(
       max_tries = 3,
       is_transient = function(resp) httr2::resp_status(resp) == 429L,
-      backoff = ~ 30
+      backoff = ~30
     ) |>
     httr2::req_throttle(rate = 5 / 1)
 }
@@ -60,8 +63,7 @@ air_perform <- function(req, call = rlang::caller_env()) {
       )
       msg <- body$error$message %||% httr2::resp_status_desc(cnd$resp)
       cli_abort(
-        c("Airtable API error ({httr2::resp_status(cnd$resp)}).",
-          x = msg),
+        c("Airtable API error ({httr2::resp_status(cnd$resp)}).", x = msg),
         call = call,
         parent = cnd
       )
@@ -76,24 +78,31 @@ air_perform <- function(req, call = rlang::caller_env()) {
 #' or `max_records` is reached.
 #'
 #' @param req An `httr2_request` for a list endpoint.
-#' @param page_size Number of records per page (max 100).
+#' @param page_size Number of records per page (max 100). Set to `NULL` to
+#'   omit the `pageSize` query parameter (for endpoints that don't support it).
 #' @param max_records Maximum total records to fetch (`Inf` for all).
 #' @param record_accessor Function to extract records from the parsed response
 #'   body. Defaults to `function(body) body$records`.
 #' @return A list of all collected items.
 #' @noRd
-air_paginate <- function(req,
-                         page_size = 100L,
-                         max_records = Inf,
-                         record_accessor = function(body) body$records) {
+air_paginate <- function(
+  req,
+  page_size = 100L,
+  max_records = Inf,
+  record_accessor = function(body) body$records
+) {
   collected <- list()
   offset <- NULL
   remaining <- max_records
 
   repeat {
-    this_size <- min(page_size, remaining)
-    page_req <- req |>
-      httr2::req_url_query(pageSize = this_size)
+    page_req <- req
+
+    if (!is.null(page_size)) {
+      this_size <- min(page_size, remaining)
+      page_req <- page_req |>
+        httr2::req_url_query(pageSize = this_size)
+    }
 
     if (!is.null(offset)) {
       page_req <- page_req |>
@@ -103,7 +112,9 @@ air_paginate <- function(req,
     body <- air_perform(page_req)
     records <- record_accessor(body)
 
-    if (length(records) == 0L) break
+    if (length(records) == 0L) {
+      break
+    }
 
     collected <- c(collected, records)
     remaining <- remaining - length(records)

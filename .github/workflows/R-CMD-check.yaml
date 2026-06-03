@@ -19,11 +19,14 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
+          - {os: macos-latest,   r: 'release', env: 'standard-testing'}
+          - {os: windows-latest, r: 'release', env: 'standard-testing'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', env: 'standard-testing'}
+          - {os: ubuntu-latest,   r: 'release', env: 'standard-testing'}
+          - {os: ubuntu-latest,   r: 'oldrel-1', env: 'standard-testing'}
+          - {os: ubuntu-latest,   r: 'release', env: 'protected-testing'}
+
+    environment: ${{ matrix.config.env }}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -45,6 +48,10 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+        env: 
+          AIRTABLE_WORKSPACE_ID: ${{ secrets.AIRTABLE_WORKSPACE_ID }}
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
+          AIRTABLE_TEST_SCHEMA: ${{ vars.AIRTABLE_TEST_SCHEMA }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'

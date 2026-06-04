@@ -121,3 +121,25 @@ resolve_base_id <- function(base_id) {
   }
   id
 }
+
+#' Resolve workspace_id, falling back to the session default
+#'
+#' Mirrors `resolve_base_id()` but backed by `default_workspace_id()` from
+#' api-counter.R (option `airtable2.workspace_id` → env `AIRTABLE_WORKSPACE_ID`).
+#' @noRd
+resolve_workspace_id <- function(workspace_id) {
+  if (!is.null(workspace_id) && length(workspace_id) == 1L &&
+      !is.na(workspace_id) && nzchar(workspace_id)) {
+    return(workspace_id)
+  }
+  id <- default_workspace_id()
+  if (!nzchar(id)) {
+    cli_abort(
+      c(
+        "x" = "{.arg workspace_id} is required.",
+        "i" = "Set a default with {.envvar AIRTABLE_WORKSPACE_ID} or {.code options(airtable2.workspace_id = ...)}."
+      )
+    )
+  }
+  id
+}

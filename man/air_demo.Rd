@@ -23,19 +23,19 @@ air_demo(
 Invisibly returns a list of results from each step.
 }
 \description{
-Runs through the canonical airtable2 operations against a demo base,
-printing results at each step. If no \code{base_id} is provided and none is set
-as the session default, calls \code{\link[=air_demo_setup]{air_demo_setup()}} first.
+Runs through the canonical airtable2 operations against a BollardsForArt
+demo base, printing results at each step. If no \code{base_id} is provided and
+none is set as the session default, calls \code{\link[=air_demo_setup]{air_demo_setup()}} first.
 }
 \details{
-The walkthrough covers:
+The BollardsForArt walkthrough covers:
 \enumerate{
-\item Read all records from the People table
-\item Write a new record
+\item Read all records from the Artists table
+\item Write a new artist record
 \item Upsert (update or insert by Name)
 \item Sync (diff-based create/update/delete)
 \item Left-join local data with the Airtable table
-\item View the base schema
+\item View the base schema (including field descriptions)
 \item View API usage
 }
 

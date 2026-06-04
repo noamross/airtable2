@@ -53,14 +53,8 @@ NULL
   # Package-level state
   pkg_env$base_url <- "https://api.airtable.com/v0"
 
-  # Warn if both airtabler and airtable2 are loaded
-  if (isNamespaceLoaded("airtabler")) {
-    cli::cli_warn(c(
-      "!" = "Both {.pkg airtabler} and {.pkg airtable2} are loaded.",
-      "i" = "Many function names overlap between these packages.",
-      "i" = "Unload {.pkg airtabler} with {.code detach(\"package:airtabler\")} to avoid conflicts."
-    ))
-  }
+  # Note: the airtabler/airtable2 conflict warning lives in .onAttach (zzz.R),
+  # which is the conventional place for user-facing startup messages.
 
   register_pillar_method(
     "pillar_shaft",

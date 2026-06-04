@@ -4,12 +4,14 @@
 \alias{air_flatten_links}
 \title{Flatten a record-links list-column to delimited strings}
 \usage{
-air_flatten_links(x, sep = ", ")
+air_flatten_links(x, sep = NULL)
 }
 \arguments{
 \item{x}{A list-column where each element is a character vector of record IDs.}
 
-\item{sep}{Delimiter. Default \code{", "}.}
+\item{sep}{Delimiter. Default \code{"; "}, overridable via
+\code{options(airtable2.delimiter = ...)} or the \code{AIRTABLE2_DELIMITER}
+environment variable. An explicit \code{sep} argument always takes precedence.}
 }
 \value{
 A character vector.

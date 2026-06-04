@@ -17,7 +17,7 @@ test_that("air_dump/air_restore round-trip preserves table structure and record 
 
   # Seed the source base with known records
   clear_test_records()
-  air_write(test_contacts_data(), base_id, "Contacts")
+  air_write(test_contacts_data(), "Contacts", base_id)
 
   # ── Dump source ─────────────────────────────────────────────────────────────
   dump1 <- air_dump(base_id, format = "list", attachments = "meta")
@@ -100,4 +100,60 @@ test_that("air_dump/air_restore round-trip preserves table structure and record 
     tags2 <- lapply(contacts2$Tags[ord2], function(x) sort(as.character(x)))
     expect_equal(tags2, tags1, ignore_attr = TRUE)
   }
+})
+
+test_that("air_restore recreates a multipleRecordLinks field pointing at the right table", {
+  skip_on_cran()
+  # Same gate as the round-trip test above: creates a new base that cannot be
+  # deleted on the free tier, so it must stay behind AIRTABLE_TEST_SCHEMA.
+  skip_if_no_schema_tests()
+
+  # Build a 2-table fixture base with a link field: Projects -> Contacts.
+  fixture_name <- paste0(
+    TEST_MAIN_BASE_NAME,
+    "_link_fixture_",
+    format(Sys.time(), "%Y%m%d%H%M%S")
+  )
+  fixture <- at_create_base(
+    name = fixture_name,
+    tables = list(
+      list(
+        name = "Contacts",
+        fields = list(list(name = "Name", type = "singleLineText"))
+      ),
+      list(
+        name = "Projects",
+        fields = list(list(name = "Title", type = "singleLineText"))
+      )
+    )
+  )
+  fixture_id <- fixture$id
+
+  # Add a link field on Projects pointing at Contacts.
+  fx_schema <- at_get_schema(fixture_id)
+  contacts_tbl <- Filter(function(t) t$name == "Contacts", fx_schema)[[1]]
+  projects_tbl <- Filter(function(t) t$name == "Projects", fx_schema)[[1]]
+  at_create_field(
+    "Owner",
+    base_id = fixture_id,
+    table_id = projects_tbl$id,
+    type = "multipleRecordLinks",
+    options = list(linkedTableId = contacts_tbl$id)
+  )
+
+  # Dump and restore.
+  dump <- air_dump(fixture_id, format = "list", attachments = "meta")
+  restore_name <- paste0(fixture_name, "_restore")
+  new_base_id <- air_restore(dump, base_name = restore_name, attachments = "meta")
+
+  # Restored Projects table should have a multipleRecordLinks "Owner" field
+  # whose linkedTableId points at the restored Contacts table.
+  new_schema <- at_get_schema(new_base_id)
+  new_contacts <- Filter(function(t) t$name == "Contacts", new_schema)[[1]]
+  new_projects <- Filter(function(t) t$name == "Projects", new_schema)[[1]]
+
+  owner <- Filter(function(f) f$name == "Owner", new_projects$fields)
+  expect_length(owner, 1L)
+  expect_equal(owner[[1]]$type, "multipleRecordLinks")
+  expect_equal(owner[[1]]$options$linkedTableId, new_contacts$id)
 })

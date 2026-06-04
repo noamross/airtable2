@@ -11,6 +11,9 @@
 #'   [air_token()] if `NULL`).
 #' @param include_views Logical. If `TRUE`, views are included in the
 #'   connection pane alongside tables. Default `FALSE`.
+#' @param .connect_code Character. Optional custom reconnect code for the IDE
+#'   connection pane. Defaults to a `DBI::dbConnect()` call. Set by
+#'   [air_pane()] to use `airtable2::air_pane()` instead.
 #' @return An [AirtableConnection-class] object.
 #' @export
 #' @examples
@@ -21,7 +24,8 @@
 #' # Connect to all accessible bases
 #' con <- air_connect()
 #' }
-air_connect <- function(base = NULL, .token = NULL, include_views = FALSE) {
+air_connect <- function(base = NULL, .token = NULL, include_views = FALSE,
+                        .connect_code = NULL) {
   .token <- .token %||% air_token()
 
   base_id <- base
@@ -65,9 +69,10 @@ air_connect <- function(base = NULL, .token = NULL, include_views = FALSE) {
 
   DBI::dbConnect(
     airtable2(),
-    base_id      = base_id,
-    token        = .token,
-    include_views = include_views
+    base_id       = base_id,
+    token         = .token,
+    include_views = include_views,
+    connect_code  = .connect_code
   )
 }
 
@@ -80,7 +85,14 @@ air_connect <- function(base = NULL, .token = NULL, include_views = FALSE) {
 #' @return An [AirtableConnection-class] object (invisibly).
 #' @export
 air_pane <- function(base = NULL, .token = NULL, include_views = FALSE) {
-  con <- air_connect(base = base, .token = .token, include_views = include_views)
+  # Build the reconnect code before connecting so the pane "Reconnect" button
+  # calls air_pane() rather than DBI::dbConnect() directly.
+  connect_code <- pane_connect_code(base, include_views)
+
+  con <- air_connect(
+    base = base, .token = .token, include_views = include_views,
+    .connect_code = connect_code
+  )
 
   if (!DBI::dbIsValid(con)) {
     cli::cli_abort("Failed to establish a valid Airtable connection.")
@@ -91,4 +103,19 @@ air_pane <- function(base = NULL, .token = NULL, include_views = FALSE) {
   )
 
   invisible(con)
+}
+
+#' Build reconnect code for air_pane()
+#' @noRd
+pane_connect_code <- function(base = NULL, include_views = FALSE) {
+  if (is.null(base)) {
+    if (isTRUE(include_views)) {
+      return('airtable2::air_pane(include_views = TRUE)')
+    }
+    return('airtable2::air_pane()')
+  }
+  if (isTRUE(include_views)) {
+    return(glue::glue('airtable2::air_pane(base = "{base}", include_views = TRUE)'))
+  }
+  glue::glue('airtable2::air_pane(base = "{base}")')
 }

@@ -14,9 +14,9 @@
 #' When `attachments` is `"file"` or `"blob"`, attachment content is uploaded
 #' for newly created records after the sync completes.
 #'
-#' @inheritParams air_read
 #' @param data A data frame representing the desired state of the table.
 #'   May contain computed field columns (they are ignored).
+#' @inheritParams air_read
 #' @param key Column name in `data` that uniquely identifies records (used as
 #'   the merge field for upsert). Must be a single field.
 #' @param hash_fields Character vector of fields to include in the change-
@@ -33,22 +33,19 @@
 #'   `airtable2.progress.bar` or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @return A list with counts: `created`, `updated`, `deleted`, `unchanged`
 #'   (invisibly).
-#' @param base_id Base ID (e.g., `"appXXXXXX"`). If `NULL`, uses the session
-#'   default set by [air_set_base()] or the `AIRTABLE_BASE_ID` environment
-#'   variable.
 #' @examples
 #' \dontrun{
 #' desired <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 26))
-#' result <- air_sync(desired, "appXXXXXX", "Contacts", key = "Name")
+#' result <- air_sync(desired, "Contacts", key = "Name", base_id = "appXXXXXX")
 #' result$created
 #' result$unchanged
 #' }
 #' @export
 air_sync <- function(
   data,
-  base_id = NULL,
   table,
   key,
+  base_id = NULL,
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
@@ -92,7 +89,7 @@ air_sync <- function(
   }
 
   # 1. Read existing records (without type coercion for consistent hashing)
-  existing <- air_read(base_id, table, coerce = FALSE, .token = .token, progress = progress)
+  existing <- air_read(table, base_id, coerce = FALSE, .token = .token, progress = progress)
 
   # 2. Compute keys and hashes
   existing_keys <- if (nrow(existing) > 0 && key %in% names(existing)) {
@@ -143,9 +140,9 @@ air_sync <- function(
 
     result <- air_upsert(
       upsert_data,
-      base_id,
       table,
       merge_on = key,
+      base_id = base_id,
       typecast = typecast,
       add_fields = add_fields,
       # Pass "meta" here; we handle attachment upload ourselves below

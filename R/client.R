@@ -62,17 +62,42 @@ air_req <- function(endpoint, token = NULL) {
 #' Perform a request and parse the JSON response
 #' @noRd
 air_perform <- function(req, call = rlang::caller_env()) {
-  resp <- tryCatch(httr2::req_perform(req), httr2_http_error = function(cnd) {
+  resp <- tryCatch(httr2::req_perform(req), httr2_http = function(cnd) {
     # A request that reaches the server (even a 4xx/5xx) still consumes quota.
     count_api_call(req)
-    # Extract Airtable error info if available
+
+    status <- httr2::resp_status(cnd$resp)
+    status_desc <- httr2::resp_status_desc(cnd$resp)
+
+    # Airtable's error field may be an object {type, message} or a bare string.
     body <- tryCatch(httr2::resp_body_json(cnd$resp), error = function(e) NULL)
-    msg <- body$error$message %||% httr2::resp_status_desc(cnd$resp)
-    cli_abort(
-      c("Airtable API error ({httr2::resp_status(cnd$resp)}).", x = msg),
-      call = call,
-      parent = cnd
+    parsed <- parse_airtable_error(body)
+
+    bullets <- c(
+      "Airtable API error ({status} {status_desc})."
     )
+    if (!is.na(parsed$type)) {
+      bullets <- c(bullets, x = "{parsed$type}")
+    }
+    if (!is.na(parsed$message)) {
+      bullets <- c(bullets, x = "{parsed$message}")
+    }
+
+    # Name the base/table from the URL (helps spot a wrong table name).
+    ids <- tryCatch(airtable_url_ids(cnd$request$url), error = function(e) NULL)
+    if (!is.null(ids) && !is.na(ids$table)) {
+      bullets <- c(
+        bullets,
+        i = "Request was for table {.val {ids$table}} in base {.val {ids$base_id}}."
+      )
+    }
+
+    bullets <- c(
+      bullets,
+      airtable_error_hint(parsed$type, cnd$request$url)
+    )
+
+    cli_abort(bullets, call = call, parent = cnd)
   })
   count_api_call(req)
   httr2::resp_body_json(resp)

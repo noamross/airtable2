@@ -14,7 +14,7 @@ Description: A modern R client for the 'Airtable' REST API. Provides low-level
     upserting, and syncing records, and a DBI-compliant interface for
     RStudio/Positron connection pane integration.
 License: MIT + file LICENSE
-URL: https://github.com/noamross/airtable2
+URL: https://github.com/noamross/airtable2, https://noamross.github.io/airtable2/
 BugReports: https://github.com/noamross/airtable2/issues
 Depends:
     R (>= 4.1.0)

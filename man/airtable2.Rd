@@ -15,7 +15,14 @@ at()
 
 airtable()
 
-\S4method{dbConnect}{AirtableDriver}(drv, token = NULL, base_id = NULL, include_views = FALSE, ...)
+\S4method{dbConnect}{AirtableDriver}(
+  drv,
+  token = NULL,
+  base_id = NULL,
+  include_views = FALSE,
+  connect_code = NULL,
+  ...
+)
 
 \S4method{dbDataType}{AirtableDriver}(dbObj, obj, ...)
 

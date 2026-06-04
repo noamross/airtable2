@@ -7,13 +7,10 @@
 #' `"file"` or `"blob"`, attachment content is uploaded separately after record
 #' creation using the dedicated upload endpoint.
 #'
-#' @inheritParams air_read
 #' @param data A data frame of records to create. Should not contain
 #'   `airtable_id` (those would be ignored). Computed field columns and
 #'   attachment field columns are silently dropped from the record payload.
-#' @param base_id Base ID (e.g., `"appXXXXXX"`). If `NULL`, uses the session
-#'   default set by [air_set_base()] or the `AIRTABLE_BASE_ID` environment
-#'   variable.
+#' @inheritParams air_read
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values
 #'   to match field types.
 #' @param add_fields What to do when `data` contains columns not in the table:
@@ -24,22 +21,22 @@
 #' @examples
 #' \dontrun{
 #' data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
-#' ids <- air_write(data, "appXXXXXX", "Contacts")
+#' ids <- air_write(data, "Contacts", "appXXXXXX")
 #'
 #' # Write records and upload attachments from list-column
-#' ids <- air_write(data, "appXXXXXX", "Projects",
+#' ids <- air_write(data, "Projects", "appXXXXXX",
 #'   attachments = "file",
 #'   attachment_dir = "files/"
 #' )
 #'
 #' # Write records and add new columns if they don't exist
-#' ids <- air_write(data, "appXXXXXX", "Contacts", add_fields = "yes")
+#' ids <- air_write(data, "Contacts", "appXXXXXX", add_fields = "yes")
 #' }
 #' @export
 air_write <- function(
   data,
-  base_id = NULL,
   table,
+  base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
@@ -60,7 +57,12 @@ air_write <- function(
   att_fields <- wf$att_fields
   exclude    <- wf$exclude
 
-  records <- tibble_to_records(data, id_col = NULL, exclude = exclude)
+  records <- tibble_to_records(
+    data,
+    id_col = NULL,
+    exclude = exclude,
+    field_types = wf$field_types
+  )
 
   results <- at_create_records(
     base_id = base_id,
@@ -102,7 +104,8 @@ air_write <- function(
 #' warns about or drops unknown columns, and optionally creates missing fields.
 #' Uses the session schema cache via `get_table_schema()`.
 #'
-#' @return A list with `computed`, `att_fields`, and `exclude` character vectors.
+#' @return A list with `computed`, `att_fields`, and `exclude` character
+#'   vectors, plus `field_types` (named field name -> Airtable type, or `NULL`).
 #' @noRd
 prepare_write_fields <- function(base_id, table, data, add_fields, .token,
                                  call = rlang::caller_env()) {
@@ -118,6 +121,14 @@ prepare_write_fields <- function(base_id, table, data, add_fields, .token,
     get_table_schema(base_id, table, token = .token),
     error = function(e) NULL
   )
+
+  field_types <- NULL
+  if (!is.null(tbl_schema)) {
+    field_types <- stats::setNames(
+      vapply(tbl_schema$fields, function(f) f$type %||% "", character(1)),
+      vapply(tbl_schema$fields, function(f) f$name, character(1))
+    )
+  }
 
   if (!is.null(tbl_schema)) {
     existing_fields <- vapply(tbl_schema$fields, function(f) f$name, character(1))
@@ -157,8 +168,9 @@ prepare_write_fields <- function(base_id, table, data, add_fields, .token,
   }
 
   list(
-    computed   = computed,
-    att_fields = att_fields,
-    exclude    = union(computed, intersect(att_fields, names(data)))
+    computed    = computed,
+    att_fields  = att_fields,
+    exclude     = union(computed, intersect(att_fields, names(data))),
+    field_types = field_types
   )
 }

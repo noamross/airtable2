@@ -3,8 +3,17 @@ test_that("at_get_schema validates base_id", {
 })
 
 test_that("at_create_base validates inputs", {
-  expect_error(at_create_base(123, "wsp1", list()), "must be a single non-NA string")
-  expect_error(at_create_base("Base", 123, list()), "must be a single non-NA string")
+  # signature: at_create_base(name, tables, workspace_id = NULL)
+  # bad name (arg 1)
+  expect_error(
+    at_create_base(123, list(), "wsp1"),
+    "must be a single non-NA string"
+  )
+  # bad workspace_id (arg 3): valid name + valid tables list + non-string ws
+  expect_error(
+    at_create_base("Base", list(), 123),
+    "must be a single non-NA string"
+  )
 })
 
 # ── at_get_base ───────────────────────────────────────────────────────────────

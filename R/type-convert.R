@@ -2,13 +2,25 @@
 #
 # These help users work with list-columns in a flat-friendly way.
 
+#' @noRd
+resolve_delimiter <- function(sep = NULL) {
+  if (!is.null(sep)) return(sep)
+  opt <- getOption("airtable2.delimiter", NULL)
+  if (!is.null(opt)) return(opt)
+  env <- Sys.getenv("AIRTABLE2_DELIMITER", unset = "")
+  if (nzchar(env)) env else "; "
+}
+
 #' Flatten a multi-select list-column to delimited strings
 #'
 #' @param x A list-column where each element is a character vector.
-#' @param sep Delimiter to join values. Default `", "`.
+#' @param sep Delimiter to join values. Default `"; "`, overridable via
+#'   `options(airtable2.delimiter = ...)` or the `AIRTABLE2_DELIMITER`
+#'   environment variable. An explicit `sep` argument always takes precedence.
 #' @return A character vector.
 #' @export
-air_flatten_multiselect <- function(x, sep = ", ") {
+air_flatten_multiselect <- function(x, sep = NULL) {
+  sep <- resolve_delimiter(sep)
   vapply(
     x,
     function(val) {
@@ -26,15 +38,27 @@ air_flatten_multiselect <- function(x, sep = ", ") {
 #' Inverse of [air_flatten_multiselect()].
 #'
 #' @param x A character vector of delimited values.
-#' @param sep Delimiter to split on. Default `", "`.
+#' @param sep Delimiter to split on. Default `"; "` (tolerates optional
+#'   surrounding spaces when the delimiter is a semicolon family), overridable
+#'   via `options(airtable2.delimiter = ...)` or the `AIRTABLE2_DELIMITER`
+#'   environment variable. An explicit `sep` argument always takes precedence.
 #' @return A list of character vectors.
 #' @export
-air_expand_multiselect <- function(x, sep = ", ") {
+air_expand_multiselect <- function(x, sep = NULL) {
+  sep <- resolve_delimiter(sep)
+  # When the delimiter is semicolon-based (default or env/option returning ";")
+  # use a regex that tolerates optional surrounding whitespace so that
+  # "A; B", "A;B", and "A ; B" all split correctly.
+  is_semi <- grepl(";", sep, fixed = TRUE)
   lapply(x, function(val) {
     if (is.na(val)) {
       return(NULL)
     }
-    trimws(strsplit(val, sep, fixed = TRUE)[[1]])
+    if (is_semi) {
+      trimws(strsplit(val, "\\s*;\\s*")[[1]])
+    } else {
+      trimws(strsplit(val, sep, fixed = TRUE)[[1]])
+    }
   })
 }
 
@@ -84,11 +108,13 @@ air_expand_collaborator <- function(x, pattern = "(.+) <(.+)>") {
 #' Flatten a record-links list-column to delimited strings
 #'
 #' @param x A list-column where each element is a character vector of record IDs.
-#' @param sep Delimiter. Default `", "`.
+#' @param sep Delimiter. Default `"; "`, overridable via
+#'   `options(airtable2.delimiter = ...)` or the `AIRTABLE2_DELIMITER`
+#'   environment variable. An explicit `sep` argument always takes precedence.
 #' @return A character vector.
 #' @export
-air_flatten_links <- function(x, sep = ", ") {
-  air_flatten_multiselect(x, sep = sep)
+air_flatten_links <- function(x, sep = NULL) {
+  air_flatten_multiselect(x, sep = resolve_delimiter(sep))
 }
 
 #' Flatten an attachments list-column to a summary string
@@ -97,10 +123,13 @@ air_flatten_links <- function(x, sep = ", ") {
 #'   attachment objects.
 #' @param field Which attachment field to extract (e.g., `"filename"`, `"url"`).
 #'   Default `"filename"`.
-#' @param sep Delimiter. Default `", "`.
+#' @param sep Delimiter. Default `"; "`, overridable via
+#'   `options(airtable2.delimiter = ...)` or the `AIRTABLE2_DELIMITER`
+#'   environment variable. An explicit `sep` argument always takes precedence.
 #' @return A character vector.
 #' @export
-air_flatten_attachments <- function(x, field = "filename", sep = ", ") {
+air_flatten_attachments <- function(x, field = "filename", sep = NULL) {
+  sep <- resolve_delimiter(sep)
   vapply(
     x,
     function(val) {
@@ -121,6 +150,46 @@ air_flatten_attachments <- function(x, field = "filename", sep = ", ") {
     },
     character(1)
   )
+}
+
+#' Flatten a complex Airtable column to a simple atomic vector
+#'
+#' Generic that dispatches on the `air_*` S3 class of a column, applying the
+#' appropriate per-type flattener. Plain (already-flat) vectors are returned
+#' unchanged.
+#'
+#' @param x A column, typically an `air_*` list-column from [air_read()].
+#' @param ... Passed to the underlying flattener, e.g. `sep`, `field`,
+#'   `format`.
+#' @return A character vector (or `x` unchanged for non-`air_*` input).
+#' @export
+air_flatten <- function(x, ...) {
+  UseMethod("air_flatten")
+}
+
+#' @export
+air_flatten.air_multiselect <- function(x, ...) {
+  air_flatten_multiselect(unclass(x), ...)
+}
+
+#' @export
+air_flatten.air_links <- function(x, ...) {
+  air_flatten_links(unclass(x), ...)
+}
+
+#' @export
+air_flatten.air_attachments <- function(x, ...) {
+  air_flatten_attachments(unclass(x), ...)
+}
+
+#' @export
+air_flatten.air_collaborator <- function(x, ...) {
+  air_flatten_collaborator(unclass(x), ...)
+}
+
+#' @export
+air_flatten.default <- function(x, ...) {
+  x
 }
 
 #' Simplify all complex columns in a tibble for display/export
@@ -149,6 +218,18 @@ air_simplify <- function(data, schema = NULL) {
       next
     }
 
+    # Classed air_* columns: route through the air_flatten() generic.
+    air_classes <- c(
+      "air_multiselect",
+      "air_links",
+      "air_attachments",
+      "air_collaborator"
+    )
+    if (inherits(col, air_classes)) {
+      data[[col_name]] <- air_flatten(col)
+      next
+    }
+
     field_type <- type_lookup[[col_name]]
 
     data[[col_name]] <- if (!is.null(field_type)) {
@@ -165,7 +246,7 @@ air_simplify <- function(data, schema = NULL) {
             if (is.null(v)) {
               NA_character_
             } else {
-              paste(format(v), collapse = ", ")
+              paste(format(v), collapse = "; ")
             }
           },
           character(1)
@@ -179,7 +260,7 @@ air_simplify <- function(data, schema = NULL) {
           if (is.null(v)) {
             NA_character_
           } else {
-            paste(format(v), collapse = ", ")
+            paste(format(v), collapse = "; ")
           }
         },
         character(1)

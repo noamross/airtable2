@@ -4,14 +4,16 @@
 \alias{air_delete}
 \title{Delete records from a table (high-level)}
 \usage{
-air_delete(base_id, table, record_ids, .token = NULL, progress = NULL)
+air_delete(record_ids, table, base_id = NULL, .token = NULL, progress = NULL)
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
+\item{record_ids}{Character vector of record IDs to delete.}
 
 \item{table}{Table name or ID.}
 
-\item{record_ids}{Character vector of record IDs to delete.}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 
@@ -27,6 +29,6 @@ A convenience wrapper around \code{\link[=at_delete_records]{at_delete_records()
 }
 \examples{
 \dontrun{
-air_delete("appXXXXXX", "Contacts", c("recABC", "recDEF"))
+air_delete(c("recABC", "recDEF"), "Contacts", "appXXXXXX")
 }
 }

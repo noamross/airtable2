@@ -8,12 +8,12 @@ test_that("air_write creates records and air_read retrieves them", {
   base_id <- get_test_base()
 
   data <- test_contacts_data()
-  ids <- air_write(data, base_id, "Contacts")
+  ids <- air_write(data, "Contacts", base_id)
 
   expect_length(ids, 3L)
  expect_true(all(grepl("^rec", ids)))
 
-  result <- air_read(base_id, "Contacts")
+  result <- air_read("Contacts", base_id)
   expect_equal(nrow(result), 3L)
   expect_true("airtable_id" %in% names(result))
   expect_true("airtable_created_time" %in% names(result))
@@ -33,9 +33,9 @@ test_that("air_read returns correct types for checkboxes", {
   base_id <- get_test_base()
 
   data <- tibble::tibble(Name = c("Yes", "No"), Active = c(TRUE, FALSE))
-  air_write(data, base_id, "Contacts")
+  air_write(data, "Contacts", base_id)
 
-  result <- air_read(base_id, "Contacts")
+  result <- air_read("Contacts", base_id)
   yes_row <- result[result$Name == "Yes", ]
   no_row <- result[result$Name == "No", ]
   expect_true(yes_row$Active)
@@ -47,9 +47,9 @@ test_that("air_read with fields parameter returns subset", {
   clear_test_records()
   base_id <- get_test_base()
 
-  air_write(test_contacts_data(), base_id, "Contacts")
+  air_write(test_contacts_data(), "Contacts", base_id)
 
-  result <- air_read(base_id, "Contacts", fields = c("Name", "Age"))
+  result <- air_read("Contacts", base_id, fields = c("Name", "Age"))
   expect_true("Name" %in% names(result))
   expect_true("Age" %in% names(result))
   expect_equal(nrow(result), 3L)
@@ -60,9 +60,9 @@ test_that("air_read with formula filters records", {
   clear_test_records()
   base_id <- get_test_base()
 
-  air_write(test_contacts_data(), base_id, "Contacts")
+  air_write(test_contacts_data(), "Contacts", base_id)
 
-  result <- air_read(base_id, "Contacts", formula = "{Age} > 28")
+  result <- air_read("Contacts", base_id, formula = "{Age} > 28")
   expect_equal(nrow(result), 2L)
   expect_true(all(result$Age > 28))
 })
@@ -72,7 +72,7 @@ test_that("air_read on empty table returns 0-row tibble", {
   clear_test_records()
   base_id <- get_test_base()
 
-  result <- air_read(base_id, "Contacts")
+  result <- air_read("Contacts", base_id)
   expect_s3_class(result, "tbl_df")
   expect_equal(nrow(result), 0L)
   expect_true("airtable_id" %in% names(result))

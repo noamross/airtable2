@@ -111,6 +111,50 @@ test_that("print.at_sitrep returns the object invisibly", {
   expect_false(ret$visible)
 })
 
+# ── print.at_sitrep hyperlinks ──────────────────────────────────────────────
+
+test_that("print.at_sitrep uses hyperlinks for base IDs", {
+  withr::local_options(cli.hyperlink = TRUE, cli.num_colors = 1)
+  result <- structure(
+    list(
+      user = list(id = "usr1", email = "a@b.com"),
+      scopes = NULL,
+      bases = tibble::tibble(
+        id = "appXXXXXX",
+        name = "MyBase",
+        permissionLevel = "create"
+      ),
+      error = NULL
+    ),
+    class = "at_sitrep"
+  )
+  out <- cli::cli_fmt(print(result))
+  combined <- paste(out, collapse = "")
+  # The output should contain the base URL for the hyperlink
+  expect_match(combined, "https://airtable.com/appXXXXXX", fixed = TRUE)
+})
+
+test_that("print.at_sitrep base ID hyperlink text is the ID itself", {
+  withr::local_options(cli.hyperlink = TRUE, cli.num_colors = 1)
+  result <- structure(
+    list(
+      user = list(id = "usr1", email = "a@b.com"),
+      scopes = NULL,
+      bases = tibble::tibble(
+        id = "appHYPERLINK",
+        name = "MyBase",
+        permissionLevel = "create"
+      ),
+      error = NULL
+    ),
+    class = "at_sitrep"
+  )
+  out <- cli::cli_fmt(print(result))
+  combined <- paste(out, collapse = "")
+  # The ID string must appear as the visible link text
+  expect_match(combined, "appHYPERLINK", fixed = TRUE)
+})
+
 # ── at_upload_attachment ─────────────────────────────────────────────────────
 
 test_that("at_upload_attachment validates inputs", {

@@ -14,10 +14,10 @@
 #' attachment content is uploaded separately after record creation/update.
 #' Optionally creates missing columns.
 #'
-#' @inheritParams air_read
 #' @param data A data frame of records to upsert. May include an `airtable_id`
 #'   column for direct record matching. Computed field columns and attachment
 #'   field columns are silently dropped from the record payload.
+#' @inheritParams air_read
 #' @param merge_on Character vector of 1-3 field names to match on (for records
 #'   without an `airtable_id`).
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
@@ -30,22 +30,19 @@
 #'   or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @return A list with `created` and `updated` character vectors of record IDs
 #'   (invisibly).
-#' @param base_id Base ID (e.g., `"appXXXXXX"`). If `NULL`, uses the session
-#'   default set by [air_set_base()] or the `AIRTABLE_BASE_ID` environment
-#'   variable.
 #' @examples
 #' \dontrun{
 #' data <- data.frame(Name = c("Alice", "Bob"), Age = c(31, 26))
-#' result <- air_upsert(data, "appXXXXXX", "Contacts", merge_on = "Name")
+#' result <- air_upsert(data, "Contacts", merge_on = "Name", base_id = "appXXXXXX")
 #' result$created
 #' result$updated
 #' }
 #' @export
 air_upsert <- function(
   data,
-  base_id = NULL,
   table,
   merge_on,
+  base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
@@ -68,7 +65,12 @@ air_upsert <- function(
   exclude    <- wf$exclude
 
   # Use airtable_id for direct matching when available, merge_on otherwise.
-  records <- tibble_to_records(data, id_col = "airtable_id", exclude = exclude)
+  records <- tibble_to_records(
+    data,
+    id_col = "airtable_id",
+    exclude = exclude,
+    field_types = wf$field_types
+  )
 
   result <- at_update_records(
     base_id = base_id,

@@ -6,8 +6,8 @@
 \usage{
 air_write(
   data,
-  base_id = NULL,
   table,
+  base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
@@ -21,11 +21,11 @@ air_write(
 \code{airtable_id} (those would be ignored). Computed field columns and
 attachment field columns are silently dropped from the record payload.}
 
+\item{table}{Table name or ID.}
+
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
 default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
 variable.}
-
-\item{table}{Table name or ID.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values
 to match field types.}
@@ -65,15 +65,15 @@ creation using the dedicated upload endpoint.
 \examples{
 \dontrun{
 data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
-ids <- air_write(data, "appXXXXXX", "Contacts")
+ids <- air_write(data, "Contacts", "appXXXXXX")
 
 # Write records and upload attachments from list-column
-ids <- air_write(data, "appXXXXXX", "Projects",
+ids <- air_write(data, "Projects", "appXXXXXX",
   attachments = "file",
   attachment_dir = "files/"
 )
 
 # Write records and add new columns if they don't exist
-ids <- air_write(data, "appXXXXXX", "Contacts", add_fields = "yes")
+ids <- air_write(data, "Contacts", "appXXXXXX", add_fields = "yes")
 }
 }

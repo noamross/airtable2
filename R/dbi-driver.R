@@ -45,7 +45,10 @@ airtable <- function() {
 
 #' Airtable DBI driver class
 #'
-#' @keywords internal
+#' S4 class representing the Airtable DBI driver. Use [airtable2()] to
+#' construct an instance and pass it to [DBI::dbConnect()].
+#'
+#' @aliases AirtableDriver
 #' @exportClass AirtableDriver
 methods::setClass("AirtableDriver", contains = "DBIDriver")
 
@@ -158,85 +161,98 @@ connection_observer_open <- function(con, connect_code) {
     }
   }
 
-  try(
-    observer$connectionOpened(
-      type = "Airtable",
-      displayName = display_name,
-      host = if (nzchar(con@base_id)) con@base_id else "Airtable",
-      connectCode = connect_code,
-      disconnect = function() DBI::dbDisconnect(con),
-      listObjectTypes = function() {
-        if (dbi_base_mode(con)) {
-          list(table = list(contains = "data"))
-        } else {
-          list(schema = list(contains = list(table = list(contains = "data"))))
-        }
-      },
-      listObjects = function(type = "table", ...) {
-        args <- list(...)
-        if (dbi_base_mode(con)) {
-          tables <- list_tables_for_base(con@base_id)
-          data.frame(name = tables, type = rep("table", length(tables)),
-                     stringsAsFactors = FALSE)
-        } else if (type == "schema") {
-          bases <- dbi_list_bases(con)
-          data.frame(
-            name = vapply(bases, `[[`, character(1), "name"),
-            type = rep("schema", length(bases)),
-            stringsAsFactors = FALSE
-          )
-        } else if (type == "table") {
-          schema_name <- args$schema %||% NULL
-          if (is.null(schema_name)) {
-            return(data.frame(name = character(), type = character(),
-                              stringsAsFactors = FALSE))
-          }
-          bases <- dbi_list_bases(con)
-          base_info <- Find(function(b) b$name == schema_name, bases)
-          if (is.null(base_info)) {
-            return(data.frame(name = character(), type = character(),
-                              stringsAsFactors = FALSE))
-          }
-          tables <- list_tables_for_base(base_info$id)
-          data.frame(name = tables, type = rep("table", length(tables)),
-                     stringsAsFactors = FALSE)
-        } else {
-          data.frame(name = character(), type = character(), stringsAsFactors = FALSE)
-        }
-      },
-      listColumns = function(table, ...) {
-        args <- list(...)
-        schema_name <- args$schema %||% NULL
-        base_id_to_use <- if (!is.null(schema_name) && !dbi_base_mode(con)) {
-          bases <- dbi_list_bases(con)
-          base_info <- Find(function(b) b$name == schema_name, bases)
-          if (!is.null(base_info)) base_info$id else con@base_id
-        } else {
-          con@base_id
-        }
-        list_columns_for(base_id_to_use, table)
-      },
-      previewObject = function(rowLimit, table, ...) {
-        args <- list(...)
-        schema_name <- args$schema %||% NULL
-        base_id_to_use <- if (!is.null(schema_name) && !dbi_base_mode(con)) {
-          bases <- dbi_list_bases(con)
-          base_info <- Find(function(b) b$name == schema_name, bases)
-          if (!is.null(base_info)) base_info$id else con@base_id
-        } else {
-          con@base_id
-        }
-        tryCatch(
-          air_read(base_id_to_use, table, .token = con@token),
-          error = function(e) NULL
+  # Build the core arguments that every version of rstudioapi supports.
+  core_args <- list(
+    type        = "Airtable",
+    displayName = display_name,
+    host        = if (nzchar(con@base_id)) con@base_id else "Airtable",
+    connectCode = connect_code,
+    disconnect  = function() DBI::dbDisconnect(con),
+    listObjectTypes = function() {
+      if (dbi_base_mode(con)) {
+        list(table = list(contains = "data"))
+      } else {
+        list(schema = list(contains = list(table = list(contains = "data"))))
+      }
+    },
+    listObjects = function(type = "table", ...) {
+      args <- list(...)
+      if (dbi_base_mode(con)) {
+        tables <- list_tables_for_base(con@base_id)
+        data.frame(name = tables, type = rep("table", length(tables)),
+                   stringsAsFactors = FALSE)
+      } else if (type == "schema") {
+        bases <- dbi_list_bases(con)
+        data.frame(
+          name = vapply(bases, `[[`, character(1), "name"),
+          type = rep("schema", length(bases)),
+          stringsAsFactors = FALSE
         )
-      },
-      actions = connection_actions(con),
-      connectionObject = con
-    ),
-    silent = TRUE
+      } else if (type == "table") {
+        schema_name <- args$schema %||% NULL
+        if (is.null(schema_name)) {
+          return(data.frame(name = character(), type = character(),
+                            stringsAsFactors = FALSE))
+        }
+        bases <- dbi_list_bases(con)
+        base_info <- Find(function(b) b$name == schema_name, bases)
+        if (is.null(base_info)) {
+          return(data.frame(name = character(), type = character(),
+                            stringsAsFactors = FALSE))
+        }
+        tables <- list_tables_for_base(base_info$id)
+        data.frame(name = tables, type = rep("table", length(tables)),
+                   stringsAsFactors = FALSE)
+      } else {
+        data.frame(name = character(), type = character(), stringsAsFactors = FALSE)
+      }
+    },
+    listColumns = function(table, ...) {
+      args <- list(...)
+      schema_name <- args$schema %||% NULL
+      base_id_to_use <- if (!is.null(schema_name) && !dbi_base_mode(con)) {
+        bases <- dbi_list_bases(con)
+        base_info <- Find(function(b) b$name == schema_name, bases)
+        if (!is.null(base_info)) base_info$id else con@base_id
+      } else {
+        con@base_id
+      }
+      list_columns_for(base_id_to_use, table)
+    },
+    previewObject = function(rowLimit, table, ...) {
+      args <- list(...)
+      schema_name <- args$schema %||% NULL
+      base_id_to_use <- if (!is.null(schema_name) && !dbi_base_mode(con)) {
+        bases <- dbi_list_bases(con)
+        base_info <- Find(function(b) b$name == schema_name, bases)
+        if (!is.null(base_info)) base_info$id else con@base_id
+      } else {
+        con@base_id
+      }
+      tryCatch(
+        air_read(table, base_id_to_use, .token = con@token),
+        error = function(e) NULL
+      )
+    }
   )
-  invisible(NULL)
+
+  # Try with extended arguments (actions, connectionObject) supported by newer
+  # versions of rstudioapi.  Fall back to core-only if the observer rejects
+  # them, so the pane always shows tables rather than silently failing.
+  result <- tryCatch(
+    do.call(observer$connectionOpened, c(core_args, list(
+      actions          = connection_actions(con),
+      connectionObject = con
+    ))),
+    error = function(e) {
+      tryCatch(
+        do.call(observer$connectionOpened, core_args),
+        error = function(e2) NULL
+      )
+    }
+  )
+
+  invisible(result)
 }
 
 #' @rdname airtable2
@@ -249,6 +265,7 @@ methods::setMethod(
     token = NULL,
     base_id = NULL,
     include_views = FALSE,
+    connect_code = NULL,
     ...
   ) {
     token <- air_token(token)
@@ -268,7 +285,10 @@ methods::setMethod(
       state = state
     )
 
-    connection_observer_open(con, dbi_connect_code(base_id))
+    # Use the caller-supplied connect code if provided (e.g. air_pane() passes
+    # an air_pane()-based reconnect code), otherwise generate the default.
+    code <- connect_code %||% dbi_connect_code(base_id)
+    connection_observer_open(con, code)
     con
   }
 )

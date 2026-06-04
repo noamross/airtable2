@@ -52,7 +52,7 @@ fake_projects <- function() {
 test_that("air_dump returns a named list with schema + one tibble per table", {
   local_mocked_bindings(
     at_get_schema = function(base_id, token = NULL) fake_schema(),
-    air_read = function(base_id, table, ...) {
+    air_read = function(table, base_id = NULL, ...) {
       if (table == "Contacts") fake_contacts() else fake_projects()
     }
   )
@@ -72,7 +72,7 @@ test_that("air_dump returns a named list with schema + one tibble per table", {
 test_that("air_dump writes schema.json and per-table JSON files", {
   local_mocked_bindings(
     at_get_schema = function(base_id, token = NULL) fake_schema(),
-    air_read = function(base_id, table, ...) {
+    air_read = function(table, base_id = NULL, ...) {
       if (table == "Contacts") fake_contacts() else fake_projects()
     }
   )
@@ -95,7 +95,7 @@ test_that("air_dump writes schema.json and per-table JSON files", {
 test_that("air_dump writes schema.json and CSV files for each table", {
   local_mocked_bindings(
     at_get_schema = function(base_id, token = NULL) fake_schema(),
-    air_read = function(base_id, table, ...) {
+    air_read = function(table, base_id = NULL, ...) {
       if (table == "Contacts") fake_contacts() else fake_projects()
     }
   )
@@ -195,7 +195,7 @@ test_that("load_dump errors on invalid input", {
 test_that("air_restore creates a base and inserts records from a list dump", {
   created_records <- list()
   local_mocked_bindings(
-    at_create_base = function(name, workspace_id, tables, token = NULL) {
+    at_create_base = function(name, tables, workspace_id = NULL, token = NULL) {
       list(id = "appNEWBASE", name = name, tables = tables)
     },
     at_get_schema = function(base_id, token = NULL) {
@@ -210,7 +210,7 @@ test_that("air_restore creates a base and inserts records from a list dump", {
       ))
     },
     at_create_field = function(...) list(id = "fldNEW"),
-    air_write = function(data, base_id = NULL, table, ...) {
+    air_write = function(data, table, base_id = NULL, ...) {
       created_records[[length(created_records) + 1L]] <<- list(
         base_id = base_id,
         table = table,
@@ -239,7 +239,7 @@ test_that("air_restore creates a base and inserts records from a list dump", {
 test_that("air_restore uses a generated base_name when not supplied", {
   called_name <- NULL
   local_mocked_bindings(
-    at_create_base = function(name, workspace_id, tables, token = NULL) {
+    at_create_base = function(name, tables, workspace_id = NULL, token = NULL) {
       called_name <<- name
       list(id = "appGEN", name = name, tables = tables)
     },
@@ -435,12 +435,252 @@ test_that("restore_fields warns (not errors) for unrestorable field types", {
   expect_equal(created_fields, "Notes")
 })
 
+# ── restore_linked_fields ─────────────────────────────────────────────────────
+
+# An old schema with two tables: "Tasks" has a multipleRecordLinks field
+# pointing at "People" (by its OLD table id), plus a rollup that references
+# that link field. "People" is the linked-to table.
+fake_linked_schema <- function() {
+  list(
+    list(
+      id = "tblTASKS_OLD",
+      name = "Tasks",
+      description = NULL,
+      fields = list(
+        list(id = "fldTITLE_OLD", name = "Title", type = "singleLineText"),
+        list(
+          id = "fldLINK_OLD",
+          name = "Assignee",
+          type = "multipleRecordLinks",
+          options = list(
+            linkedTableId = "tblPEOPLE_OLD",
+            isReversed = FALSE,
+            prefersSingleRecordLink = FALSE,
+            inverseLinkFieldId = "fldINV_OLD",
+            viewIdForRecordSelection = "viwOLD"
+          )
+        ),
+        list(
+          id = "fldROLLUP_OLD",
+          name = "Assignee Count",
+          type = "rollup",
+          options = list(
+            recordLinkFieldId = "fldLINK_OLD",
+            fieldIdInLinkedTable = "fldPNAME_OLD",
+            referencedFieldIds = list("fldPNAME_OLD"),
+            isValid = TRUE,
+            result = list(type = "number")
+          )
+        )
+      ),
+      views = list()
+    ),
+    list(
+      id = "tblPEOPLE_OLD",
+      name = "People",
+      description = NULL,
+      fields = list(
+        list(id = "fldPNAME_OLD", name = "Person Name", type = "singleLineText")
+      ),
+      views = list()
+    )
+  )
+}
+
+# The NEW schema: same table NAMES, different IDs, and (after link creation)
+# the new link field "Assignee" with a new field id.
+fake_new_schema_no_link <- function() {
+  list(
+    list(
+      id = "tblTASKS_NEW",
+      name = "Tasks",
+      fields = list(
+        list(id = "fldTITLE_NEW", name = "Title", type = "singleLineText")
+      ),
+      views = list()
+    ),
+    list(
+      id = "tblPEOPLE_NEW",
+      name = "People",
+      fields = list(
+        list(id = "fldPNAME_NEW", name = "Person Name", type = "singleLineText")
+      ),
+      views = list()
+    )
+  )
+}
+
+fake_new_schema_with_link <- function() {
+  list(
+    list(
+      id = "tblTASKS_NEW",
+      name = "Tasks",
+      fields = list(
+        list(id = "fldTITLE_NEW", name = "Title", type = "singleLineText"),
+        list(
+          id = "fldLINK_NEW",
+          name = "Assignee",
+          type = "multipleRecordLinks",
+          options = list(linkedTableId = "tblPEOPLE_NEW")
+        )
+      ),
+      views = list()
+    ),
+    list(
+      id = "tblPEOPLE_NEW",
+      name = "People",
+      fields = list(
+        list(id = "fldPNAME_NEW", name = "Person Name", type = "singleLineText")
+      ),
+      views = list()
+    )
+  )
+}
+
+test_that("build_table_id_map maps old->new table ids by name", {
+  m <- build_table_id_map(fake_linked_schema(), fake_new_schema_with_link())
+  expect_equal(m[["tblTASKS_OLD"]], "tblTASKS_NEW")
+  expect_equal(m[["tblPEOPLE_OLD"]], "tblPEOPLE_NEW")
+})
+
+test_that("restore_linked_fields creates a remapped multipleRecordLinks field", {
+  link_calls <- list()
+  # at_get_schema is called repeatedly: first call has no link (used to map
+  # field ids for dependents), subsequent calls include the new link.
+  schema_calls <- 0L
+  local_mocked_bindings(
+    at_get_schema = function(base_id, token = NULL) {
+      schema_calls <<- schema_calls + 1L
+      if (schema_calls == 1L) {
+        fake_new_schema_no_link()
+      } else {
+        fake_new_schema_with_link()
+      }
+    },
+    at_create_field = function(name, table_id, type, base_id = NULL,
+                               description = NULL, options = NULL, token = NULL) {
+      link_calls[[length(link_calls) + 1L]] <<- list(
+        name = name,
+        table_id = table_id,
+        type = type,
+        options = options
+      )
+      list(id = paste0("fldCREATED_", name))
+    }
+  )
+
+  table_id_map <- build_table_id_map(
+    fake_linked_schema(),
+    fake_new_schema_no_link()
+  )
+  restore_linked_fields(
+    fake_linked_schema(),
+    "appNEW",
+    table_id_map,
+    .token = NULL
+  )
+
+  link_call <- Find(
+    function(c) c$type == "multipleRecordLinks",
+    link_calls
+  )
+  expect_false(is.null(link_call))
+  expect_equal(link_call$name, "Assignee")
+  expect_equal(link_call$table_id, "tblTASKS_NEW")
+  # linkedTableId remapped to the NEW People table id
+  expect_equal(link_call$options$linkedTableId, "tblPEOPLE_NEW")
+  # inverseLinkFieldId and viewIdForRecordSelection dropped
+  expect_null(link_call$options$inverseLinkFieldId)
+  expect_null(link_call$options$viewIdForRecordSelection)
+})
+
+test_that("restore_linked_fields recreates dependent rollup with remapped recordLinkFieldId", {
+  link_calls <- list()
+  schema_calls <- 0L
+  local_mocked_bindings(
+    at_get_schema = function(base_id, token = NULL) {
+      schema_calls <<- schema_calls + 1L
+      if (schema_calls == 1L) {
+        fake_new_schema_no_link()
+      } else {
+        fake_new_schema_with_link()
+      }
+    },
+    at_create_field = function(name, table_id, type, base_id = NULL,
+                               description = NULL, options = NULL, token = NULL) {
+      link_calls[[length(link_calls) + 1L]] <<- list(
+        name = name,
+        type = type,
+        options = options
+      )
+      list(id = paste0("fldCREATED_", name))
+    }
+  )
+
+  table_id_map <- build_table_id_map(
+    fake_linked_schema(),
+    fake_new_schema_no_link()
+  )
+  restore_linked_fields(
+    fake_linked_schema(),
+    "appNEW",
+    table_id_map,
+    .token = NULL
+  )
+
+  rollup_call <- Find(function(c) c$type == "rollup", link_calls)
+  expect_false(is.null(rollup_call))
+  expect_equal(rollup_call$name, "Assignee Count")
+  # recordLinkFieldId remapped to the NEW link field id (looked up by name)
+  expect_equal(rollup_call$options$recordLinkFieldId, "fldLINK_NEW")
+})
+
+test_that("restore_linked_fields warns and skips a link to an unmapped table", {
+  link_calls <- list()
+  local_mocked_bindings(
+    at_get_schema = function(base_id, token = NULL) fake_new_schema_no_link(),
+    at_create_field = function(name, table_id, type, base_id = NULL,
+                               description = NULL, options = NULL, token = NULL) {
+      link_calls[[length(link_calls) + 1L]] <<- list(name = name, type = type)
+      list(id = "x")
+    }
+  )
+
+  # Old schema whose link points at a table name that does not exist in the new
+  # base (here the map simply won't contain its target).
+  bad_schema <- list(
+    list(
+      id = "tblTASKS_OLD",
+      name = "Tasks",
+      fields = list(
+        list(id = "fldT", name = "Title", type = "singleLineText"),
+        list(
+          id = "fldL",
+          name = "Ghost",
+          type = "multipleRecordLinks",
+          options = list(linkedTableId = "tblGONE_OLD")
+        )
+      ),
+      views = list()
+    )
+  )
+  # Map only contains the Tasks table -> nothing maps tblGONE_OLD
+  table_id_map <- c(tblTASKS_OLD = "tblTASKS_NEW")
+
+  expect_warning(
+    restore_linked_fields(bad_schema, "appNEW", table_id_map, .token = NULL),
+    "could not be remapped|not found"
+  )
+  # No multipleRecordLinks field created
+  expect_null(Find(function(c) c$type == "multipleRecordLinks", link_calls))
+})
+
 # ── round-trip: metadata stripping ───────────────────────────────────────────
 
 test_that("air_restore strips airtable_id and airtable_created_time before writing", {
   written_cols <- NULL
   local_mocked_bindings(
-    at_create_base = function(name, workspace_id, tables, token = NULL) {
+    at_create_base = function(name, tables, workspace_id = NULL, token = NULL) {
       list(id = "appREST", name = name, tables = tables)
     },
     at_get_schema = function(base_id, token = NULL) {
@@ -455,7 +695,7 @@ test_that("air_restore strips airtable_id and airtable_created_time before writi
       ))
     },
     at_create_field = function(...) list(id = "fldX"),
-    air_write = function(data, base_id = NULL, table, ...) {
+    air_write = function(data, table, base_id = NULL, ...) {
       written_cols <<- names(data)
       invisible(character())
     }
@@ -475,7 +715,7 @@ test_that("air_restore strips airtable_id and airtable_created_time before writi
 test_that("JSON dump preserves record values through load_dump", {
   local_mocked_bindings(
     at_get_schema = function(base_id, token = NULL) fake_schema(),
-    air_read = function(base_id, table, ...) {
+    air_read = function(table, base_id = NULL, ...) {
       if (table == "Contacts") fake_contacts() else fake_projects()
     }
   )

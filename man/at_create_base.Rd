@@ -4,15 +4,15 @@
 \alias{at_create_base}
 \title{Create a new base}
 \usage{
-at_create_base(name, workspace_id = NULL, tables, token = NULL)
+at_create_base(name, tables, workspace_id = NULL, token = NULL)
 }
 \arguments{
 \item{name}{Name for the new base.}
 
-\item{workspace_id}{Workspace ID to create the base in.}
-
 \item{tables}{A list of table configurations. Each should include at minimum
 \code{name} and \code{fields} (a list of field configs).}
+
+\item{workspace_id}{Workspace ID to create the base in.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

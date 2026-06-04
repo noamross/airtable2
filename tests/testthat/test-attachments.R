@@ -23,7 +23,7 @@ test_that("air_write excludes attachment fields from payload", {
     )
   )
 
-  ids <- air_write(data, "app1", "tbl1")
+  ids <- air_write(data, "tbl1", "app1")
   expect_equal(ids, c("rec1", "rec2"))
 })
 
@@ -51,7 +51,7 @@ test_that("air_write uploads attachments when mode is 'file'", {
     )
   )
 
-  air_write(data, "app1", "tbl1", attachments = "file")
+  air_write(data, "tbl1", "app1", attachments = "file")
   expect_length(upload_calls, 1)
   expect_equal(upload_calls[[1]]$mode, "file")
   expect_equal(upload_calls[[1]]$record_ids, c("rec1", "rec2"))
@@ -78,7 +78,7 @@ test_that("air_write does not upload when attachments = 'meta'", {
     Photos = list(list(list(filename = "a.png")))
   )
 
-  air_write(data, "app1", "tbl1", attachments = "meta")
+  air_write(data, "tbl1", "app1", attachments = "meta")
   expect_length(upload_calls, 0)
 })
 
@@ -98,7 +98,7 @@ test_that("air_write skips attachment upload when no att cols in data", {
   )
 
   data <- tibble::tibble(Name = "A", Age = 30L)
-  air_write(data, "app1", "tbl1", attachments = "file")
+  air_write(data, "tbl1", "app1", attachments = "file")
   expect_length(upload_calls, 0)
 })
 
@@ -130,7 +130,7 @@ test_that("air_upsert excludes attachment fields from payload", {
     Photos = list(list(list(filename = "pic.jpg")))
   )
 
-  result <- air_upsert(data, "app1", "tbl1", merge_on = "Name")
+  result <- air_upsert(data, "tbl1", "app1", merge_on = "Name")
   expect_equal(result$created, "rec1")
 })
 
@@ -165,7 +165,7 @@ test_that("air_upsert uploads attachments in 'blob' mode", {
     Docs = list(list(list(filename = "doc.pdf", content = charToRaw("hello"))))
   )
 
-  air_upsert(data, "app1", "tbl1", merge_on = "Name", attachments = "blob")
+  air_upsert(data, "tbl1", "app1", merge_on = "Name", attachments = "blob")
   expect_length(upload_calls, 1)
   expect_equal(upload_calls[[1]]$mode, "blob")
 })
@@ -198,7 +198,7 @@ test_that("air_upsert does not count attachment fields as unknown", {
   # Should NOT error about "Photos" being unknown
 
   expect_no_error(
-    air_upsert(data, "app1", "tbl1", merge_on = "Name")
+    air_upsert(data, "tbl1", "app1", merge_on = "Name")
   )
 })
 
@@ -234,7 +234,7 @@ test_that("air_sync excludes attachment fields from hash", {
     )))
   )
 
-  result <- air_sync(data, "app1", "tbl1", key = "Name")
+  result <- air_sync(data, "tbl1", "app1", key = "Name")
   # Attachment URL difference should NOT cause an update
   expect_equal(result$unchanged, 1L)
   expect_equal(result$updated, 0L)
@@ -271,7 +271,7 @@ test_that("air_sync uploads attachments for created records", {
   )
 
   result <- air_sync(
-    data, "app1", "tbl1",
+    data, "tbl1", "app1",
     key = "Name",
     attachments = "file",
     attachment_dir = "/tmp"
@@ -310,7 +310,7 @@ test_that("air_sync does not upload attachments in meta mode", {
     Photos = list(list(list(filename = "x.png")))
   )
 
-  air_sync(data, "app1", "tbl1", key = "Name", attachments = "meta")
+  air_sync(data, "tbl1", "app1", key = "Name", attachments = "meta")
   expect_length(upload_calls, 0)
 })
 
@@ -323,8 +323,8 @@ test_that("air_dump passes attachments param to air_read", {
         list(name = "Name", type = "singleLineText")
       ))
     ),
-    air_read = function(base_id, table, ...) {
-      args <- list(base_id = base_id, table = table, ...)
+    air_read = function(table, base_id, ...) {
+      args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Name = "A")
     }
@@ -344,8 +344,8 @@ test_that("air_dump defaults to attachments = 'file'", {
         list(name = "Title", type = "singleLineText")
       ))
     ),
-    air_read = function(base_id, table, ...) {
-      args <- list(base_id = base_id, table = table, ...)
+    air_read = function(table, base_id, ...) {
+      args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Title = "X")
     }
@@ -365,8 +365,8 @@ test_that("air_dump with meta mode does not download attachments", {
         list(name = "Title", type = "singleLineText")
       ))
     ),
-    air_read = function(base_id, table, ...) {
-      args <- list(base_id = base_id, table = table, ...)
+    air_read = function(table, base_id, ...) {
+      args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Title = "X")
     }

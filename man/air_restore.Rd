@@ -39,6 +39,21 @@ Recreates a base from output of \code{\link[=air_dump]{air_dump()}}. When \code{
 \code{"file"}, uploads attachment files from the dump directory after record
 creation. For CSV dumps, automatically detects and parses the flattened format.
 }
+\section{Linked-record fields}{
+
+Linked-record fields (\code{multipleRecordLinks}) and the computed fields that
+depend on them (\code{rollup}, \code{lookup}, \code{count}) are skipped during the initial
+field-creation pass because their options reference base-specific IDs that
+do not exist in the new base. After all tables and records have been
+created, \code{restore_linked_fields()} recreates these fields, remapping the
+linked-table and record-link-field references to the new base's IDs.
+
+Note that the link FIELDS are recreated but their CELL VALUES (the specific
+record-to-record connections) are NOT repopulated: the old record IDs stored
+in the dump do not correspond to the newly created records' IDs. Re-linking
+cell values is left for a future pass.
+}
+
 \examples{
 \dontrun{
 # Restore from a directory dump

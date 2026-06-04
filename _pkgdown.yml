@@ -1,109 +1,107 @@
 url: https://noamross.github.io/airtable2/
-
 home:
   title: airtable2 — Airtable REST client for R
-
 template:
   bootstrap: 5
-
 navbar:
   structure:
-    left: [intro, reference, articles, news]
+    left:
+    - intro
+    - reference
+    - articles
+    - news
   components:
     intro:
       text: Get started
       href: articles/airtable2.html
-
 articles:
-  - title: Vignettes
-    navbar: ~
-    contents:
-      - airtable2
-      - special-types
-      - metadata-backup
-
+- title: Vignettes
+  navbar: ~
+  contents:
+  - airtable2
+  - special-types
+  - metadata-backup
 reference:
-  - title: "High-level functions (air_*)"
-    desc: "User-facing functions for reading, writing, and working with Airtable data"
-    contents:
-      - air_read
-      - air_read_attachments
-      - air_write
-      - air_write_attachments
-      - air_sync
-      - air_sync_attachments
-      - air_upsert
-      - air_delete
-      - air_left_join
-      - air_inner_join
-      - air_full_join
-      - air_api_usage
-      - air_set_token
-      - air_set_base
-      - air_browse
-      - air_connect
-      - air_pane
-      - air_resolve_id
+- title: High-level functions (air_*)
+  desc: User-facing functions for reading, writing, and working with Airtable data
+  contents:
+  - air_read
+  - air_read_attachments
+  - air_write
+  - air_write_attachments
+  - air_sync
+  - air_sync_attachments
+  - air_upsert
+  - air_delete
+  - air_left_join
+  - air_inner_join
+  - air_full_join
+  - air_api_usage
+  - air_set_token
+  - air_set_base
+  - air_browse
+  - air_connect
+  - air_pane
+  - air_resolve_id
+- title: Demo
+  desc: Functions for creating and running a live demo walkthrough
+  contents:
+  - air_demo
+  - air_demo_setup
+- title: Special types & helpers
+  desc: S3 classes and helpers for Airtable special field types
+  contents:
+  - air_flatten_multiselect
+  - air_flatten_links
+  - air_flatten_attachments
+  - air_flatten_collaborator
+  - air_expand_multiselect
+  - air_expand_collaborator
+  - air_simplify
+- title: Metadata & backup
+  desc: Schema inspection, base metadata, and backup/restore
+  contents:
+  - air_meta
+  - air_meta_push
+  - air_meta_sync
+  - air_schema
+  - air_dump
+  - air_restore
+  - air_field_template
+  - air_table_template
+- title: Request building & authentication
+  desc: Low-level helpers for constructing and authenticating API requests
+  contents:
+  - air_req
+  - air_token
+- title: Low-level API wrappers (at_*)
+  desc: Direct Airtable REST API wrappers — use air_* for most tasks
+  contents:
+  - at_sitrep
+  - at_list_records
+  - at_get_record
+  - at_create_records
+  - at_update_records
+  - at_delete_records
+  - at_list_bases
+  - at_get_base
+  - at_get_schema
+  - at_get_collaborators
+  - at_create_base
+  - at_create_table
+  - at_update_table
+  - at_create_field
+  - at_update_field
+  - at_list_views
+  - at_get_view
+  - at_upload_attachment
+  - at_whoami
+- title: DBI interface
+  desc: DBI-compatible S4 interface for Airtable connections
+  contents:
+  - AirtableDriver
+  - AirtableConnection-class
+  - AirtableResult-class
+- title: Internal
+  contents: airtable2
 
-  - title: "Demo"
-    desc: "Functions for creating and running a live demo walkthrough"
-    contents:
-      - air_demo
-      - air_demo_setup
-
-  - title: "Special types & helpers"
-    desc: "S3 classes and helpers for Airtable special field types"
-    contents:
-      - air_flatten_multiselect
-      - air_flatten_links
-      - air_flatten_attachments
-      - air_flatten_collaborator
-      - air_expand_multiselect
-      - air_expand_collaborator
-      - air_simplify
-
-  - title: "Metadata & backup"
-    desc: "Schema inspection, base metadata, and backup/restore"
-    contents:
-      - air_meta
-      - air_meta_push
-      - air_meta_sync
-      - air_schema
-      - air_dump
-      - air_restore
-      - air_field_template
-      - air_table_template
-
-  - title: "Low-level API wrappers (at_*)"
-    desc: "Direct Airtable REST API wrappers — use air_* for most tasks"
-    contents:
-      - at_sitrep
-      - at_list_records
-      - at_get_record
-      - at_create_records
-      - at_update_records
-      - at_delete_records
-      - at_list_bases
-      - at_get_base
-      - at_get_schema
-      - at_get_collaborators
-      - at_create_base
-      - at_create_table
-      - at_update_table
-      - at_create_field
-      - at_update_field
-      - at_list_views
-      - at_get_view
-      - at_upload_attachment
-      - at_whoami
-
-  - title: "DBI interface"
-    desc: "DBI-compatible S4 interface for Airtable connections"
-    contents:
-      - AirtableDriver
-      - AirtableConnection
-      - AirtableResult
-
-  - title: "Internal"
-    contents:
-      - airtable2-package

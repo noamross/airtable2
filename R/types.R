@@ -618,13 +618,19 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
 #'   omit IDs, e.g., for creating new records).
 #' @param exclude Character vector of column names to exclude from the
 #'   `fields` payload (e.g., computed fields). These are silently dropped.
+#' @param field_types Optional named character vector mapping field name to
+#'   Airtable field type (from the table schema). When supplied, flat character
+#'   values are auto-expanded to the structure Airtable expects (e.g. a
+#'   `"A; B"` string becomes a JSON array for a `multipleSelects` field). When
+#'   `NULL` (default), no expansion is performed (fully back-compatible).
 #' @return A list of record objects suitable for [at_create_records()] or
 #'   [at_update_records()].
 #' @noRd
 tibble_to_records <- function(
   data,
   id_col = "airtable_id",
-  exclude = character()
+  exclude = character(),
+  field_types = NULL
 ) {
   meta_cols <- c("airtable_id", "airtable_created_time")
   field_cols <- setdiff(names(data), c(meta_cols, exclude))
@@ -636,6 +642,11 @@ tibble_to_records <- function(
       val <- data[[col]][[i]]
       if (is.atomic(val) && length(val) == 1L && is.na(val)) {
         return(NULL)
+      }
+      # Auto-expand flat values to the API's expected shape, when we know
+      # the field type from the schema.
+      if (!is.null(field_types) && col %in% names(field_types)) {
+        val <- expand_upload_value(val, field_types[[col]])
       }
       # Strip air_* classes - send plain lists/vectors to the API
       unclass_air(val)
@@ -650,6 +661,59 @@ tibble_to_records <- function(
     }
     rec
   })
+}
+
+#' Expand a flat value to the structure Airtable expects, by field type
+#'
+#' Used on the WRITE path so users can supply flat character columns that are
+#' auto-expanded to the JSON shape the API requires, inferred from the table
+#' schema. Conservative: only transforms plain length-1 character scalars;
+#' lists, objects, and already-classed `air_*` values are returned untouched
+#' (left for [unclass_air()] / normal serialization).
+#'
+#' @param val A single cell value.
+#' @param field_type Airtable field type string (or `NULL`).
+#' @param sep Delimiter for splitting multi-value strings.
+#' @return The (possibly expanded) value.
+#' @noRd
+expand_upload_value <- function(val, field_type, sep = NULL) {
+  if (is.null(field_type)) {
+    return(val)
+  }
+  # Only act on plain character scalars; leave lists / classed columns alone.
+  is_plain_scalar <- is.character(val) &&
+    length(val) == 1L &&
+    is.null(attr(val, "class"))
+  if (!is_plain_scalar || is.na(val)) {
+    return(val)
+  }
+
+  split_vals <- function(x) {
+    air_expand_multiselect(x, sep = sep)[[1]]
+  }
+
+  switch(
+    field_type,
+    multipleSelects = split_vals(val),
+    multipleRecordLinks = split_vals(val),
+    singleCollaborator = collaborator_obj(val),
+    collaborator = collaborator_obj(val),
+    multipleCollaborators = lapply(split_vals(val), collaborator_obj),
+    val
+  )
+}
+
+#' Wrap a flat collaborator string as the object Airtable expects
+#'
+#' An `usr...`-looking id becomes `list(id = ...)`; anything else is treated as
+#' an email and becomes `list(email = ...)`.
+#' @noRd
+collaborator_obj <- function(x) {
+  if (grepl("^usr[A-Za-z0-9]+$", x)) {
+    list(id = x)
+  } else {
+    list(email = x)
+  }
 }
 
 #' Strip air_* class attributes before sending to the API

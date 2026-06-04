@@ -4,12 +4,15 @@
 \alias{air_expand_multiselect}
 \title{Expand delimited strings to a multi-select list-column}
 \usage{
-air_expand_multiselect(x, sep = ", ")
+air_expand_multiselect(x, sep = NULL)
 }
 \arguments{
 \item{x}{A character vector of delimited values.}
 
-\item{sep}{Delimiter to split on. Default \code{", "}.}
+\item{sep}{Delimiter to split on. Default \code{"; "} (tolerates optional
+surrounding spaces when the delimiter is a semicolon family), overridable
+via \code{options(airtable2.delimiter = ...)} or the \code{AIRTABLE2_DELIMITER}
+environment variable. An explicit \code{sep} argument always takes precedence.}
 }
 \value{
 A list of character vectors.

@@ -1,0 +1,641 @@
+<!-- Source vignette — run tools/precompile_vignettes.R to update the .Rmd -->
+---
+title: "Special Field Types in airtable2"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Special Field Types in airtable2}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+```{r setup}
+library(airtable2)
+```
+
+## Overview
+
+Most Airtable fields map naturally to R atomic vectors: text becomes
+`character`, numbers become `numeric`, checkboxes become `logical`, and dates
+become `Date` or `POSIXct`. A handful of field types, however, carry
+structured data that cannot fit in a single scalar value per row.
+
+airtable2 represents these as **list-columns** in the returned tibble — one
+list element per row. Each list-column is wrapped in a lightweight S3 class so
+that the data round-trips faithfully through read/write cycles and displays
+compactly in the tibble header and in the RStudio/Positron data viewer.
+
+The six special types are:
+
+| Airtable field type | R S3 class | Pillar type tag |
+|---|---|---|
+| Multiple select | `air_multiselect` | `sel[]` |
+| Linked records | `air_links` | `lnk[]` |
+| Attachments | `air_attachments` | `att[]` |
+| Single collaborator | `air_collaborator` | `collab` |
+| Multiple collaborators | `air_collaborators` | `collabs` |
+| Barcode | `air_barcode` | `barcode` |
+
+When you print a tibble that contains these columns, pillar uses the registered
+`pillar_shaft` and `type_sum` methods to show a one-line summary per cell and
+the short tag in the column header. The full structured data is always
+preserved in the list-column and can be written back with `air_write()` or
+`air_upsert()` unchanged.
+
+If you want a plain, flat data frame instead, see [Section 7](#air_simplify)
+for `air_simplify()`, or the type-specific flatteners described throughout this
+vignette.
+
+For the general workflow — authentication, reading, writing, syncing — see the
+[Getting Started vignette](airtable2.html).
+
+---
+
+## 1. Multi-select fields (`air_multiselect`) {#multiselect}
+
+Airtable's *Multiple select* field lets each record carry zero or more
+selection options. `air_read()` returns these as an `air_multiselect`
+list-column, where each element is a character vector of selected options (or
+`NULL` for an empty selection).
+
+```{r multiselect-read}
+# Suppose a "Projects" table has a "Tags" multiple-select field.
+projects <- air_read("appXXXXXX", "Projects")
+projects
+#> # A tibble: 4 × 4
+#>   airtable_id  airtable_created_time name         tags
+#>   <chr>        <dttm>                <chr>        <sel[]>
+#> 1 recAAAAAAAA  2024-01-10 09:00:00   Alpha        R, data, analysis
+#> 2 recBBBBBBBB  2024-01-11 10:30:00   Beta         data
+#> 3 recCCCCCCCC  2024-01-12 14:00:00   Gamma        NA
+#> 4 recDDDDDDDD  2024-01-13 08:15:00   Delta        R, reporting
+```
+
+The `sel[]` tag in the column header indicates an `air_multiselect`
+list-column. Each cell shows the selections joined with `", "` for display, but
+the underlying list element is a character vector:
+
+```{r multiselect-inspect}
+# Look at the raw list element for the first row
+projects$tags[[1]]
+#> [1] "R"        "data"     "analysis"
+
+# NULL for a row with no selection
+projects$tags[[3]]
+#> NULL
+```
+
+### Flattening to a character vector
+
+`air_flatten_multiselect()` collapses each element to a delimited string,
+giving one character value per row:
+
+```{r multiselect-flatten}
+air_flatten_multiselect(projects$tags)
+#> [1] "R, data, analysis" "data"              NA                  "R, reporting"
+
+# Use a different delimiter
+air_flatten_multiselect(projects$tags, sep = " | ")
+#> [1] "R | data | analysis" "data"                NA                    "R | reporting"
+```
+
+This is useful for export to CSV or for passing to string-based tools.
+
+### Expanding back to a list-column
+
+`air_expand_multiselect()` is the inverse: it splits delimited strings back
+into character vectors, ready to write to Airtable:
+
+```{r multiselect-expand}
+flat_tags <- c("R, data, analysis", "data", NA, "R, reporting")
+air_expand_multiselect(flat_tags)
+#> [[1]]
+#> [1] "R"        "data"     "analysis"
+#>
+#> [[2]]
+#> [1] "data"
+#>
+#> [[3]]
+#> NULL
+#>
+#> [[4]]
+#> [1] "R"         "reporting"
+```
+
+### Round-tripping through write
+
+Because `air_write()` and `air_upsert()` strip the `air_*` class before
+sending data to the API, you can pass the original `air_multiselect`
+list-column directly without any conversion:
+
+```{r multiselect-write}
+# Modify one row's tags and write back
+projects$tags[[3]] <- list("reporting") # was NULL
+air_upsert(projects, "appXXXXXX", "Projects", merge_on = "name")
+```
+
+---
+
+## 2. Linked records (`air_links`) {#links}
+
+Airtable's *Link to another record* field connects rows across tables. On
+read, each cell contains a character vector of record IDs (strings like
+`"recXXXXXXXXXXXXXX"`). airtable2 wraps these in an `air_links` list-column.
+
+```{r links-read}
+projects <- air_read("appXXXXXX", "Projects")
+projects
+#> # A tibble: 3 × 4
+#>   airtable_id  name    owner_ids
+#>   <chr>        <chr>   <lnk[]>
+#> 1 recAAAAAAAA  Alpha   recPPPPPPPP
+#> 2 recBBBBBBBB  Beta    [2 records]
+#> 3 recCCCCCCCC  Gamma   NA
+```
+
+A single linked record is shown as the ID; multiple are shown as
+`[N records]`; an empty link field is `NA`.
+
+The linked field stores only record IDs, not the values from the linked table.
+To retrieve the actual data you need to read the linked table separately and
+join.
+
+### Flattening links
+
+`air_flatten_links()` collapses the ID vectors to delimited strings (it is a
+thin wrapper around `air_flatten_multiselect()`):
+
+```{r links-flatten}
+air_flatten_links(projects$owner_ids)
+#> [1] "recPPPPPPPP"                NA             "recQQQQQQQQ, recRRRRRRRR"
+```
+
+### Joining to resolve linked records
+
+Use `air_left_join()`, `air_inner_join()`, or `air_full_join()` to fetch the
+linked table and join it with a local data frame in a single step. The `by`
+argument maps the column(s) to join on.
+
+A common pattern is to first flatten the links to get one row per linked record,
+then join to the linked table:
+
+```{r links-join}
+# Read the "People" table that Projects links to
+people <- air_read("appXXXXXX", "People")
+
+# Flatten: one row per (project, person) pair
+project_owners <- tidyr::unnest(projects, cols = owner_ids, keep_empty = TRUE)
+project_owners
+#> # A tibble: 4 × 3
+#>   airtable_id  name    owner_ids
+#>   <chr>        <chr>   <chr>
+#> 1 recAAAAAAAA  Alpha   recPPPPPPPP
+#> 2 recBBBBBBBB  Beta    recQQQQQQQQ
+#> 3 recBBBBBBBB  Beta    recRRRRRRRR
+#> 4 recCCCCCCCC  Gamma   NA
+
+# Join on the record ID to get person names
+dplyr::left_join(
+  project_owners,
+  dplyr::select(people, airtable_id, person_name = name),
+  by = c("owner_ids" = "airtable_id")
+)
+#> # A tibble: 4 × 4
+#>   airtable_id  name    owner_ids    person_name
+#>   <chr>        <chr>   <chr>        <chr>
+#> 1 recAAAAAAAA  Alpha   recPPPPPPPP  Alice
+#> 2 recBBBBBBBB  Beta    recQQQQQQQQ  Bob
+#> 3 recBBBBBBBB  Beta    recRRRRRRRR  Carol
+#> 4 recCCCCCCCC  Gamma   NA           NA
+```
+
+You can also use `air_left_join()` if the join key is shared by name:
+
+```{r links-air-join}
+# air_left_join fetches the remote table and merges in one call
+air_left_join(
+  project_owners,
+  "appXXXXXX",
+  "People",
+  by = c("owner_ids" = "airtable_id")
+)
+```
+
+### Re-linking records after a restore
+
+A known limitation: linked records are stored by record ID, and IDs are
+assigned by Airtable and cannot be set on create. If you dump a base with
+`air_dump()` and restore it to a new base with `air_restore()`, the records
+get new IDs, so all `air_links` columns in the restored base point to the old
+IDs and the links are broken.
+
+Resolving this requires re-linking: match records in the restored base by a
+stable key field (e.g., a name or a surrogate key you maintain), look up the
+new record IDs, and then write the `air_links` columns back. This is a manual
+step; see the [Metadata and Backup vignette](metadata-backup.html) for the
+broader dump/restore workflow.
+
+---
+
+## 3. Attachments (`air_attachments`) {#attachments}
+
+Airtable's *Attachments* field holds one or more files per record. On read,
+each cell is a list of attachment objects, each with at minimum:
+
+- `filename` — the original file name
+- `url` — a temporary Airtable-hosted download URL
+- `size` — file size in bytes
+- `type` — MIME type
+
+airtable2 wraps these in an `air_attachments` list-column.
+
+> **Important:** Airtable attachment URLs are temporary and expire after a
+> short time (typically a few hours). Always re-fetch records before
+> downloading if significant time has passed since the last `air_read()` call.
+
+```{r att-read}
+projects <- air_read("appXXXXXX", "Projects")
+projects
+#> # A tibble: 3 × 4
+#>   airtable_id  name    docs
+#>   <chr>        <chr>   <att[]>
+#> 1 recAAAAAAAA  Alpha   brief.pdf
+#> 2 recBBBBBBBB  Beta    report.docx +1
+#> 3 recCCCCCCCC  Gamma   NA
+```
+
+The `att[]` tag marks the column as `air_attachments`. A single attachment
+shows its filename; multiple attachments show `first_file.ext +N`; an empty
+field is `NA`.
+
+Inspect a single row's attachment metadata directly:
+
+```{r att-inspect}
+projects$docs[[2]]
+#> [[1]]
+#> [[1]]$id
+#> [1] "attXXXXXXXXXXXXXX"
+#> [[1]]$filename
+#> [1] "report.docx"
+#> [[1]]$url
+#> [1] "https://dl.airtable.com/..."
+#> [[1]]$size
+#> [1] 42816
+#> [[1]]$type
+#> [1] "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+#>
+#> [[2]]
+#> [[2]]$filename
+#> [1] "notes.txt"
+#> ...
+```
+
+### Flattening attachment metadata
+
+`air_flatten_attachments()` extracts one field from each attachment object and
+collapses to a delimited string:
+
+```{r att-flatten}
+# Default: filenames
+air_flatten_attachments(projects$docs)
+#> [1] "brief.pdf"           "report.docx, notes.txt" NA
+
+# Extract URLs instead
+air_flatten_attachments(projects$docs, field = "url")
+#> [1] "https://dl.airtable.com/..." "https://..." NA
+```
+
+### Downloading attachments with `air_read_attachments()`
+
+`air_read_attachments()` fetches all attachments for a given field and returns
+a flat tibble with one row per file. The `dest` argument controls the output
+format:
+
+- `"meta"` — **not a valid value here**; `air_read_attachments()` always
+  downloads content. Use `air_flatten_attachments()` on the list-column if
+  you only need metadata.
+- `"blob"` — download files as raw byte vectors stored in a `blob` list-column
+- `"file"` — write files to disk under `dir/`; returns a `local_path` column
+
+```{r att-read-attachments-blob}
+# Download as raw bytes (in-memory)
+blobs <- air_read_attachments(
+  base_id = "appXXXXXX",
+  table = "Projects",
+  field = "docs",
+  dest = "blob"
+)
+blobs
+#> # A tibble: 3 × 6
+#>   airtable_id  filename       url                    size    type           blob
+#>   <chr>        <chr>          <chr>                 <int>    <chr>          <list>
+#> 1 recAAAAAAAA  brief.pdf      https://dl.airtable…  18432    application/… <raw[18432]>
+#> 2 recBBBBBBBB  report.docx    https://dl.airtable…  42816    application/… <raw[42816]>
+#> 3 recBBBBBBBB  notes.txt      https://dl.airtable…   1024    text/plain    <raw[1024]>
+```
+
+```{r att-read-attachments-file}
+# Save files to disk: one sub-directory per record
+files <- air_read_attachments(
+  base_id = "appXXXXXX",
+  table = "Projects",
+  field = "docs",
+  dest = "file",
+  dir = "downloads/"
+)
+files
+#> # A tibble: 3 × 6
+#>   airtable_id  filename     url                  size  type          local_path
+#>   <chr>        <chr>        <chr>               <int>  <chr>         <chr>
+#> 1 recAAAAAAAA  brief.pdf    https://…           18432  application/… downloads/brief.pdf
+#> 2 recBBBBBBBB  report.docx  https://…           42816  application/… downloads/report.docx
+#> 3 recBBBBBBBB  notes.txt    https://…            1024  text/plain    downloads/notes.txt
+```
+
+You can also control the attachment mode directly in `air_read()` using the
+`attachments` argument. This downloads files as part of the initial read and
+augments the attachment objects in the list-column with a `content` (blob) or
+`local_path` (file) field:
+
+```{r att-air-read-mode}
+# Download attachments to disk while reading
+projects <- air_read(
+  "appXXXXXX",
+  "Projects",
+  attachments = "file",
+  attachment_dir = "downloads/"
+)
+# Now each attachment object in projects$docs has a $local_path entry
+projects$docs[[1]][[1]]$local_path
+#> [1] "downloads/recAAAAAAAA/brief.pdf"
+```
+
+### Parallel downloads
+
+By default, airtable2 downloads attachments in parallel using
+`httr2::req_perform_parallel()` (up to 5 concurrent). You can control this
+with:
+
+- The `parallel` argument: `TRUE` to force on, `FALSE` to force sequential
+- The `airtable2.parallel` option: `options(airtable2.parallel = FALSE)`
+- The `AIRTABLE2_PARALLEL` environment variable: `AIRTABLE2_PARALLEL=false`
+
+```{r att-parallel}
+# Force sequential downloads (useful for debugging or strict rate limiting)
+air_read_attachments(
+  "appXXXXXX",
+  "Projects",
+  "docs",
+  dest = "file",
+  dir = "downloads/",
+  parallel = FALSE
+)
+```
+
+### Uploading attachments with `air_write_attachments()`
+
+`air_write_attachments()` uploads files to an existing attachment field. It
+takes a data frame with `airtable_id` and `file_path` columns:
+
+```{r att-write}
+to_upload <- data.frame(
+  airtable_id = c("recAAAAAAAA", "recBBBBBBBB"),
+  file_path = c("outputs/alpha_summary.pdf", "outputs/beta_report.docx")
+)
+
+air_write_attachments(
+  base_id = "appXXXXXX",
+  table = "Projects",
+  field = "docs",
+  data = to_upload
+)
+#> Uploading 2 attachments...
+#> Upload complete.
+```
+
+Note that uploads **add** attachments to a record; they do not replace
+existing ones. Use `air_sync_attachments()` if you want to avoid duplicates.
+
+### Diff-based sync with `air_sync_attachments()`
+
+`air_sync_attachments()` compares the filenames in your local data with those
+already in Airtable, uploading only files that are not already present. This
+avoids duplicate uploads on repeated runs:
+
+```{r att-sync}
+local_files <- data.frame(
+  project_name = c("Alpha", "Alpha", "Beta"),
+  file_path = c(
+    "outputs/alpha_summary.pdf",
+    "outputs/alpha_data.csv",
+    "outputs/beta_report.docx"
+  )
+)
+
+air_sync_attachments(
+  base_id = "appXXXXXX",
+  table = "Projects",
+  field = "docs",
+  data = local_files,
+  key = "project_name" # column in both local_files and the Airtable table
+)
+#> Attachment sync: 2 uploaded, 1 skipped.
+```
+
+---
+
+## 4. Collaborator fields (`air_collaborator` / `air_collaborators`) {#collaborators}
+
+Airtable has two collaborator field types:
+
+- **Collaborator** (`collaborator`) — a single workspace member. Also used for
+  the built-in *Created by* and *Last modified by* fields.
+- **Multiple collaborators** (`multipleCollaborators`) — zero or more workspace
+  members.
+
+Each collaborator object has three fields: `id` (Airtable user ID), `email`,
+and `name`.
+
+Single-collaborator fields become an `air_collaborator` list-column (type tag
+`collab`). Multi-collaborator fields become an `air_collaborators` list-column
+(type tag `collabs`).
+
+```{r collab-read}
+tasks <- air_read("appXXXXXX", "Tasks")
+tasks
+#> # A tibble: 3 × 5
+#>   airtable_id  title         assigned_to            reviewers
+#>   <chr>        <chr>         <collab>               <collabs>
+#> 1 recAAAAAAAA  Write tests   Alice <alice@co.com>   Bob <bob@co.com>
+#> 2 recBBBBBBBB  Review PR     Bob <bob@co.com>       Alice <alice@co.com> +1
+#> 3 recCCCCCCCC  Deploy        NA                     NA
+```
+
+```{r collab-inspect}
+# Single collaborator: a named list
+tasks$assigned_to[[1]]
+#> $id
+#> [1] "usrXXXXXXXXXXXXXX"
+#> $email
+#> [1] "alice@co.com"
+#> $name
+#> [1] "Alice"
+```
+
+### Flattening collaborators
+
+`air_flatten_collaborator()` converts each collaborator to a formatted string.
+The `format` argument is a glue-style template with access to `id`, `email`,
+and `name`:
+
+```{r collab-flatten}
+# Default: "Name <email>"
+air_flatten_collaborator(tasks$assigned_to)
+#> [1] "Alice <alice@co.com>" "Bob <bob@co.com>"     NA
+
+# Just the name
+air_flatten_collaborator(tasks$assigned_to, format = "{name}")
+#> [1] "Alice" "Bob"   NA
+
+# Just the ID
+air_flatten_collaborator(tasks$assigned_to, format = "{id}")
+#> [1] "usrXXXXXXXXXXXXXX" "usrYYYYYYYYYYYYYY" NA
+```
+
+### Expanding strings back to collaborator list-columns
+
+`air_expand_collaborator()` parses formatted strings back into named lists. The
+`pattern` argument is a regex with two capture groups (name, email):
+
+```{r collab-expand}
+strings <- c("Alice <alice@co.com>", "Bob <bob@co.com>", NA)
+air_expand_collaborator(strings)
+#> [[1]]
+#> $name
+#> [1] "Alice"
+#> $email
+#> [1] "alice@co.com"
+#>
+#> [[2]]
+#> $name
+#> [1] "Bob"
+#> $email
+#> [1] "bob@co.com"
+#>
+#> [[3]]
+#> NULL
+```
+
+When writing collaborator values back to Airtable, pass the `id` field — the
+API identifies users by their Airtable user ID, not by name or email.
+
+---
+
+## 5. Barcode fields (`air_barcode`) {#barcode}
+
+Airtable's *Barcode* field stores a scanned barcode value alongside its
+symbology (e.g., QR code, EAN-13, Code 128). Each row's value is a named
+list with:
+
+- `text` — the decoded barcode string
+- `type` — the barcode symbology (may be absent)
+
+```{r barcode-read}
+inventory <- air_read("appXXXXXX", "Inventory")
+inventory
+#> # A tibble: 3 × 4
+#>   airtable_id  item         barcode
+#>   <chr>        <chr>        <barcode>
+#> 1 recAAAAAAAA  Widget A     9780201379624 (EAN13)
+#> 2 recBBBBBBBB  Widget B     https://example.com/p/456 (QR)
+#> 3 recCCCCCCCC  Widget C     NA
+```
+
+```{r barcode-inspect}
+inventory$barcode[[1]]
+#> $text
+#> [1] "9780201379624"
+#> $type
+#> [1] "EAN13"
+```
+
+There is no dedicated `air_flatten_barcode()` function. Use `air_simplify()`
+(described in the next section) or extract fields manually:
+
+```{r barcode-flatten-manual}
+# Extract just the barcode text
+vapply(inventory$barcode, function(b) b$text %||% NA_character_, character(1))
+#> [1] "9780201379624"               "https://example.com/p/456"   NA
+```
+
+---
+
+## 6. `air_simplify()` — the kitchen-sink flattener {#air_simplify}
+
+`air_simplify()` processes every list-column in a tibble at once, converting
+each to its simplest character representation using the appropriate
+type-specific flattener. It is the quickest way to get a fully flat,
+all-atomic data frame for export or display:
+
+```{r simplify}
+projects <- air_read("appXXXXXX", "Projects")
+
+# Before: list-columns with air_* classes
+str(projects$tags)
+#>  air_multiselect [1:4] ...
+
+flat <- air_simplify(projects)
+flat
+#> # A tibble: 4 × 4
+#>   airtable_id  name    tags                owner_ids
+#>   <chr>        <chr>   <chr>               <chr>
+#> 1 recAAAAAAAA  Alpha   R, data, analysis   recPPPPPPPP
+#> 2 recBBBBBBBB  Beta    data                recQQQQQQQQ, recRRRRRRRR
+#> 3 recCCCCCCCC  Gamma   NA                  NA
+#> 4 recDDDDDDDD  Delta   R, reporting        NA
+
+# After: plain character columns
+str(flat$tags)
+#>  chr [1:4] "R, data, analysis" "data" NA "R, reporting"
+```
+
+When a schema is available (passed as the `schema` argument), `air_simplify()`
+uses the field type to pick the right flattener. Without a schema, it falls
+back to a generic `paste(format(v), collapse = ", ")` for each list element.
+
+```{r simplify-with-schema}
+# at_get_schema() returns all tables; find the one named "Projects"
+all_tables <- at_get_schema("appXXXXXX")
+projects_table <- Filter(function(t) t$name == "Projects", all_tables)[[1]]
+schema <- projects_table$fields
+flat <- air_simplify(projects, schema = schema)
+```
+
+### When to use `air_simplify()` vs. the type-specific flatteners
+
+- Use **`air_simplify()`** when you want a quick flat snapshot of the whole
+  table, e.g., to export to CSV or to inspect data interactively.
+- Use **type-specific flatteners** (`air_flatten_multiselect()`,
+  `air_flatten_links()`, `air_flatten_attachments()`,
+  `air_flatten_collaborator()`) when you need control over delimiters, output
+  format, or want to work with individual columns in a pipeline.
+- Avoid `air_simplify()` before writing data back to Airtable. The original
+  `air_*` list-columns round-trip correctly; flattened strings do not (you
+  would need `air_expand_multiselect()` etc. to convert them back).
+
+---
+
+## See also
+
+- [Getting Started vignette](airtable2.html) — authentication, `air_read()`,
+  `air_write()`, `air_upsert()`, `air_sync()`.
+- [Metadata and Backup vignette](metadata-backup.html) — `air_dump()`,
+  `air_restore()`, schema operations, best practices for archiving bases.
+- `?air_read` — the `attachments` and `attachment_dir` arguments for
+  downloading content at read time.
+- `?air_read_attachments`, `?air_write_attachments`, `?air_sync_attachments` —
+  dedicated attachment helpers.
+- `?air_left_join` — joining local data frames with remote Airtable tables.

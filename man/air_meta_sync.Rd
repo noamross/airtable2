@@ -2,22 +2,70 @@
 % Please edit documentation in R/air_meta.R
 \name{air_meta_sync}
 \alias{air_meta_sync}
-\title{Sync metadata to a table within the base itself}
+\title{Sync a metadata source to patch the base schema}
 \usage{
-air_meta_sync(base_id, meta_table = "_metadata", .token = NULL)
+air_meta_sync(base_id, source = "_metadata", ..., .token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
-\item{meta_table}{Name of the table to store metadata in.
-Default \code{"_metadata"}.}
+\item{source}{Where to pull the edited metadata from.  Defaults to
+\code{"_metadata"}, meaning the \verb{_metadata} table inside \code{base_id}.  Can also
+be a \code{data.frame}, a path to a \code{.csv} file, or a path to a \code{.json} file
+(see \emph{Source precedence} above).}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
-Invisible upsert result.
+Invisible \code{NULL}. Side-effect: PATCHes changed fields in the base.
 }
 \description{
-Makes the base self-documenting by upserting the metadata tibble into a
-designated table within the same base.
+The \strong{preferred metadata workflow}: pull field names and descriptions from
+a source (default: the \code{"_metadata"} table inside the same base), compare
+against the live schema, and PATCH any changed fields.
+}
+\section{Typical workflow}{
+\enumerate{
+\item \strong{Seed} – run \code{\link[=air_meta_init]{air_meta_init()}} once to create / populate the
+\code{"_metadata"} table from the live schema.
+\item \strong{Edit} – open the \code{"_metadata"} table in Airtable and change
+\code{field_name} / \code{description} cells to your liking.
+\item \strong{Sync} – call \code{air_meta_sync()} (no arguments needed) to PATCH the
+schema with your edits.
+}
+}
+
+\section{Source precedence}{
+\code{source} is resolved in this order:
+\enumerate{
+\item A \code{data.frame} → used directly.
+\item A length-1 character path to an \strong{existing \code{.csv}} file → read with
+\code{\link[utils:read.csv]{utils::read.csv()}}.
+\item A length-1 character path to an \strong{existing \code{.json}} file → read with
+\code{\link[jsonlite:fromJSON]{jsonlite::fromJSON()}}.
+\item A length-1 character string that matches neither 2 nor 3 → treated as
+a \strong{table name} inside the base and read with \code{\link[=air_read]{air_read()}}.
+}
+
+The source tibble must contain at least \code{field_id}, \code{table_id},
+\code{field_name}, and \code{description} columns (the shape produced by
+\code{\link[=air_meta]{air_meta()}} and \code{\link[=air_meta_init]{air_meta_init()}}). An extra \code{meta_key} column (produced
+by older seed runs) is silently ignored.
+}
+
+\examples{
+\dontrun{
+# 1. Seed the _metadata table from the live schema (run once)
+air_meta_init("appXXXXXX")
+
+# 2. Edit field_name / description cells directly in Airtable ...
+
+# 3. Pull edits back and patch the schema
+air_meta_sync("appXXXXXX")
+
+# 4. Alternatively, sync from a local CSV
+air_meta_sync("appXXXXXX", source = "my_meta.csv")
+}
 }

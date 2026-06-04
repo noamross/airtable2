@@ -57,7 +57,10 @@ print.air_api_usage <- function(x, ...) {
   ws <- if (identical(x$workspace_id, "unknown")) {
     "unknown workspace"
   } else {
-    x$workspace_id
+    cli::style_hyperlink(
+      x$workspace_id,
+      paste0("https://airtable.com/", x$workspace_id)
+    )
   }
   cli::cli_text("Airtable API usage for {.val {ws}}")
   cli::cli_text("{n} API call{?s} since start of month ({x$since})")

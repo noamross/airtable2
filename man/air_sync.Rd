@@ -6,9 +6,9 @@
 \usage{
 air_sync(
   data,
-  base_id = NULL,
   table,
   key,
+  base_id = NULL,
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
@@ -23,14 +23,14 @@ air_sync(
 \item{data}{A data frame representing the desired state of the table.
 May contain computed field columns (they are ignored).}
 
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
-default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
-variable.}
-
 \item{table}{Table name or ID.}
 
 \item{key}{Column name in \code{data} that uniquely identifies records (used as
 the merge field for upsert). Must be a single field.}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
 \item{hash_fields}{Character vector of fields to include in the change-
 detection hash. If \code{NULL} (default), all non-key, non-computed,
@@ -84,7 +84,7 @@ for newly created records after the sync completes.
 \examples{
 \dontrun{
 desired <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 26))
-result <- air_sync(desired, "appXXXXXX", "Contacts", key = "Name")
+result <- air_sync(desired, "Contacts", key = "Name", base_id = "appXXXXXX")
 result$created
 result$unchanged
 }

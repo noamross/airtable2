@@ -4,19 +4,28 @@
 \alias{air_browse}
 \title{Open an Airtable workspace, base, table, or view in the browser}
 \usage{
-air_browse(id, ...)
+air_browse(id = NULL, base_id = NULL, table_id = NULL, ...)
 }
 \arguments{
-\item{id}{Character or connection. One of:
+\item{id}{Character, connection, or \code{NULL}. One of:
 \itemize{
+\item \code{NULL} (default): opens the session default base.
 \item A workspace ID (starts with \code{wsp})
 \item A base ID (starts with \code{app})
 \item A table ID (starts with \code{tbl})
 \item A view ID (starts with \code{viw})
 \item A record ID (starts with \code{rec})
 \item A full Airtable URL
-\item An Airtable connection object (uses its base_id or workspace_id)
+\item An Airtable connection object (uses its \code{base_id})
+\item A human-readable base or table name (see Name resolution above)
 }}
+
+\item{base_id}{Character or \code{NULL}. The base ID to use when browsing a
+table, view, or record, or when resolving a table name. Falls back to the
+session default set via \code{\link[=air_set_base]{air_set_base()}}.}
+
+\item{table_id}{Character or \code{NULL}. The table ID to use when browsing a
+view or record ID.}
 
 \item{...}{Additional arguments passed to \code{\link[utils:browseURL]{utils::browseURL()}}.}
 }
@@ -25,21 +34,46 @@ The URL that was opened (invisibly).
 }
 \description{
 Navigates to the Airtable web interface for the given resource.
-Automatically resolves IDs from connection objects and determines
-the resource type from the ID prefix.
+Automatically resolves IDs from connection objects, determines the resource
+type from the ID prefix, or resolves human-readable names to IDs.
+}
+\details{
+If \code{id} is \code{NULL} (the default), \code{air_browse()} opens the session default
+base set via \code{\link[=air_set_base]{air_set_base()}} or the \code{airtable2.base_id} option.
+
+Name resolution precedence:
+\itemize{
+\item If \code{id} is a human name \strong{and} a \code{base_id} is available (explicit arg or
+session default), \code{id} is treated as a \strong{table name} and resolved via
+\code{\link[=at_get_schema]{at_get_schema()}}. Case-sensitive first; falls back to case-insensitive
+with a warning if needed.
+\item If \code{id} is a human name and \strong{no} base context is available, \code{id} is
+treated as a \strong{base name} and resolved via \code{\link[=at_list_bases]{at_list_bases()}}.
+\item If no match is found, \code{cli_abort()} is called with a helpful message
+listing how to view valid names.
+}
 }
 \examples{
 \dontrun{
-# Open a base
+# Open the session default base (requires air_set_base() or option)
+air_browse()
+
+# Open a base by ID
 air_browse("appXXXXXX")
 
 # Open a workspace
 air_browse("wspXXXXXX")
 
-# Open a table within a base
+# Open a table within a base (base_id is a proper formal, not ...)
 air_browse("tblXXXXXX", base_id = "appXXXXXX")
 
 # Open a view
 air_browse("viwXXXXXX", base_id = "appXXXXXX", table_id = "tblXXXXXX")
+
+# Resolve a table by name (requires base context)
+air_browse("My Table", base_id = "appXXXXXX")
+
+# Resolve a base by name (no base context)
+air_browse("My Base")
 }
 }

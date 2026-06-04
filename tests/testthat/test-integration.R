@@ -28,7 +28,7 @@ test_that("at_get_schema returns table metadata", {
 
 test_that("air_read returns typed tibble", {
   httptest2::with_mock_dir("fixtures", {
-    result <- air_read("appTEST123", "Contacts", .token = "fake_token")
+    result <- air_read("Contacts", "appTEST123", .token = "fake_token")
     expect_s3_class(result, "tbl_df")
     expect_equal(nrow(result), 2L)
 

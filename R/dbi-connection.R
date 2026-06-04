@@ -178,10 +178,10 @@ methods::setMethod(
     if (isTRUE(overwrite)) {
       key <- names(value)[[1]]
       air_sync(
-        resolved$base_id,
-        resolved$table$name,
         value,
+        resolved$table$name,
         key = key,
+        base_id = resolved$base_id,
         delete_missing = TRUE,
         .token = conn@token,
         ...
@@ -193,9 +193,9 @@ methods::setMethod(
         )
       }
       air_write(
-        resolved$base_id,
-        resolved$table$name,
         value,
+        resolved$table$name,
+        resolved$base_id,
         .token = conn@token,
         ...
       )

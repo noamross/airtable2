@@ -69,8 +69,8 @@ air_dump <- function(
         NULL
       }
       air_read(
-        base_id,
         t$name,
+        base_id,
         coerce = FALSE,
         attachments = attachments,
         attachment_dir = tbl_att_dir,
@@ -145,6 +145,18 @@ air_dump <- function(
 #' @param workspace_id Workspace ID to create the base in.
 #' @inheritParams air_read
 #' @return The new base ID (invisibly).
+#' @section Linked-record fields:
+#' Linked-record fields (`multipleRecordLinks`) and the computed fields that
+#' depend on them (`rollup`, `lookup`, `count`) are skipped during the initial
+#' field-creation pass because their options reference base-specific IDs that
+#' do not exist in the new base. After all tables and records have been
+#' created, `restore_linked_fields()` recreates these fields, remapping the
+#' linked-table and record-link-field references to the new base's IDs.
+#'
+#' Note that the link FIELDS are recreated but their CELL VALUES (the specific
+#' record-to-record connections) are NOT repopulated: the old record IDs stored
+#' in the dump do not correspond to the newly created records' IDs. Re-linking
+#' cell values is left for a future pass.
 #' @examples
 #' \dontrun{
 #' # Restore from a directory dump
@@ -259,8 +271,8 @@ air_restore <- function(
       tryCatch(
         air_write(
           data,
-          new_base_id,
           tbl_name,
+          new_base_id,
           typecast = TRUE,
           attachments = attachments,
           attachment_dir = tbl_att_dir,
@@ -273,6 +285,19 @@ air_restore <- function(
         }
       )
     }
+  }
+
+  # Recreate linked-record fields and their dependent computed fields. These
+  # were skipped during restore_fields() because their options reference
+  # base-specific IDs. Build an old->new table id map (matched by table name)
+  # from the original schema and a freshly fetched new schema.
+  new_schema <- tryCatch(
+    at_get_schema(new_base_id, token = .token),
+    error = function(e) NULL
+  )
+  if (!is.null(new_schema)) {
+    table_id_map <- build_table_id_map(schema, new_schema)
+    restore_linked_fields(schema, new_base_id, table_id_map, .token = .token)
   }
 
   cli_inform("Restore complete. New base ID: {.val {new_base_id}}.")
@@ -482,4 +507,226 @@ restore_fields <- function(schema, new_base_id, .token) {
       }
     }
   }
+}
+
+#' Build an old -> new table id map by matching table names
+#'
+#' Returns a named character vector whose names are old table IDs and whose
+#' values are the new base's table IDs, matched on table name. Tables whose
+#' name has no counterpart in the new schema are omitted.
+#'
+#' @param old_schema Schema list from the dump.
+#' @param new_schema Schema list freshly fetched from the new base.
+#' @return Named character vector (`old_table_id -> new_table_id`).
+#' @noRd
+build_table_id_map <- function(old_schema, new_schema) {
+  new_ids_by_name <- stats::setNames(
+    vapply(new_schema, function(t) t$id %||% NA_character_, character(1L)),
+    vapply(new_schema, function(t) t$name %||% NA_character_, character(1L))
+  )
+
+  map <- character(0)
+  for (t in old_schema) {
+    old_id <- t$id %||% NA_character_
+    nm <- t$name %||% NA_character_
+    if (!is.na(nm) && nm %in% names(new_ids_by_name) && !is.na(old_id)) {
+      map[[old_id]] <- new_ids_by_name[[nm]]
+    }
+  }
+  map
+}
+
+#' Recreate linked-record fields and their dependent computed fields
+#'
+#' Recreates `multipleRecordLinks` fields (skipped during [air_restore()]'s
+#' initial field pass because they reference base-specific IDs) and, once those
+#' exist, the dependent `rollup`/`lookup`/`count` fields.
+#'
+#' For each link field: `options$linkedTableId` is remapped to the new base's
+#' table id (via `table_id_map`), and `options$inverseLinkFieldId` and
+#' `options$viewIdForRecordSelection` are dropped (they don't exist yet;
+#' Airtable auto-creates the inverse link). For each dependent field:
+#' `options$recordLinkFieldId` is remapped to the newly created link field's id
+#' (looked up by name in a freshly fetched schema).
+#'
+#' Link CELL VALUES are not repopulated: the dump's old record IDs do not
+#' correspond to the new records' IDs. Only the link FIELDS are recreated.
+#'
+#' Failures are warned-and-continued (like `restore_fields()`); a link whose
+#' target table name is missing from the map is warned and skipped.
+#'
+#' @param schema The original (dump) schema list.
+#' @param new_base_id The ID of the newly created base.
+#' @param table_id_map Named character vector mapping old table IDs to new
+#'   table IDs (see `build_table_id_map()`).
+#' @param .token Personal access token (resolved via [air_token()] if `NULL`).
+#' @return Invisibly, `NULL`.
+#' @noRd
+restore_linked_fields <- function(
+  schema,
+  new_base_id,
+  table_id_map,
+  .token = NULL
+) {
+  # Fetch current new schema to learn new table ids by name.
+  new_schema <- at_get_schema(new_base_id, token = .token)
+  new_tbl_id_by_name <- stats::setNames(
+    vapply(new_schema, function(t) t$id %||% NA_character_, character(1L)),
+    vapply(new_schema, function(t) t$name %||% NA_character_, character(1L))
+  )
+
+  # Safe lookup into a named vector: returns NULL when the key is absent
+  # (named-vector `[[` errors on a missing key).
+  lookup <- function(vec, key) {
+    if (is.null(key) || is.na(key) || !key %in% names(vec)) {
+      return(NULL)
+    }
+    vec[[key]]
+  }
+
+  n_links <- 0L
+  n_deps <- 0L
+
+  # --- Pass 1: create multipleRecordLinks fields ---
+  for (tbl_schema in schema) {
+    new_tbl_id <- lookup(new_tbl_id_by_name, tbl_schema$name %||% "")
+    if (is.null(new_tbl_id) || is.na(new_tbl_id)) {
+      next
+    }
+
+    for (f in tbl_schema$fields) {
+      if (!identical(f$type, "multipleRecordLinks")) {
+        next
+      }
+
+      opts <- f$options %||% list()
+      old_linked <- opts$linkedTableId %||% NA_character_
+      new_linked <- lookup(table_id_map, old_linked)
+
+      if (is.null(new_linked) || is.na(new_linked)) {
+        cli_warn(
+          "Link field {.field {f$name}} targets a table that could not be \\
+          remapped (linked table not found in the restored base) - skipping."
+        )
+        next
+      }
+
+      opts$linkedTableId <- new_linked
+      opts$inverseLinkFieldId <- NULL
+      opts$viewIdForRecordSelection <- NULL
+
+      tryCatch(
+        {
+          at_create_field(
+            f$name,
+            base_id = new_base_id,
+            table_id = new_tbl_id,
+            type = "multipleRecordLinks",
+            description = f$description,
+            options = opts,
+            token = .token
+          )
+          n_links <- n_links + 1L
+        },
+        error = function(e) {
+          cli_warn(
+            "Could not create link field {.field {f$name}}: \\
+            {conditionMessage(e)}"
+          )
+        }
+      )
+    }
+  }
+
+  # --- Pass 2: create dependent rollup/lookup/count fields ---
+  # Re-fetch schema so we can map old link-field ids to the new link-field ids
+  # (looked up by name within each table).
+  refreshed <- tryCatch(
+    at_get_schema(new_base_id, token = .token),
+    error = function(e) NULL
+  )
+
+  for (tbl_schema in schema) {
+    new_tbl_id <- lookup(new_tbl_id_by_name, tbl_schema$name %||% "")
+    if (is.null(new_tbl_id) || is.na(new_tbl_id)) {
+      next
+    }
+
+    # Build old-link-field-id -> new-link-field-id map for this table by name.
+    new_tbl <- if (!is.null(refreshed)) {
+      Find(function(t) identical(t$name, tbl_schema$name), refreshed)
+    } else {
+      NULL
+    }
+    new_link_id_by_name <- if (!is.null(new_tbl)) {
+      stats::setNames(
+        vapply(new_tbl$fields, function(g) g$id %||% NA_character_, character(1L)),
+        vapply(new_tbl$fields, function(g) g$name %||% NA_character_, character(1L))
+      )
+    } else {
+      character(0)
+    }
+    # old link field id -> its name, for this table.
+    old_link_name_by_id <- stats::setNames(
+      vapply(tbl_schema$fields, function(g) g$name %||% NA_character_, character(1L)),
+      vapply(tbl_schema$fields, function(g) g$id %||% NA_character_, character(1L))
+    )
+
+    for (f in tbl_schema$fields) {
+      if (!f$type %in% c("rollup", "lookup", "count")) {
+        next
+      }
+
+      opts <- f$options %||% list()
+      old_link_id <- opts$recordLinkFieldId %||% NA_character_
+      link_name <- lookup(old_link_name_by_id, old_link_id)
+      new_link_id <- if (!is.null(link_name)) {
+        lookup(new_link_id_by_name, link_name)
+      } else {
+        NULL
+      }
+
+      if (is.null(new_link_id) || is.na(new_link_id)) {
+        cli_warn(
+          "Dependent field {.field {f$name}} (type {.val {f$type}}) references \\
+          a link field that could not be remapped - skipping."
+        )
+        next
+      }
+
+      # Patch options: remap recordLinkFieldId, drop read-only keys.
+      opts$recordLinkFieldId <- new_link_id
+      opts <- opts[setdiff(
+        names(opts),
+        c("isValid", "referencedFieldIds", "result")
+      )]
+
+      tryCatch(
+        {
+          at_create_field(
+            f$name,
+            base_id = new_base_id,
+            table_id = new_tbl_id,
+            type = f$type,
+            description = f$description,
+            options = opts,
+            token = .token
+          )
+          n_deps <- n_deps + 1L
+        },
+        error = function(e) {
+          cli_warn(
+            "Could not create dependent field {.field {f$name}}: \\
+            {conditionMessage(e)}"
+          )
+        }
+      )
+    }
+  }
+
+  cli_inform(
+    "Recreated {n_links} link field{?s} and {n_deps} dependent \\
+    field{?s}."
+  )
+  invisible(NULL)
 }

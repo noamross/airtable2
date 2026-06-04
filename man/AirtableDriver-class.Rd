@@ -3,8 +3,9 @@
 \docType{class}
 \name{AirtableDriver-class}
 \alias{AirtableDriver-class}
+\alias{AirtableDriver}
 \title{Airtable DBI driver class}
 \description{
-Airtable DBI driver class
+S4 class representing the Airtable DBI driver. Use \code{\link[=airtable2]{airtable2()}} to
+construct an instance and pass it to \code{\link[DBI:dbConnect]{DBI::dbConnect()}}.
 }
-\keyword{internal}

@@ -16,7 +16,9 @@
 ^air\.toml$
 ^_pkgdown\.yml$
 ^docs$
-^tools$
+^tools/
 ^NEWS\.md$
+^.*\.Rmd\.orig$
 ^\.claude$
 ^NOTES.md$
+^pkgdown$

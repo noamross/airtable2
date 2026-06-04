@@ -6,18 +6,20 @@
 \alias{air_full_join}
 \title{Join local data with an Airtable table}
 \usage{
-air_left_join(x, base_id = NULL, table, by = NULL, ..., .token = NULL)
+air_left_join(x, table, base_id = NULL, by = NULL, ..., .token = NULL)
 
-air_inner_join(x, base_id = NULL, table, by = NULL, ..., .token = NULL)
+air_inner_join(x, table, base_id = NULL, by = NULL, ..., .token = NULL)
 
-air_full_join(x, base_id = NULL, table, by = NULL, ..., .token = NULL)
+air_full_join(x, table, base_id = NULL, by = NULL, ..., .token = NULL)
 }
 \arguments{
 \item{x}{A local data frame.}
 
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
-
 \item{table}{Table name or ID.}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
 \item{by}{Character vector of column name(s) to join on. If \code{NULL},
 uses all column names shared between \code{x} and the remote table
@@ -38,6 +40,6 @@ The \code{...} are forwarded to \code{\link[=air_read]{air_read()}} (e.g. \code{
 \examples{
 \dontrun{
 scores <- tibble::tibble(Name = c("Alice", "Bob"), Score = c(90, 85))
-air_left_join(scores, "appXXXX", "Contacts", by = "Name")
+air_left_join(scores, "Contacts", "appXXXX", by = "Name")
 }
 }

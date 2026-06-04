@@ -5,8 +5,8 @@
 \title{Read records from an Airtable table}
 \usage{
 air_read(
-  base_id = NULL,
   table,
+  base_id = NULL,
   view = NULL,
   fields = NULL,
   formula = NULL,
@@ -22,9 +22,11 @@ air_read(
 )
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
-
 \item{table}{Table name or ID.}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
 \item{view}{Optional view name or ID to filter by.}
 
@@ -71,16 +73,16 @@ and returns a properly typed tibble.
 \examples{
 \dontrun{
 # Read all records from a table
-df <- air_read("appXXXXXX", "Contacts")
+df <- air_read("Contacts", "appXXXXXX")
 
 # Read specific fields with a filter
-df <- air_read("appXXXXXX", "Contacts",
+df <- air_read("Contacts", "appXXXXXX",
   fields = c("Name", "Email"),
   formula = "{Age} > 30"
 )
 
 # Download attachments to disk
-df <- air_read("appXXXXXX", "Projects",
+df <- air_read("Projects", "appXXXXXX",
   attachments = "file",
   attachment_dir = "downloads/"
 )

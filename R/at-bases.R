@@ -90,9 +90,9 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #' Create a new base
 #'
 #' @param name Name for the new base.
-#' @param workspace_id Workspace ID to create the base in.
 #' @param tables A list of table configurations. Each should include at minimum
 #'   `name` and `fields` (a list of field configs).
+#' @param workspace_id Workspace ID to create the base in.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created base object (list with `id`, `name`, `tables`).
 #' @examples
@@ -108,7 +108,7 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #' new_base$id
 #' }
 #' @export
-at_create_base <- function(name, workspace_id = NULL, tables, token = NULL) {
+at_create_base <- function(name, tables, workspace_id = NULL, token = NULL) {
   check_string(name)
   workspace_id <- workspace_id %||% default_workspace_id()
   check_string(workspace_id)

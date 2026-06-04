@@ -4,7 +4,7 @@
 \alias{air_flatten_attachments}
 \title{Flatten an attachments list-column to a summary string}
 \usage{
-air_flatten_attachments(x, field = "filename", sep = ", ")
+air_flatten_attachments(x, field = "filename", sep = NULL)
 }
 \arguments{
 \item{x}{A list-column where each element is a data frame or list of
@@ -13,7 +13,9 @@ attachment objects.}
 \item{field}{Which attachment field to extract (e.g., \code{"filename"}, \code{"url"}).
 Default \code{"filename"}.}
 
-\item{sep}{Delimiter. Default \code{", "}.}
+\item{sep}{Delimiter. Default \code{"; "}, overridable via
+\code{options(airtable2.delimiter = ...)} or the \code{AIRTABLE2_DELIMITER}
+environment variable. An explicit \code{sep} argument always takes precedence.}
 }
 \value{
 A character vector.

@@ -3,8 +3,10 @@
 #' High-level function that auto-paginates, fetches schema for type coercion,
 #' and returns a properly typed tibble.
 #'
-#' @param base_id Base ID (e.g., `"appXXXXXX"`).
 #' @param table Table name or ID.
+#' @param base_id Base ID (e.g., `"appXXXXXX"`). If `NULL`, uses the session
+#'   default set by [air_set_base()] or the `AIRTABLE_BASE_ID` environment
+#'   variable.
 #' @param view Optional view name or ID to filter by.
 #' @param fields Optional character vector of field names to return.
 #' @param formula Optional Airtable formula string for filtering.
@@ -32,24 +34,24 @@
 #' @examples
 #' \dontrun{
 #' # Read all records from a table
-#' df <- air_read("appXXXXXX", "Contacts")
+#' df <- air_read("Contacts", "appXXXXXX")
 #'
 #' # Read specific fields with a filter
-#' df <- air_read("appXXXXXX", "Contacts",
+#' df <- air_read("Contacts", "appXXXXXX",
 #'   fields = c("Name", "Email"),
 #'   formula = "{Age} > 30"
 #' )
 #'
 #' # Download attachments to disk
-#' df <- air_read("appXXXXXX", "Projects",
+#' df <- air_read("Projects", "appXXXXXX",
 #'   attachments = "file",
 #'   attachment_dir = "downloads/"
 #' )
 #' }
 #' @export
 air_read <- function(
-  base_id = NULL,
   table,
+  base_id = NULL,
   view = NULL,
   fields = NULL,
   formula = NULL,

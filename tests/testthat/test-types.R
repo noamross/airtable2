@@ -101,3 +101,58 @@ test_that("coerce_datetime works", {
   expect_s3_class(result, "POSIXct")
   expect_equal(attr(result, "tzone"), "UTC")
 })
+
+# ── print methods: no bare quoted IDs ────────────────────────────────────────
+
+test_that("print.air_multiselect shows class and count without raw IDs", {
+  obj <- new_air_multiselect(list(c("a", "b"), "c"))
+  out <- capture.output(print(obj))
+  expect_match(out, "air_multiselect", fixed = TRUE)
+})
+
+test_that("print.air_links shows class header without quoting IDs", {
+  obj <- new_air_links(list(c("rec123", "rec456")))
+  out <- capture.output(print(obj))
+  expect_match(out, "air_links", fixed = TRUE)
+})
+
+test_that("format.air_links shows single record ID without extra quotes", {
+  obj <- new_air_links(list("recABC123XYZ"))
+  result <- format(obj)
+  # The raw id should appear without surrounding quotes
+  expect_equal(result, "recABC123XYZ")
+  expect_false(grepl("^\"", result))
+})
+
+test_that("print.air_attachments shows class header", {
+  obj <- new_air_attachments(list(list(list(filename = "photo.jpg"))))
+  out <- capture.output(print(obj))
+  expect_match(out, "air_attachments", fixed = TRUE)
+})
+
+test_that("print.air_collaborator shows class header", {
+  obj <- new_air_collaborator(list(list(name = "Alice", email = "alice@example.com", id = "usrABC")))
+  out <- capture.output(print(obj))
+  expect_match(out, "air_collaborator", fixed = TRUE)
+})
+
+test_that("print.air_barcode shows class header", {
+  obj <- new_air_barcode(list(list(text = "12345", type = "QR")))
+  out <- capture.output(print(obj))
+  expect_match(out, "air_barcode", fixed = TRUE)
+})
+
+test_that("air_simplify flattens classed air_* columns via the generic", {
+  data <- tibble::tibble(
+    Name = c("A", "B"),
+    Tags = new_air_multiselect(list(c("x", "y"), NULL)),
+    Links = new_air_links(list("rec1", c("rec2", "rec3")))
+  )
+  # No schema: classed columns should still flatten via dispatch
+  result <- air_simplify(data)
+  expect_type(result$Tags, "character")
+  expect_equal(result$Tags, c("x; y", NA))
+  expect_type(result$Links, "character")
+  expect_equal(result$Links, c("rec1", "rec2; rec3"))
+  expect_equal(result$Name, c("A", "B"))
+})

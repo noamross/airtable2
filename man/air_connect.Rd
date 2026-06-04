@@ -4,7 +4,12 @@
 \alias{air_connect}
 \title{Connect to Airtable via DBI}
 \usage{
-air_connect(base = NULL, .token = NULL, include_views = FALSE)
+air_connect(
+  base = NULL,
+  .token = NULL,
+  include_views = FALSE,
+  .connect_code = NULL
+)
 }
 \arguments{
 \item{base}{Character. A Base ID (starts with \code{app}) or a Base Name. If
@@ -15,6 +20,10 @@ air_connect(base = NULL, .token = NULL, include_views = FALSE)
 
 \item{include_views}{Logical. If \code{TRUE}, views are included in the
 connection pane alongside tables. Default \code{FALSE}.}
+
+\item{.connect_code}{Character. Optional custom reconnect code for the IDE
+connection pane. Defaults to a \code{DBI::dbConnect()} call. Set by
+\code{\link[=air_pane]{air_pane()}} to use \code{airtable2::air_pane()} instead.}
 }
 \value{
 An \link[=AirtableConnection-class]{AirtableConnection} object.

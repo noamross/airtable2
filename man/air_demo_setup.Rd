@@ -6,7 +6,7 @@
 \usage{
 air_demo_setup(
   workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID"),
-  name = "airtable2_demo",
+  name = "bollardsforart_demo",
   .token = NULL
 )
 }
@@ -14,7 +14,7 @@ air_demo_setup(
 \item{workspace_id}{Workspace ID (defaults to AIRTABLE_WORKSPACE_ID env var).
 Find yours in the browser URL: \verb{https://airtable.com/wspXXXXX/...}}
 
-\item{name}{Base name (default: \code{"airtable2_demo"}).}
+\item{name}{Base name (default: \code{"bollardsforart_demo"}).}
 
 \item{.token}{API token (see \code{\link[=air_set_token]{air_set_token()}}).}
 }
@@ -23,29 +23,35 @@ The base ID (invisibly). Prints a summary of what was created.
 }
 \description{
 Creates a new Airtable base with tables and sample records that exercise
-all the key field types and airtable2 features. The demo base is intended
-for learning and testing.
+all the key field types and airtable2 features. The demo base is themed
+around \strong{BollardsForArt}, a fictional creative-arts advocacy nonprofit that
+installs unauthorized public art, fights for arts funding, runs community
+workshops, and tracks their campaigns and artists.
 }
 \details{
 The demo base contains:
 \itemize{
-\item \strong{People} table: text, number, checkbox, single/multi-select, date, email
-\item \strong{Projects} table: text, number, date, single-select, linked records to People
-\item \strong{Attachments} table: name + attachment field (for attachment demos)
+\item \strong{Artists} table: text, number, checkbox, single/multi-select, date, email
+(15+ rows with diverse international artists)
+\item \strong{Projects} table: text, number, date, single-select, attachments,
+linked records to Artists (15+ rows with imaginative installation names)
+\item \strong{Grants} table: text, number, date, single-select, linked records to
+Projects (15+ rows of funding sources and applications)
 }
+
+Fields include descriptions (column metadata) set via \code{\link[=at_update_field]{at_update_field()}}.
+Project records have image attachments uploaded via \code{\link[=at_upload_attachment]{at_upload_attachment()}}.
+Linked-records fields connect Projects to Artists and Grants to Projects.
 
 This function creates a real Airtable base and consumes several API calls.
 The base cannot be deleted via the API on free/team-tier accounts; clean up
 manually via the Airtable web interface.
-
-Field types that cannot be created via API (autoNumber, createdTime,
-lastModifiedTime, etc.) are not included.
 }
 \examples{
 \dontrun{
 # Requires AIRTABLE_WORKSPACE_ID and AIRTABLE_API_KEY env vars
 base_id <- air_demo_setup()
 air_set_base(base_id)
-air_read("People")
+air_read("Artists")
 }
 }

@@ -98,8 +98,11 @@ print.at_sitrep <- function(x, ...) {
     n <- nrow(x$bases)
     cli::cli_text("Accessible bases: {n}")
     for (i in seq_len(min(n, 15L))) {
+      base_id_i <- x$bases$id[i]
+      base_url_i <- paste0("https://airtable.com/", base_id_i)
+      id_link <- cli::style_hyperlink(base_id_i, base_url_i)
       cli::cli_text(
-        "  {x$bases$name[i]} ({.val {x$bases$id[i]}}) [{x$bases$permissionLevel[i]}]"
+        "  {x$bases$name[i]} ({id_link}) [{x$bases$permissionLevel[i]}]"
       )
     }
     if (n > 15L) {
@@ -113,8 +116,11 @@ print.at_sitrep <- function(x, ...) {
 
   usage <- tryCatch(air_api_usage(), error = function(e) NULL)
   if (!is.null(usage) && !identical(usage$workspace_id, "unknown")) {
+    wsp_id <- usage$workspace_id
+    wsp_url <- paste0("https://airtable.com/workspaces/", wsp_id)
+    wsp_link <- cli::style_hyperlink(wsp_id, wsp_url)
     cli::cli_text(
-      "API usage: {usage$count} call{?s} this month ({.val {usage$workspace_id}})"
+      "API usage: {usage$count} call{?s} this month ({wsp_link})"
     )
   }
 

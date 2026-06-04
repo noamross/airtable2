@@ -6,9 +6,9 @@
 \usage{
 air_upsert(
   data,
-  base_id = NULL,
   table,
   merge_on,
+  base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
@@ -22,14 +22,14 @@ air_upsert(
 column for direct record matching. Computed field columns and attachment
 field columns are silently dropped from the record payload.}
 
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
-default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
-variable.}
-
 \item{table}{Table name or ID.}
 
 \item{merge_on}{Character vector of 1-3 field names to match on (for records
 without an \code{airtable_id}).}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values.}
 
@@ -79,7 +79,7 @@ Optionally creates missing columns.
 \examples{
 \dontrun{
 data <- data.frame(Name = c("Alice", "Bob"), Age = c(31, 26))
-result <- air_upsert(data, "appXXXXXX", "Contacts", merge_on = "Name")
+result <- air_upsert(data, "Contacts", merge_on = "Name", base_id = "appXXXXXX")
 result$created
 result$updated
 }

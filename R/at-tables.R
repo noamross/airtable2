@@ -2,23 +2,25 @@
 
 #' Create a table in a base
 #'
-#' @param base_id Base ID.
 #' @param name Table name.
 #' @param fields A list of field configurations. The first field becomes the
 #'   primary field.
+#' @param base_id Base ID. If `NULL`, uses the session default set by
+#'   [air_set_base()] or the `AIRTABLE_BASE_ID` environment variable.
 #' @param description Optional table description.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created table object (list with `id`, `name`, `fields`).
 #' @export
 at_create_table <- function(
-  base_id,
   name,
   fields,
+  base_id = NULL,
   description = NULL,
   token = NULL
 ) {
-  check_string(base_id)
   check_string(name)
+  base_id <- resolve_base_id(base_id)
+  check_string(base_id)
 
   body <- compact(list(
     name = name,
@@ -71,27 +73,29 @@ at_update_table <- function(
 
 #' Create a field in a table
 #'
-#' @param base_id Base ID.
-#' @param table_id Table ID.
 #' @param name Field name.
+#' @param table_id Table ID.
 #' @param type Field type (e.g., `"singleLineText"`, `"number"`).
+#' @param base_id Base ID. If `NULL`, uses the session default set by
+#'   [air_set_base()] or the `AIRTABLE_BASE_ID` environment variable.
 #' @param description Optional field description.
 #' @param options Field-specific options (list). Depends on field type.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created field object.
 #' @export
 at_create_field <- function(
-  base_id,
-  table_id,
   name,
+  table_id,
   type,
+  base_id = NULL,
   description = NULL,
   options = NULL,
   token = NULL
 ) {
+  check_string(name)
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table_id)
-  check_string(name)
   check_string(type)
 
   body <- compact(list(

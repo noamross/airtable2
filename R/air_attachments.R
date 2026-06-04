@@ -20,6 +20,7 @@ air_read_attachments <- function(
   record_ids = NULL,
   dest = c("blob", "file"),
   dir = NULL,
+  parallel = NULL,
   .token = NULL
 ) {
   check_string(base_id)
@@ -82,32 +83,46 @@ air_read_attachments <- function(
     type = vapply(rows, `[[`, character(1), "type")
   )
 
-  # Download content
+  # Download content — parallel when enabled, sequential otherwise
+  valid <- !is.na(tbl$url)
+  reqs <- lapply(tbl$url[valid], httr2::request)
+
   if (dest == "blob") {
-    tbl$blob <- lapply(tbl$url, function(u) {
-      if (is.na(u)) {
-        return(raw())
-      }
-      resp <- httr2::request(u) |> httr2::req_perform()
-      httr2::resp_body_raw(resp)
-    })
+    if (parallel_enabled(parallel) && sum(valid) > 1L) {
+      resps <- httr2::req_perform_parallel(reqs, on_error = "continue",
+                                           max_active = 5L)
+      blobs <- vector("list", nrow(tbl))
+      blobs[!valid] <- list(raw())
+      blobs[valid] <- lapply(resps, function(r) {
+        if (inherits(r, "error")) raw() else httr2::resp_body_raw(r)
+      })
+      tbl$blob <- blobs
+    } else {
+      tbl$blob <- lapply(tbl$url, function(u) {
+        if (is.na(u)) return(raw())
+        resp <- httr2::request(u) |> httr2::req_perform()
+        httr2::resp_body_raw(resp)
+      })
+    }
   } else {
     if (!dir.exists(dir)) {
       dir.create(dir, recursive = TRUE)
     }
-    tbl$local_path <- vapply(
-      seq_len(nrow(tbl)),
-      function(i) {
-        if (is.na(tbl$url[i])) {
-          return(NA_character_)
-        }
-        dest_path <- file.path(dir, tbl$filename[i])
-        resp <- httr2::request(tbl$url[i]) |>
-          httr2::req_perform(path = dest_path)
-        dest_path
-      },
-      character(1)
+    dest_paths <- ifelse(
+      valid,
+      file.path(dir, tbl$filename),
+      NA_character_
     )
+    if (parallel_enabled(parallel) && sum(valid) > 1L) {
+      httr2::req_perform_parallel(reqs, paths = dest_paths[valid],
+                                  on_error = "continue", max_active = 5L)
+    } else {
+      mapply(
+        function(u, p) { httr2::request(u) |> httr2::req_perform(path = p) },
+        tbl$url[valid], dest_paths[valid]
+      )
+    }
+    tbl$local_path <- dest_paths
   }
 
   cli_inform("Downloaded {nrow(tbl)} attachment{?s}.")
@@ -121,7 +136,8 @@ air_read_attachments <- function(
 #' @param data A tibble with `airtable_id` and `file_path` columns.
 #' @return Invisible `NULL`. Side effect: uploads attachments.
 #' @export
-air_write_attachments <- function(base_id, table, field, data, .token = NULL) {
+air_write_attachments <- function(base_id, table, field, data,
+                                   parallel = NULL, .token = NULL) {
   check_string(base_id)
   check_string(table)
   check_string(field)
@@ -167,6 +183,7 @@ air_sync_attachments <- function(
   field,
   data,
   key,
+  parallel = NULL,
   .token = NULL
 ) {
   check_string(base_id)
@@ -250,7 +267,8 @@ air_sync_attachments <- function(
 #' @param dir Directory for file downloads (required for `"file"` mode).
 #' @return Modified tibble with downloaded content added to attachment objects.
 #' @noRd
-download_attachments_in_tibble <- function(tbl, att_fields, mode, dir = NULL) {
+download_attachments_in_tibble <- function(tbl, att_fields, mode, dir = NULL,
+                                            parallel = NULL) {
   if (mode == "file" && (is.null(dir) || !nzchar(dir))) {
     cli_abort(
       "{.arg attachment_dir} is required when {.code attachments = \"file\"}."
@@ -260,36 +278,68 @@ download_attachments_in_tibble <- function(tbl, att_fields, mode, dir = NULL) {
     dir.create(dir, recursive = TRUE)
   }
 
+  do_parallel <- parallel_enabled(parallel)
+
   for (field in att_fields) {
-    if (!field %in% names(tbl)) {
-      next
-    }
-    tbl[[field]] <- lapply(seq_len(nrow(tbl)), function(i) {
+    if (!field %in% names(tbl)) next
+
+    # Flatten all (row_idx, att_idx, url, dest_path) for parallel dispatch
+    att_meta <- list()
+    for (i in seq_len(nrow(tbl))) {
       atts <- tbl[[field]][[i]]
-      if (is.null(atts) || length(atts) == 0L) {
-        return(NULL)
-      }
+      if (is.null(atts) || length(atts) == 0L) next
       record_id <- tbl$airtable_id[i]
-      lapply(atts, function(att) {
-        url <- att$url
-        if (is.null(url) || is.na(url)) {
-          return(att)
-        }
-        if (mode == "blob") {
-          resp <- httr2::request(url) |> httr2::req_perform()
-          att$content <- httr2::resp_body_raw(resp)
-        } else {
+      for (j in seq_along(atts)) {
+        url <- atts[[j]]$url
+        if (is.null(url) || is.na(url)) next
+        dest_path <- if (mode == "file") {
           rec_dir <- file.path(dir, record_id)
-          if (!dir.exists(rec_dir)) {
-            dir.create(rec_dir, recursive = TRUE)
-          }
-          dest_path <- file.path(rec_dir, att$filename %||% "unnamed")
-          httr2::request(url) |> httr2::req_perform(path = dest_path)
-          att$local_path <- dest_path
+          if (!dir.exists(rec_dir)) dir.create(rec_dir, recursive = TRUE)
+          file.path(rec_dir, atts[[j]]$filename %||% "unnamed")
+        } else {
+          NA_character_
         }
-        att
-      })
-    })
+        att_meta[[length(att_meta) + 1L]] <- list(
+          row = i, att = j, url = url, dest_path = dest_path
+        )
+      }
+    }
+
+    if (length(att_meta) == 0L) next
+
+    reqs <- lapply(att_meta, function(m) httr2::request(m$url))
+
+    if (do_parallel && length(reqs) > 1L) {
+      paths <- vapply(att_meta, `[[`, character(1), "dest_path")
+      if (mode == "file") {
+        httr2::req_perform_parallel(reqs, paths = paths,
+                                    on_error = "continue", max_active = 5L)
+        for (m in att_meta) {
+          tbl[[field]][[m$row]][[m$att]]$local_path <- m$dest_path
+        }
+      } else {
+        resps <- httr2::req_perform_parallel(reqs, on_error = "continue",
+                                             max_active = 5L)
+        for (k in seq_along(att_meta)) {
+          m <- att_meta[[k]]
+          if (!inherits(resps[[k]], "error")) {
+            tbl[[field]][[m$row]][[m$att]]$content <-
+              httr2::resp_body_raw(resps[[k]])
+          }
+        }
+      }
+    } else {
+      # Sequential fallback
+      for (m in att_meta) {
+        if (mode == "blob") {
+          resp <- httr2::request(m$url) |> httr2::req_perform()
+          tbl[[field]][[m$row]][[m$att]]$content <- httr2::resp_body_raw(resp)
+        } else {
+          httr2::request(m$url) |> httr2::req_perform(path = m$dest_path)
+          tbl[[field]][[m$row]][[m$att]]$local_path <- m$dest_path
+        }
+      }
+    }
   }
   tbl
 }

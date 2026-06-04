@@ -2,6 +2,292 @@
 #
 # Uses schema info to determine how to coerce each field.
 # When schema is unavailable, falls back to best-guess heuristics.
+#
+# --- S3 classes for list-column Airtable types ---
+#
+# Each complex Airtable field type becomes a lightweight list-subclass so that:
+#   (a) all data is preserved as a list-column
+#   (b) pillar/tibble print shows a compact one-line summary per value
+#   (c) type_sum() shows the Airtable type abbreviation in column headers
+#
+# Coercion to plain character/vector is user-initiated via air_flatten_*().
+# S3 methods are registered lazily in .onLoad via vctrs::s3_register() so
+# pillar and vctrs can remain in Suggests / Imports respectively.
+
+# --------------------------------------------------------------------------- #
+#  air_multiselect - list of character vectors
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_multiselect <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_multiselect", "list"))
+}
+
+#' @export
+format.air_multiselect <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v) || length(v) == 0L) {
+        NA_character_
+      } else {
+        paste(v, collapse = ", ")
+      }
+    },
+    character(1)
+  )
+}
+
+#' @export
+print.air_multiselect <- function(x, ...) {
+  cat("<air_multiselect[", length(x), "]>\n", sep = "")
+  invisible(x)
+}
+
+# pillar methods registered via s3_register in zzz.R
+pillar_shaft_air_multiselect <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 8L)
+}
+
+type_sum_air_multiselect <- function(x, ...) "sel[]"
+
+# --------------------------------------------------------------------------- #
+#  air_links - list of record-ID character vectors
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_links <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_links", "list"))
+}
+
+#' @export
+format.air_links <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v) || length(v) == 0L) {
+        NA_character_
+      } else if (length(v) == 1L) {
+        v[[1L]]
+      } else {
+        sprintf("[%d records]", length(v))
+      }
+    },
+    character(1)
+  )
+}
+
+#' @export
+print.air_links <- function(x, ...) {
+  cat("<air_links[", length(x), "]>\n", sep = "")
+  invisible(x)
+}
+
+pillar_shaft_air_links <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 10L)
+}
+
+type_sum_air_links <- function(x, ...) "lnk[]"
+
+# --------------------------------------------------------------------------- #
+#  air_attachments - list of lists of attachment objects
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_attachments <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_attachments", "list"))
+}
+
+#' @export
+format.air_attachments <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v) || length(v) == 0L) {
+        return(NA_character_)
+      }
+      # v is a list of attachment objects (each has $filename, $url, etc.)
+      fnames <- vapply(v, function(a) a$filename %||% "?", character(1))
+      n <- length(fnames)
+      if (n == 1L) {
+        fnames[[1L]]
+      } else {
+        sprintf("%s +%d", fnames[[1L]], n - 1L)
+      }
+    },
+    character(1)
+  )
+}
+
+#' @export
+print.air_attachments <- function(x, ...) {
+  cat("<air_attachments[", length(x), "]>\n", sep = "")
+  invisible(x)
+}
+
+pillar_shaft_air_attachments <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 12L)
+}
+
+type_sum_air_attachments <- function(x, ...) "att[]"
+
+# --------------------------------------------------------------------------- #
+#  air_collaborator - single collaborator (list with id/email/name)
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_collaborator <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_collaborator", "list"))
+}
+
+#' @export
+format.air_collaborator <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v)) {
+        return(NA_character_)
+      }
+      name <- v$name %||% ""
+      email <- v$email %||% ""
+      if (nzchar(name) && nzchar(email)) {
+        sprintf("%s <%s>", name, email)
+      } else if (nzchar(name)) {
+        name
+      } else if (nzchar(email)) {
+        email
+      } else {
+        v$id %||% NA_character_
+      }
+    },
+    character(1)
+  )
+}
+
+#' @export
+print.air_collaborator <- function(x, ...) {
+  cat("<air_collaborator[", length(x), "]>\n", sep = "")
+  invisible(x)
+}
+
+pillar_shaft_air_collaborator <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 12L)
+}
+
+type_sum_air_collaborator <- function(x, ...) "collab"
+
+# --------------------------------------------------------------------------- #
+#  air_collaborators - list of lists of collaborator objects
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_collaborators <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_collaborators", "list"))
+}
+
+#' @export
+format.air_collaborators <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v) || length(v) == 0L) {
+        return(NA_character_)
+      }
+      # v is a list of collaborator objects
+      summaries <- vapply(
+        v,
+        function(c) c$name %||% c$email %||% c$id %||% "?",
+        character(1)
+      )
+      n <- length(summaries)
+      if (n == 1L) {
+        summaries[[1L]]
+      } else {
+        sprintf("%s +%d", summaries[[1L]], n - 1L)
+      }
+    },
+    character(1)
+  )
+}
+
+pillar_shaft_air_collaborators <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 12L)
+}
+
+type_sum_air_collaborators <- function(x, ...) "collabs"
+
+# --------------------------------------------------------------------------- #
+#  air_barcode - list with $text and $type
+# --------------------------------------------------------------------------- #
+
+#' @keywords internal
+new_air_barcode <- function(x = list()) {
+  stopifnot(is.list(x))
+  structure(x, class = c("air_barcode", "list"))
+}
+
+#' @export
+format.air_barcode <- function(x, ...) {
+  vapply(
+    x,
+    function(v) {
+      if (is.null(v)) {
+        return(NA_character_)
+      }
+      text <- v$text %||% ""
+      type <- v$type %||% ""
+      if (nzchar(type)) sprintf("%s (%s)", text, type) else text
+    },
+    character(1)
+  )
+}
+
+#' @export
+print.air_barcode <- function(x, ...) {
+  cat("<air_barcode[", length(x), "]>\n", sep = "")
+  invisible(x)
+}
+
+pillar_shaft_air_barcode <- function(x, ...) {
+  pillar::new_pillar_shaft_simple(format(x), align = "left", min_width = 10L)
+}
+
+type_sum_air_barcode <- function(x, ...) "barcode"
+
+# --------------------------------------------------------------------------- #
+#  Constructor dispatch - wrap raw list-column in the right air_* class
+# --------------------------------------------------------------------------- #
+
+#' Wrap a raw list-column in the appropriate air_* class
+#'
+#' @param values List (one element per record). May contain NULLs.
+#' @param field_type Airtable field type string.
+#' @return A classed list or plain list if no matching class.
+#' @noRd
+wrap_list_column <- function(values, field_type) {
+  switch(
+    field_type,
+    multipleSelects = new_air_multiselect(values),
+    multipleCollaborators = new_air_collaborators(values),
+    multipleRecordLinks = new_air_links(values),
+    multipleAttachments = new_air_attachments(values),
+    collaborator = new_air_collaborator(values),
+    createdBy = new_air_collaborator(values),
+    lastModifiedBy = new_air_collaborator(values),
+    barcode = new_air_barcode(values),
+    # lookup, button, formula, rollup - return plain list
+    values
+  )
+}
+
+# --------------------------------------------------------------------------- #
+#  Computed / read-only field helpers
+# --------------------------------------------------------------------------- #
 
 #' Field types that are computed/read-only and cannot be written
 #' @noRd
@@ -54,8 +340,7 @@ computed_fields_from_schema <- function(schema) {
 #' @return Character vector of computed field names.
 #' @noRd
 get_computed_fields <- function(base_id, table, .token = NULL) {
-  tables <- at_get_schema(base_id, token = .token)
-  tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
+  tbl_schema <- get_table_schema(base_id, table, token = .token)
   if (is.null(tbl_schema)) {
     return(character())
   }
@@ -73,8 +358,7 @@ get_computed_fields <- function(base_id, table, .token = NULL) {
 #' @return Character vector of attachment field names.
 #' @noRd
 get_attachment_fields <- function(base_id, table, .token = NULL) {
-  tables <- at_get_schema(base_id, token = .token)
-  tbl_schema <- Find(function(t) t$name == table || t$id == table, tables)
+  tbl_schema <- get_table_schema(base_id, table, token = .token)
   if (is.null(tbl_schema)) {
     return(character())
   }
@@ -87,6 +371,10 @@ get_attachment_fields <- function(base_id, table, .token = NULL) {
     character(1)
   )
 }
+
+# --------------------------------------------------------------------------- #
+#  Type map and coercion helpers
+# --------------------------------------------------------------------------- #
 
 #' Map Airtable field types to R coercion functions
 #' @noRd
@@ -113,7 +401,7 @@ airtable_type_map <- function() {
     dateTime = coerce_datetime,
     createdTime = coerce_datetime,
     lastModifiedTime = coerce_datetime,
-    # List-column types return identity (already lists from JSON)
+    # List-column types: identity here; wrap_list_column handles class wrapping
     multipleSelects = identity,
     multipleRecordLinks = identity,
     multipleAttachments = identity,
@@ -141,10 +429,18 @@ coerce_datetime <- function(x) {
   as.POSIXct(x, format = "%Y-%m-%dT%H:%M:%OS", tz = "UTC")
 }
 
+# --------------------------------------------------------------------------- #
+#  records_to_tibble - main entry point
+# --------------------------------------------------------------------------- #
+
 #' Coerce record fields using schema information
 #'
 #' Takes a list of raw records (from the API) and a schema (list of field
 #' definitions) and returns a tibble with proper R types.
+#'
+#' List-column types are wrapped in `air_*` S3 classes for rich pillar display.
+#' All columns receive `label` (= field name) and `comment` (= Airtable type)
+#' attributes so they appear nicely in the RStudio/Positron data viewer.
 #'
 #' @param records List of record objects (each with `id`, `createdTime`,
 #'   `fields`).
@@ -156,13 +452,20 @@ coerce_datetime <- function(x) {
 records_to_tibble <- function(records, schema = NULL) {
   if (length(records) == 0L) {
     tbl <- tibble::tibble(
-      airtable_id = character(),
-      airtable_created_time = as.POSIXct(character(), tz = "UTC")
+      airtable_id = structure(
+        character(),
+        label = "Record ID",
+        comment = "recordId"
+      ),
+      airtable_created_time = structure(
+        as.POSIXct(character(), tz = "UTC"),
+        label = "Created Time",
+        comment = "createdTime"
+      )
     )
     return(tbl)
   }
 
-  # Extract metadata
   ids <- vapply(records, function(r) r$id %||% NA_character_, character(1))
   created <- vapply(
     records,
@@ -170,41 +473,73 @@ records_to_tibble <- function(records, schema = NULL) {
     character(1)
   )
 
-  # Collect all field names across records
   all_fields <- unique(unlist(lapply(records, function(r) names(r$fields))))
 
-  # Build schema lookup
+  # Build schema lookups
   type_lookup <- NULL
   if (!is.null(schema)) {
     type_lookup <- stats::setNames(
       vapply(schema, function(f) f$type %||% "unknown", character(1)),
       vapply(schema, function(f) f$name, character(1))
     )
-    # Ensure all schema fields are represented even if absent from records
     all_fields <- union(all_fields, names(type_lookup))
   }
 
-  # Build columns
   type_map <- airtable_type_map()
+  list_types <- list_column_types()
 
   cols <- lapply(all_fields, function(field_name) {
     raw_values <- lapply(records, function(r) r$fields[[field_name]])
 
-    field_type <- if (!is.null(type_lookup)) type_lookup[[field_name]]
+    field_type <- if (
+      !is.null(type_lookup) && field_name %in% names(type_lookup)
+    ) {
+      type_lookup[[field_name]]
+    } else {
+      NULL
+    }
     coerce_fn <- if (!is.null(field_type)) type_map[[field_type]]
 
-    coerce_column(raw_values, coerce_fn, field_type)
+    col <- coerce_column(raw_values, coerce_fn, field_type)
+
+    # Wrap list-column types in air_* S3 classes for pillar display
+    if (!is.null(field_type) && field_type %in% list_types) {
+      col <- wrap_list_column(col, field_type)
+    }
+
+    # Attach label (field description from schema, or field name) and comment (Airtable type) for data viewer
+    field_label <- if (!is.null(schema)) {
+      field_def <- Find(function(f) f$name == field_name, schema)
+      if (
+        !is.null(field_def) &&
+          !is.null(field_def$description) &&
+          nzchar(field_def$description)
+      ) {
+        field_def$description
+      } else {
+        field_name
+      }
+    } else {
+      field_name
+    }
+    attr(col, "label") <- field_label
+    attr(col, "comment") <- field_type %||% ""
+
+    col
   })
   names(cols) <- all_fields
 
-  # Assemble tibble
   tbl <- tibble::tibble(
-    airtable_id = ids,
-    airtable_created_time = coerce_datetime(created)
+    airtable_id = structure(ids, label = "Record ID", comment = "recordId"),
+    airtable_created_time = structure(
+      coerce_datetime(created),
+      label = "Created Time",
+      comment = "createdTime"
+    )
   )
   tbl[all_fields] <- cols
 
-  # Post-process: Airtable omits unchecked checkboxes; fill with FALSE
+  # Airtable omits unchecked checkboxes; fill with FALSE
   if (!is.null(type_lookup)) {
     checkbox_fields <- names(type_lookup)[type_lookup == "checkbox"]
     for (f in intersect(checkbox_fields, names(tbl))) {
@@ -215,18 +550,12 @@ records_to_tibble <- function(records, schema = NULL) {
   tbl
 }
 
-#' Coerce a single column of values
-#' @param values List of raw values (one per record, may contain NULLs).
-#' @param coerce_fn Coercion function, or NULL for best-guess.
-#' @param field_type Airtable field type string, or NULL.
+#' Airtable field types that become list-columns
 #' @noRd
-coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
-  # Replace NULLs with NA
-  is_null <- vapply(values, is.null, logical(1))
-
-  # Determine if this is a list-column type
-  list_types <- c(
+list_column_types <- function() {
+  c(
     "multipleSelects",
+    "multipleCollaborators",
     "multipleRecordLinks",
     "multipleAttachments",
     "lookup",
@@ -236,16 +565,22 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
     "createdBy",
     "lastModifiedBy"
   )
+}
 
-  if (!is.null(field_type) && field_type %in% list_types) {
-    # Keep as list-column; replace NULLs with typed NAs
+#' Coerce a single column of values
+#' @param values List of raw values (one per record, may contain NULLs).
+#' @param coerce_fn Coercion function, or NULL for best-guess.
+#' @param field_type Airtable field type string, or NULL.
+#' @noRd
+coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
+  is_null <- vapply(values, is.null, logical(1))
+
+  if (!is.null(field_type) && field_type %in% list_column_types()) {
     values[is_null] <- list(NULL)
     return(values)
   }
 
-  # For scalar types, try to simplify
   if (!is.null(coerce_fn) && !identical(coerce_fn, identity)) {
-    # Replace NULLs with NA before coercion
     values[is_null] <- list(NA)
     scalar <- tryCatch(coerce_fn(unlist(values)), error = function(e) NULL)
     if (!is.null(scalar) && length(scalar) == length(values)) {
@@ -253,12 +588,9 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
     }
   }
 
-  # Fallback: attempt to unlist if all scalars, otherwise keep as list
   scalar_check <- vapply(
     values,
-    function(v) {
-      is.null(v) || (is.atomic(v) && length(v) == 1L)
-    },
+    function(v) is.null(v) || (is.atomic(v) && length(v) == 1L),
     logical(1)
   )
 
@@ -270,6 +602,10 @@ coerce_column <- function(values, coerce_fn = NULL, field_type = NULL) {
     values
   }
 }
+
+# --------------------------------------------------------------------------- #
+#  tibble_to_records - convert R data frame to API payload
+# --------------------------------------------------------------------------- #
 
 #' Prepare an R data frame for upload to Airtable
 #'
@@ -290,7 +626,6 @@ tibble_to_records <- function(
   id_col = "airtable_id",
   exclude = character()
 ) {
-  # Identify which columns are fields vs metadata
   meta_cols <- c("airtable_id", "airtable_created_time")
   field_cols <- setdiff(names(data), c(meta_cols, exclude))
 
@@ -299,11 +634,11 @@ tibble_to_records <- function(
   lapply(seq_len(nrow(data)), function(i) {
     fields <- lapply(field_cols, function(col) {
       val <- data[[col]][[i]]
-      # Convert NA to NULL for JSON (Airtable ignores null fields)
       if (is.atomic(val) && length(val) == 1L && is.na(val)) {
         return(NULL)
       }
-      val
+      # Strip air_* classes - send plain lists/vectors to the API
+      unclass_air(val)
     })
     names(fields) <- field_cols
     fields <- compact(fields)
@@ -315,4 +650,22 @@ tibble_to_records <- function(
     }
     rec
   })
+}
+
+#' Strip air_* class attributes before sending to the API
+#'
+#' The API expects plain lists/vectors, not classed objects.
+#' @noRd
+unclass_air <- function(x) {
+  air_classes <- c(
+    "air_multiselect",
+    "air_links",
+    "air_attachments",
+    "air_collaborator",
+    "air_barcode"
+  )
+  if (inherits(x, air_classes)) {
+    class(x) <- setdiff(class(x), air_classes)
+  }
+  x
 }

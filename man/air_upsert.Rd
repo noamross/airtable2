@@ -5,25 +5,28 @@
 \title{Upsert records into an Airtable table}
 \usage{
 air_upsert(
-  base_id,
-  table,
   data,
+  base_id = NULL,
+  table,
   merge_on,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  progress = NULL,
   .token = NULL
 )
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
-
-\item{table}{Table name or ID.}
-
 \item{data}{A data frame of records to upsert. May include an \code{airtable_id}
 column for direct record matching. Computed field columns and attachment
 field columns are silently dropped from the record payload.}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
+
+\item{table}{Table name or ID.}
 
 \item{merge_on}{Character vector of 1-3 field names to match on (for records
 without an \code{airtable_id}).}
@@ -44,6 +47,10 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 \item{attachment_dir}{Directory for downloading attachments (required when
 \code{attachments = "file"}). Files are saved as
 \code{{attachment_dir}/{record_id}/{filename}}.}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -72,7 +79,7 @@ Optionally creates missing columns.
 \examples{
 \dontrun{
 data <- data.frame(Name = c("Alice", "Bob"), Age = c(31, 26))
-result <- air_upsert("appXXXXXX", "Contacts", data, merge_on = "Name")
+result <- air_upsert(data, "appXXXXXX", "Contacts", merge_on = "Name")
 result$created
 result$updated
 }

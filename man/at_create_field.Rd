@@ -5,23 +5,24 @@
 \title{Create a field in a table}
 \usage{
 at_create_field(
-  base_id,
-  table_id,
   name,
+  table_id,
   type,
+  base_id = NULL,
   description = NULL,
   options = NULL,
   token = NULL
 )
 }
 \arguments{
-\item{base_id}{Base ID.}
+\item{name}{Field name.}
 
 \item{table_id}{Table ID.}
 
-\item{name}{Field name.}
-
 \item{type}{Field type (e.g., \code{"singleLineText"}, \code{"number"}).}
+
+\item{base_id}{Base ID. If \code{NULL}, uses the session default set by
+\code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment variable.}
 
 \item{description}{Optional field description.}
 

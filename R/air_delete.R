@@ -10,7 +10,8 @@
 #' air_delete("appXXXXXX", "Contacts", c("recABC", "recDEF"))
 #' }
 #' @export
-air_delete <- function(base_id, table, record_ids, .token = NULL) {
+air_delete <- function(base_id, table, record_ids, .token = NULL,
+                       progress = NULL) {
   check_string(base_id)
   check_string(table)
 
@@ -19,7 +20,7 @@ air_delete <- function(base_id, table, record_ids, .token = NULL) {
     return(invisible(NULL))
   }
 
-  at_delete_records(base_id, table, record_ids, token = .token)
+  at_delete_records(base_id, table, record_ids, token = .token, progress = progress)
   cli_inform("Deleted {length(record_ids)} record{?s}.")
   invisible(NULL)
 }

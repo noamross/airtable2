@@ -5,26 +5,37 @@
 \title{Write (create) records in an Airtable table}
 \usage{
 air_write(
-  base_id,
-  table,
   data,
+  base_id = NULL,
+  table,
   typecast = TRUE,
+  add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  progress = NULL,
   .token = NULL
 )
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
-
-\item{table}{Table name or ID.}
-
 \item{data}{A data frame of records to create. Should not contain
 \code{airtable_id} (those would be ignored). Computed field columns and
 attachment field columns are silently dropped from the record payload.}
 
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
+
+\item{table}{Table name or ID.}
+
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values
 to match field types.}
+
+\item{add_fields}{What to do when \code{data} contains columns not in the table:
+\itemize{
+\item \code{"error"} (default): error if unknown columns exist.
+\item \code{"warn"}: warn and drop unknown columns.
+\item \code{"yes"}: create missing fields before writing (as \code{singleLineText}).
+}}
 
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
 only metadata (filename, url, size, type); \code{"file"} downloads to
@@ -33,6 +44,10 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 \item{attachment_dir}{Directory for downloading attachments (required when
 \code{attachments = "file"}). Files are saved as
 \code{{attachment_dir}/{record_id}/{filename}}.}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+paginated requests. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -50,12 +65,15 @@ creation using the dedicated upload endpoint.
 \examples{
 \dontrun{
 data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
-ids <- air_write("appXXXXXX", "Contacts", data)
+ids <- air_write(data, "appXXXXXX", "Contacts")
 
 # Write records and upload attachments from list-column
-ids <- air_write("appXXXXXX", "Projects", data,
+ids <- air_write(data, "appXXXXXX", "Projects",
   attachments = "file",
   attachment_dir = "files/"
 )
+
+# Write records and add new columns if they don't exist
+ids <- air_write(data, "appXXXXXX", "Contacts", add_fields = "yes")
 }
 }

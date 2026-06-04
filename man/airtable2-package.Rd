@@ -2,7 +2,6 @@
 % Please edit documentation in R/airtable2-package.R
 \docType{package}
 \name{airtable2-package}
-\alias{airtable2}
 \alias{airtable2-package}
 \title{airtable2: Pure R Client for the 'Airtable' REST API}
 \description{
@@ -17,11 +16,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Noam Ross \email{noam.ross@gmail.com}
+\strong{Maintainer}: Noam Ross \email{noam.ross@gmail.com} (author with heavy LLM assistance)
 
 Authors:
 \itemize{
-  \item Noam Ross \email{noam.ross@gmail.com}
+  \item Noam Ross \email{noam.ross@gmail.com} (author with heavy LLM assistance)
   \item Darko Bergant (Original airtabler package)
   \item Collin Schwantes (airtabler fork maintainer)
 }

@@ -4,7 +4,14 @@
 \alias{at_create_records}
 \title{Create records in a table}
 \usage{
-at_create_records(base_id, table_id, records, typecast = FALSE, token = NULL)
+at_create_records(
+  base_id,
+  table_id,
+  records,
+  typecast = FALSE,
+  token = NULL,
+  progress = NULL
+)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -18,6 +25,10 @@ at_create_records(base_id, table_id, records, typecast = FALSE, token = NULL)
 correct type.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR} (both default to \code{FALSE}).}
 }
 \value{
 A list of created record objects (with assigned IDs).

@@ -4,7 +4,14 @@
 \alias{air_write_attachments}
 \title{Upload attachments to records}
 \usage{
-air_write_attachments(base_id, table, field, data, .token = NULL)
+air_write_attachments(
+  base_id,
+  table,
+  field,
+  data,
+  parallel = NULL,
+  .token = NULL
+)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -14,6 +21,10 @@ air_write_attachments(base_id, table, field, data, .token = NULL)
 \item{field}{Name of the attachment field.}
 
 \item{data}{A tibble with \code{airtable_id} and \code{file_path} columns.}
+
+\item{parallel}{Logical or \code{NULL}. If \code{TRUE}, attachment downloads use
+\code{\link[httr2:req_perform_parallel]{httr2::req_perform_parallel()}} (up to 5 concurrent). If \code{NULL}, uses
+option \code{airtable2.parallel} or env var \code{AIRTABLE2_PARALLEL} (default \code{TRUE}).}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

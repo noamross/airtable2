@@ -11,7 +11,7 @@ test_that("air_sync creates, updates, deletes, and detects unchanged", {
     Name = c("Alice", "Bob", "Charlie"),
     Age = c(30L, 25L, 35L)
   )
-  air_write(base_id, "Contacts", initial)
+  air_write(initial, base_id, "Contacts")
 
   # Sync to desired state: keep Alice unchanged, update Bob, drop Charlie, add Dana
   desired <- tibble::tibble(
@@ -20,9 +20,7 @@ test_that("air_sync creates, updates, deletes, and detects unchanged", {
   )
 
   result <- air_sync(
-    base_id,
-    "Contacts",
-    desired,
+    desired, base_id, "Contacts",
     key = "Name",
     hash_fields = "Age",
     delete_missing = TRUE
@@ -46,14 +44,12 @@ test_that("air_sync with delete_missing=FALSE preserves extra records", {
   base_id <- get_test_base()
 
   initial <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
-  air_write(base_id, "Contacts", initial)
+  air_write(initial, base_id, "Contacts")
 
   # Sync with only Alice (Bob should remain)
   desired <- tibble::tibble(Name = "Alice", Age = 30L)
   result <- air_sync(
-    base_id,
-    "Contacts",
-    desired,
+    desired, base_id, "Contacts",
     key = "Name",
     delete_missing = FALSE
   )
@@ -69,12 +65,10 @@ test_that("air_sync is idempotent (no changes on second run)", {
   base_id <- get_test_base()
 
   data <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
-  air_write(base_id, "Contacts", data)
+  air_write(data, base_id, "Contacts")
 
   result <- air_sync(
-    base_id,
-    "Contacts",
-    data,
+    data, base_id, "Contacts",
     key = "Name",
     hash_fields = "Age",
     delete_missing = TRUE
@@ -91,7 +85,7 @@ test_that("air_delete removes specific records", {
   clear_test_records()
   base_id <- get_test_base()
 
-  air_write(base_id, "Contacts", test_contacts_data())
+  air_write(test_contacts_data(), base_id, "Contacts")
   records <- air_read(base_id, "Contacts")
 
   alice_id <- records$airtable_id[records$Name == "Alice"]
@@ -117,15 +111,15 @@ test_that("air_write silently drops computed fields", {
 
   # Should succeed (computed field silently dropped)
   expect_message(
-    ids <- air_write(base_id, "Contacts", data),
+    ids <- air_write(data, base_id, "Contacts"),
     "Dropping computed"
   )
   expect_length(ids, 1L)
 
   # Verify the record was created and formula computed
   result <- air_read(base_id, "Contacts")
-  expect_equal(result$Name, "Alice")
-  expect_equal(result$NameUpper, "ALICE")
+  expect_equal(result$Name, "Alice", ignore_attr = TRUE)
+  expect_equal(result$NameUpper, "ALICE", ignore_attr = TRUE)
 })
 
 test_that("air_upsert silently drops computed fields", {
@@ -141,7 +135,7 @@ test_that("air_upsert silently drops computed fields", {
     NameUpper = "BOB"
   )
   expect_message(
-    result <- air_upsert(base_id, "Contacts", data, merge_on = "Name"),
+    result <- air_upsert(data, base_id, "Contacts", merge_on = "Name"),
     "Dropping computed"
   )
   expect_length(result$created, 1L)
@@ -155,7 +149,7 @@ test_that("air_sync excludes computed fields from hash", {
 
   # Write initial data
   initial <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
-  air_write(base_id, "Contacts", initial)
+  air_write(initial, base_id, "Contacts")
 
   # Read back (includes NameUpper from server-computed formula)
   current <- air_read(base_id, "Contacts")
@@ -165,9 +159,7 @@ test_that("air_sync excludes computed fields from hash", {
   # The formula field should be excluded from hash comparison automatically.
   desired <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
   result <- air_sync(
-    base_id,
-    "Contacts",
-    desired,
+    desired, base_id, "Contacts",
     key = "Name",
     hash_fields = NULL
   )

@@ -5,7 +5,7 @@
 \title{Read records from an Airtable table}
 \usage{
 air_read(
-  base_id,
+  base_id = NULL,
   table,
   view = NULL,
   fields = NULL,
@@ -16,6 +16,8 @@ air_read(
   coerce = TRUE,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  parallel = NULL,
+  progress = NULL,
   .token = NULL
 )
 }
@@ -47,6 +49,14 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 \item{attachment_dir}{Directory for downloading attachments (required when
 \code{attachments = "file"}). Files are saved as
 \code{{attachment_dir}/{record_id}/{filename}}.}
+
+\item{parallel}{Logical or \code{NULL}. If \code{TRUE}, attachment downloads use
+\code{\link[httr2:req_perform_parallel]{httr2::req_perform_parallel()}} (up to 5 concurrent). If \code{NULL}, uses
+option \code{airtable2.parallel} or env var \code{AIRTABLE2_PARALLEL} (default \code{TRUE}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+paginated requests. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

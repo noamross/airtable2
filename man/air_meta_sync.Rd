@@ -4,13 +4,13 @@
 \alias{air_meta_sync}
 \title{Sync metadata to a table within the base itself}
 \usage{
-air_meta_sync(base_id, meta_table = "_Meta Data", .token = NULL)
+air_meta_sync(base_id, meta_table = "_metadata", .token = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
 \item{meta_table}{Name of the table to store metadata in.
-Default \code{"_Meta Data"}.}
+Default \code{"_metadata"}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

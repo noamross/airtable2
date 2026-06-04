@@ -17,7 +17,8 @@ at_list_records(
   time_zone = NULL,
   user_locale = NULL,
   return_fields_by_id = FALSE,
-  token = NULL
+  token = NULL,
+  progress = NULL
 )
 }
 \arguments{
@@ -47,6 +48,10 @@ at_list_records(
 \item{return_fields_by_id}{If \code{TRUE}, use field IDs as keys instead of names.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR} (both default to \code{FALSE}).}
 }
 \value{
 A list of record objects (each with \code{id}, \code{createdTime}, \code{fields}).

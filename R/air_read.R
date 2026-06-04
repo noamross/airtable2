@@ -20,6 +20,12 @@
 #' @param attachment_dir Directory for downloading attachments (required when
 #'   `attachments = "file"`). Files are saved as
 #'   `{attachment_dir}/{record_id}/{filename}`.
+#' @param parallel Logical or `NULL`. If `TRUE`, attachment downloads use
+#'   [httr2::req_perform_parallel()] (up to 5 concurrent). If `NULL`, uses
+#'   option `airtable2.parallel` or env var `AIRTABLE2_PARALLEL` (default `TRUE`).
+#' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
+#'   paginated requests. If `NULL` (default), uses option `airtable2.progress.bar`
+#'   or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @param .token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A tibble with columns `airtable_id`, `airtable_created_time`, and
 #'   one column per field.
@@ -42,7 +48,7 @@
 #' }
 #' @export
 air_read <- function(
-  base_id,
+  base_id = NULL,
   table,
   view = NULL,
   fields = NULL,
@@ -53,20 +59,20 @@ air_read <- function(
   coerce = TRUE,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  parallel = NULL,
+  progress = NULL,
   .token = NULL
 ) {
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
   check_bool(coerce)
   attachments <- match.arg(attachments)
 
-  # Fetch schema for type coercion if requested
+  # Fetch schema for type coercion if requested (uses session cache)
   schema <- NULL
   if (coerce) {
-    tables <- at_get_schema(base_id, token = .token)
-    tbl_schema <- Find(
-      function(t) t$name == table || t$id == table, tables
-    )
+    tbl_schema <- get_table_schema(base_id, table, token = .token)
     if (!is.null(tbl_schema)) {
       schema <- tbl_schema$fields
     }
@@ -82,7 +88,8 @@ air_read <- function(
     view = view,
     max_records = max_records,
     page_size = page_size,
-    token = .token
+    token = .token,
+    progress = progress
   )
 
   tbl <- records_to_tibble(records, schema = schema)
@@ -93,7 +100,11 @@ air_read <- function(
     att_fields <- intersect(att_fields, names(tbl))
     if (length(att_fields) > 0L) {
       tbl <- download_attachments_in_tibble(
-        tbl, att_fields, mode = attachments, dir = attachment_dir
+        tbl,
+        att_fields,
+        mode = attachments,
+        dir = attachment_dir,
+        parallel = parallel
       )
     }
   }

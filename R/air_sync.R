@@ -26,28 +26,39 @@
 #' @param delete_missing If `TRUE` (default), records in Airtable that are not
 #'   in `data` will be deleted.
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
+#' @param add_fields What to do when `data` contains columns not in the table.
+#'   Passed to [air_upsert()]. Default is `"error"`.
+#' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
+#'   read and upsert operations. If `NULL` (default), uses option
+#'   `airtable2.progress.bar` or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @return A list with counts: `created`, `updated`, `deleted`, `unchanged`
 #'   (invisibly).
+#' @param base_id Base ID (e.g., `"appXXXXXX"`). If `NULL`, uses the session
+#'   default set by [air_set_base()] or the `AIRTABLE_BASE_ID` environment
+#'   variable.
 #' @examples
 #' \dontrun{
 #' desired <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 26))
-#' result <- air_sync("appXXXXXX", "Contacts", desired, key = "Name")
+#' result <- air_sync(desired, "appXXXXXX", "Contacts", key = "Name")
 #' result$created
 #' result$unchanged
 #' }
 #' @export
 air_sync <- function(
-  base_id,
-  table,
   data,
+  base_id = NULL,
+  table,
   key,
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
+  add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  progress = NULL,
   .token = NULL
 ) {
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
   check_string(key)
@@ -81,7 +92,7 @@ air_sync <- function(
   }
 
   # 1. Read existing records (without type coercion for consistent hashing)
-  existing <- air_read(base_id, table, coerce = FALSE, .token = .token)
+  existing <- air_read(base_id, table, coerce = FALSE, .token = .token, progress = progress)
 
   # 2. Compute keys and hashes
   existing_keys <- if (nrow(existing) > 0 && key %in% names(existing)) {
@@ -131,14 +142,15 @@ air_sync <- function(
     upsert_data$airtable_id <- upsert_ids
 
     result <- air_upsert(
+      upsert_data,
       base_id,
       table,
-      upsert_data,
       merge_on = key,
       typecast = typecast,
-      add_fields = "error",
+      add_fields = add_fields,
       # Pass "meta" here; we handle attachment upload ourselves below
       attachments = "meta",
+      progress = progress,
       .token = .token
     )
     n_created <- length(result$created)

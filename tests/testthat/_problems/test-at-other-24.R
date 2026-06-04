@@ -1,0 +1,22 @@
+# Extracted from test-at-other.R:24
+
+# test -------------------------------------------------------------------------
+local_mocked_bindings(
+    air_perform = function(req) {
+      if (grepl("whoami", req$url)) {
+        list(id = "usrABC", email = "test@example.com")
+      } else {
+        # meta/bases response (no workspaceId per API spec)
+        list(
+          bases = list(
+            list(id = "appAAA", name = "Base One", permissionLevel = "create"),
+            list(id = "appBBB", name = "Base Two", permissionLevel = "edit")
+          )
+        )
+      }
+    }
+  )
+result <- at_sitrep()
+expect_type(result, "list")
+expect_named(result, c("user", "scopes", "bases", "error"))
+expect_equal(result$user$id,    "usrABC")

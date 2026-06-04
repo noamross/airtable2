@@ -5,25 +5,29 @@
 \title{Smart sync: diff-based upsert + delete}
 \usage{
 air_sync(
-  base_id,
-  table,
   data,
+  base_id = NULL,
+  table,
   key,
   hash_fields = NULL,
   delete_missing = TRUE,
   typecast = TRUE,
+  add_fields = c("error", "warn", "yes"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
+  progress = NULL,
   .token = NULL
 )
 }
 \arguments{
-\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
-
-\item{table}{Table name or ID.}
-
 \item{data}{A data frame representing the desired state of the table.
 May contain computed field columns (they are ignored).}
+
+\item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session
+default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
+variable.}
+
+\item{table}{Table name or ID.}
 
 \item{key}{Column name in \code{data} that uniquely identifies records (used as
 the merge field for upsert). Must be a single field.}
@@ -38,6 +42,9 @@ in \code{data} will be deleted.}
 
 \item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values.}
 
+\item{add_fields}{What to do when \code{data} contains columns not in the table.
+Passed to \code{\link[=air_upsert]{air_upsert()}}. Default is \code{"error"}.}
+
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
 only metadata (filename, url, size, type); \code{"file"} downloads to
 \code{attachment_dir}; \code{"blob"} downloads as in-memory raw vectors.}
@@ -45,6 +52,10 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 \item{attachment_dir}{Directory for downloading attachments (required when
 \code{attachments = "file"}). Files are saved as
 \code{{attachment_dir}/{record_id}/{filename}}.}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+read and upsert operations. If \code{NULL} (default), uses option
+\code{airtable2.progress.bar} or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
@@ -73,7 +84,7 @@ for newly created records after the sync completes.
 \examples{
 \dontrun{
 desired <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 26))
-result <- air_sync("appXXXXXX", "Contacts", desired, key = "Name")
+result <- air_sync(desired, "appXXXXXX", "Contacts", key = "Name")
 result$created
 result$unchanged
 }

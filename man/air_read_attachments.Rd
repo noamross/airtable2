@@ -11,6 +11,7 @@ air_read_attachments(
   record_ids = NULL,
   dest = c("blob", "file"),
   dir = NULL,
+  parallel = NULL,
   .token = NULL
 )
 }
@@ -28,6 +29,10 @@ If \code{NULL}, fetches all records.}
 (save to disk).}
 
 \item{dir}{Directory to save files to (required if \code{dest = "file"}).}
+
+\item{parallel}{Logical or \code{NULL}. If \code{TRUE}, attachment downloads use
+\code{\link[httr2:req_perform_parallel]{httr2::req_perform_parallel()}} (up to 5 concurrent). If \code{NULL}, uses
+option \code{airtable2.parallel} or env var \code{AIRTABLE2_PARALLEL} (default \code{TRUE}).}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

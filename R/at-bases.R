@@ -34,6 +34,25 @@ at_get_schema <- function(base_id, token = NULL) {
   body$tables
 }
 
+#' Get information about a single base
+#'
+#' @param base_id Base ID (e.g., `"appXXXXXX"`).
+#' @param token Personal access token (resolved via [air_token()] if `NULL`).
+#' @return A list with `id`, `name`, and `permissionLevel`, or `NULL` if not
+#'   found.
+#' @export
+at_get_base <- function(base_id, token = NULL) {
+  check_string(base_id)
+  bases <- at_list_bases(token = token)
+  match_row <- bases[bases$id == base_id, , drop = FALSE]
+  if (nrow(match_row) == 0L) return(NULL)
+  list(
+    id = match_row$id[[1L]],
+    name = match_row$name[[1L]],
+    permissionLevel = match_row$permissionLevel[[1L]]
+  )
+}
+
 #' Get collaborators for a base
 #'
 #' @inheritParams at_get_schema
@@ -57,8 +76,9 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created base object (list with `id`, `name`, `tables`).
 #' @export
-at_create_base <- function(name, workspace_id, tables, token = NULL) {
+at_create_base <- function(name, workspace_id = NULL, tables, token = NULL) {
   check_string(name)
+  workspace_id <- workspace_id %||% default_workspace_id()
   check_string(workspace_id)
 
   body <- list(

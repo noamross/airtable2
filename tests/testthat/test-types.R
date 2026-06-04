@@ -21,9 +21,9 @@ test_that("records_to_tibble produces correct structure", {
   )
   result <- records_to_tibble(records, schema = NULL)
   expect_equal(nrow(result), 2L)
-  expect_equal(result$airtable_id, c("rec1", "rec2"))
-  expect_equal(result$Name, c("Alice", "Bob"))
-  expect_equal(result$Age, c(30, 25))
+  expect_equal(result$airtable_id, c("rec1", "rec2"), ignore_attr = TRUE)
+  expect_equal(result$Name, c("Alice", "Bob"), ignore_attr = TRUE)
+  expect_equal(result$Age, c(30, 25), ignore_attr = TRUE)
 })
 
 test_that("records_to_tibble handles missing fields with NA", {
@@ -34,7 +34,7 @@ test_that("records_to_tibble handles missing fields with NA", {
          fields = list(Name = "Bob"))
   )
   result <- records_to_tibble(records, schema = NULL)
-  expect_equal(result$Status, c("Active", NA))
+  expect_equal(result$Status, c("Active", NA), ignore_attr = TRUE)
 })
 
 test_that("records_to_tibble with schema coerces types", {

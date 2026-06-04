@@ -7,7 +7,7 @@
 air_dump(
   base_id,
   dir = NULL,
-  format = c("list", "json"),
+  format = c("list", "json", "csv"),
   attachments = c("file", "meta", "blob"),
   .token = NULL
 )
@@ -15,14 +15,15 @@ air_dump(
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
 
-\item{dir}{Directory to write JSON/attachment files to. When
-\code{format = "json"}, schema and data files are written here. When
+\item{dir}{Directory to write files to. When \code{format = "json"} or
+\code{format = "csv"}, schema and data files are written here. When
 \code{attachments = "file"}, attachment files are saved under
 
 \code{{dir}/attachments/{table_name}/{record_id}/{filename}}.
-If \code{NULL} and format is \code{"json"}, uses a temp directory.}
+If \code{NULL} and format is \code{"json"} or \code{"csv"}, uses a temp directory.}
 
-\item{format}{Either \code{"list"} (return as R list) or \code{"json"} (write files).}
+\item{format}{One of \code{"list"} (return as R list), \code{"json"} (write JSON files),
+or \code{"csv"} (write CSV files with flattened complex types).}
 
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
 only metadata (filename, url, size, type); \code{"file"} downloads to
@@ -32,7 +33,7 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 }
 \value{
 For \code{format = "list"}: a named list with \code{schema} and a tibble per
-table. For \code{format = "json"}: the directory path (invisibly).
+table. For \code{format = "json"} or \code{"csv"}: the directory path (invisibly).
 }
 \description{
 Exports the full schema and all table data from a base. By default,
@@ -46,5 +47,8 @@ air_dump("appXXXXXX", dir = "backup/")
 
 # Quick dump without downloading attachments
 air_dump("appXXXXXX", dir = "backup/", attachments = "meta")
+
+# CSV dump (flattened for spreadsheet compatibility)
+air_dump("appXXXXXX", dir = "backup/", format = "csv")
 }
 }

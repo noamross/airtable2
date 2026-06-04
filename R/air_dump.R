@@ -5,15 +5,16 @@
 #' purpose of a dump is to create a full backup.
 #'
 #' @inheritParams air_read
-#' @param dir Directory to write JSON/attachment files to. When
-#'   `format = "json"`, schema and data files are written here. When
+#' @param dir Directory to write files to. When `format = "json"` or
+#'   `format = "csv"`, schema and data files are written here. When
 #'   `attachments = "file"`, attachment files are saved under
 #'
 #'   `{dir}/attachments/{table_name}/{record_id}/{filename}`.
-#'   If `NULL` and format is `"json"`, uses a temp directory.
-#' @param format Either `"list"` (return as R list) or `"json"` (write files).
+#'   If `NULL` and format is `"json"` or `"csv"`, uses a temp directory.
+#' @param format One of `"list"` (return as R list), `"json"` (write JSON files),
+#'   or `"csv"` (write CSV files with flattened complex types).
 #' @return For `format = "list"`: a named list with `schema` and a tibble per
-#'   table. For `format = "json"`: the directory path (invisibly).
+#'   table. For `format = "json"` or `"csv"`: the directory path (invisibly).
 #' @examples
 #' \dontrun{
 #' # Full backup with attachments
@@ -21,12 +22,15 @@
 #'
 #' # Quick dump without downloading attachments
 #' air_dump("appXXXXXX", dir = "backup/", attachments = "meta")
+#'
+#' # CSV dump (flattened for spreadsheet compatibility)
+#' air_dump("appXXXXXX", dir = "backup/", format = "csv")
 #' }
 #' @export
 air_dump <- function(
   base_id,
   dir = NULL,
-  format = c("list", "json"),
+  format = c("list", "json", "csv"),
   attachments = c("file", "meta", "blob"),
   .token = NULL
 ) {
@@ -65,7 +69,8 @@ air_dump <- function(
         NULL
       }
       air_read(
-        base_id, t$name,
+        base_id,
+        t$name,
         coerce = FALSE,
         attachments = attachments,
         attachment_dir = tbl_att_dir,
@@ -74,6 +79,31 @@ air_dump <- function(
     }),
     vapply(tables, function(t) t$name, character(1))
   )
+
+  if (format == "csv") {
+    # Flatten all tables and write as CSV
+    for (tbl_name in names(table_data)) {
+      safe_name <- gsub("[^a-zA-Z0-9_-]", "_", tolower(tbl_name))
+      flat_data <- flatten_for_csv(table_data[[tbl_name]])
+      write.csv(
+        flat_data,
+        file.path(dir, paste0(safe_name, ".csv")),
+        row.names = FALSE,
+        na = ""
+      )
+    }
+
+    # Write schema as JSON (CSV doesn't support schema metadata well)
+    jsonlite::write_json(
+      tables,
+      file.path(dir, "schema.json"),
+      auto_unbox = TRUE,
+      pretty = TRUE
+    )
+
+    cli_inform("CSV dump written to {.path {dir}}.")
+    return(invisible(dir))
+  }
 
   if (format == "list") {
     result <- list(schema = tables)
@@ -107,10 +137,10 @@ air_dump <- function(
 #'
 #' Recreates a base from output of [air_dump()]. When `attachments` is
 #' `"file"`, uploads attachment files from the dump directory after record
-#' creation.
+#' creation. For CSV dumps, automatically detects and parses the flattened format.
 #'
 #' @param dump Either a list (from `air_dump(format = "list")`) or a path to
-#'   a dump directory (from `air_dump(format = "json")`).
+#'   a dump directory (from `air_dump(format = "json")` or `air_dump(format = "csv")`).
 #' @param base_name Name for the new base. If `NULL`, uses a generated name.
 #' @param workspace_id Workspace ID to create the base in.
 #' @inheritParams air_read
@@ -119,16 +149,20 @@ air_dump <- function(
 #' \dontrun{
 #' # Restore from a directory dump
 #' air_restore("backup/", workspace_id = "wspXXXXXX")
+#'
+#' # Restore from a CSV dump
+#' air_restore("backup/", workspace_id = "wspXXXXXX", format = "csv")
 #' }
 #' @export
 air_restore <- function(
   dump,
   base_name = NULL,
-  workspace_id,
+  workspace_id = NULL,
   attachments = c("file", "meta"),
   attachment_dir = NULL,
   .token = NULL
 ) {
+  workspace_id <- workspace_id %||% default_workspace_id()
   check_string(workspace_id)
   attachments <- match.arg(attachments)
 
@@ -147,16 +181,24 @@ air_restore <- function(
   base_name <- base_name %||%
     paste0("Restored_", format(Sys.time(), "%Y%m%d_%H%M%S"))
 
-  # Build table configs for base creation (first table + field only)
+  # Build table configs for base creation (first field only per table).
+  # Sanitize field options so the API accepts them (strip choice IDs, convert
+  # formula references, fall back to singleLineText for unrestorable types).
   table_configs <- lapply(schema, function(t) {
-    fields <- lapply(t$fields[1], function(f) {
-      compact(list(
+    f <- t$fields[[1]]
+    s <- sanitize_field_for_create(f, t$fields) %||%
+      list(
         name = f$name,
-        type = f$type,
-        description = f$description,
-        options = f$options
-      ))
-    })
+        type = "singleLineText",
+        description = NULL,
+        options = NULL
+      )
+    fields <- list(compact(list(
+      name = s$name,
+      type = s$type,
+      description = s$description,
+      options = s$options
+    )))
     compact(list(name = t$name, description = t$description, fields = fields))
   })
 
@@ -174,6 +216,13 @@ air_restore <- function(
   cli_inform("Adding fields...")
   restore_fields(schema, new_base_id, .token)
 
+  # Fetch the actual restored schema so we only write fields that exist.
+  # restore_fields() warns-and-continues, so some fields may not have been created.
+  restored_schema <- tryCatch(
+    at_get_schema(new_base_id, token = .token),
+    error = function(e) NULL
+  )
+
   # Insert records
   cli_inform("Inserting records...")
   for (tbl_name in names(table_data)) {
@@ -183,6 +232,19 @@ air_restore <- function(
         names(data),
         c("airtable_id", "airtable_created_time")
       )]
+
+      # Drop columns for fields that were not successfully created.
+      if (!is.null(restored_schema)) {
+        tbl_info <- Find(function(t) t$name == tbl_name, restored_schema)
+        if (!is.null(tbl_info)) {
+          valid_cols <- vapply(
+            tbl_info$fields,
+            function(f) f$name,
+            character(1L)
+          )
+          data <- data[intersect(names(data), valid_cols)]
+        }
+      }
 
       # Resolve per-table attachment dir
       tbl_att_dir <- NULL
@@ -196,9 +258,9 @@ air_restore <- function(
 
       tryCatch(
         air_write(
+          data,
           new_base_id,
           tbl_name,
-          data,
           typecast = TRUE,
           attachments = attachments,
           attachment_dir = tbl_att_dir,
@@ -219,17 +281,88 @@ air_restore <- function(
 
 # --- Internal helpers ---
 
+#' Flatten a data frame for CSV export
+#'
+#' Converts complex Airtable types (list-columns) to character vectors
+#' suitable for CSV export.
+#'
+#' @param df A data frame (possibly with list-columns).
+#' @return A data frame with all columns as atomic vectors.
+#' @noRd
+flatten_for_csv <- function(df) {
+  if (nrow(df) == 0) {
+    return(df)
+  }
+
+  for (col in names(df)) {
+    if (is.list(df[[col]])) {
+      # Convert list-column to character by formatting
+      df[[col]] <- vapply(
+        df[[col]],
+        function(x) {
+          if (is.null(x)) {
+            return(NA_character_)
+          }
+          # For air_* types, use format method if available
+          if (
+            inherits(x, "air_multiselect") ||
+              inherits(x, "air_links") ||
+              inherits(x, "air_attachments") ||
+              inherits(x, "air_collaborator") ||
+              inherits(x, "air_collaborators") ||
+              inherits(x, "air_barcode")
+          ) {
+            # Strip class and format
+            formatted <- tryCatch(format(unclass(x)), error = function(e) {
+              as.character(x)
+            })
+            if (is.character(formatted) && length(formatted) == 1) {
+              return(formatted)
+            }
+            return(as.character(x))
+          }
+          # For other lists, convert to JSON string
+          jsonlite::toJSON(x, auto_unbox = TRUE, simplifyVector = FALSE)
+        },
+        character(1)
+      )
+    }
+  }
+  df
+}
+
 #' Load a dump from path or list
 #' @noRd
 load_dump <- function(dump) {
   if (is.character(dump) && length(dump) == 1L && dir.exists(dump)) {
     schema <- jsonlite::read_json(file.path(dump, "schema.json"))
+
+    # Check if this is a CSV dump
+    csv_files <- list.files(dump, pattern = "\\.csv$", full.names = TRUE)
     json_files <- list.files(dump, pattern = "\\.json$", full.names = TRUE)
     json_files <- json_files[basename(json_files) != "schema.json"]
-    table_data <- stats::setNames(
-      lapply(json_files, jsonlite::read_json, simplifyVector = TRUE),
-      tools::file_path_sans_ext(basename(json_files))
-    )
+
+    if (length(csv_files) > 0) {
+      # CSV dump - read CSV files
+      table_data <- stats::setNames(
+        lapply(csv_files, function(f) {
+          df <- read.csv(f, stringsAsFactors = FALSE)
+          # Replace empty strings with NA
+          df[df == ""] <- NA
+          df
+        }),
+        tools::file_path_sans_ext(basename(csv_files))
+      )
+    } else if (length(json_files) > 0) {
+      # JSON dump - read JSON files
+      table_data <- stats::setNames(
+        lapply(json_files, jsonlite::read_json, simplifyVector = TRUE),
+        tools::file_path_sans_ext(basename(json_files))
+      )
+    } else {
+      table_data <- list()
+    }
+
     list(schema = schema, table_data = table_data)
   } else if (is.list(dump)) {
     list(
@@ -239,6 +372,75 @@ load_dump <- function(dump) {
   } else {
     cli_abort("{.arg dump} must be a list or a path to a dump directory.")
   }
+}
+
+# Sanitize a field definition for use with at_create_field() or in
+# at_create_base() table configs. Returns a modified field_def ready for the
+# API, or NULL if the type cannot be created via the Airtable API.
+#
+# Two transformations applied to restorable fields:
+#   1. singleSelect / multipleSelects: strip `id` from choices - the create
+#      API rejects choice objects that include `id`.
+#   2. formula: convert {fldXXX} field-ID references to {FieldName} using the
+#      original table's field list, then strip read-only keys (isValid,
+#      referencedFieldIds, result) from the options.
+#
+# Returns NULL for field types that the API cannot create:
+#   - multipleRecordLinks / rollup / lookup / count: reference table/field IDs
+#     that are base-specific and won't be valid in the new base.
+#   - Auto-generated / read-only computed fields: lastModifiedTime,
+#     lastModifiedBy, createdTime, createdBy, autoNumber, externalSyncSource,
+#     aiText, button.
+#' @noRd
+sanitize_field_for_create <- function(field_def, table_fields) {
+  cannot_create <- c(
+    "multipleRecordLinks",
+    "rollup",
+    "lookup",
+    "count",
+    "lastModifiedTime",
+    "lastModifiedBy",
+    "createdTime",
+    "createdBy",
+    "autoNumber",
+    "externalSyncSource",
+    "aiText",
+    "button"
+  )
+  if (field_def$type %in% cannot_create) {
+    return(NULL)
+  }
+
+  opts <- field_def$options
+
+  if (field_def$type %in% c("singleSelect", "multipleSelects")) {
+    if (!is.null(opts$choices)) {
+      opts$choices <- lapply(opts$choices, function(ch) {
+        ch[setdiff(names(ch), "id")]
+      })
+    }
+    field_def$options <- opts
+  }
+
+  if (field_def$type == "formula") {
+    ids <- vapply(table_fields, function(f) f$id %||% "", character(1L))
+    nms <- vapply(table_fields, function(f) f$name %||% "", character(1L))
+    valid <- nzchar(ids) & nzchar(nms)
+    id_to_name <- stats::setNames(nms[valid], ids[valid])
+
+    formula <- opts$formula %||% ""
+    for (fld_id in names(id_to_name)) {
+      formula <- gsub(
+        paste0("{", fld_id, "}"),
+        paste0("{", id_to_name[[fld_id]], "}"),
+        formula,
+        fixed = TRUE
+      )
+    }
+    field_def$options <- list(formula = formula)
+  }
+
+  field_def
 }
 
 #' Add fields from schema to a newly created base
@@ -251,17 +453,24 @@ restore_fields <- function(schema, new_base_id, .token) {
       next
     }
 
-    # Skip first field (already created with table)
     if (length(tbl_schema$fields) > 1L) {
       for (f in tbl_schema$fields[-1]) {
+        sanitized <- sanitize_field_for_create(f, tbl_schema$fields)
+        if (is.null(sanitized)) {
+          cli_warn(
+            "Field {.field {f$name}} (type {.val {f$type}}) cannot be \\
+            restored via the API - create it manually in the web UI."
+          )
+          next
+        }
         tryCatch(
           at_create_field(
+            sanitized$name,
             base_id = new_base_id,
             table_id = new_tbl$id,
-            name = f$name,
-            type = f$type,
-            description = f$description,
-            options = f$options,
+            type = sanitized$type,
+            description = sanitized$description,
+            options = sanitized$options,
             token = .token
           ),
           error = function(e) {

@@ -4,7 +4,7 @@
 \alias{at_delete_records}
 \title{Delete records}
 \usage{
-at_delete_records(base_id, table_id, record_ids, token = NULL)
+at_delete_records(base_id, table_id, record_ids, token = NULL, progress = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -14,6 +14,10 @@ at_delete_records(base_id, table_id, record_ids, token = NULL)
 \item{record_ids}{Character vector of record IDs to delete.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 }
 \value{
 A list of delete confirmation objects (each with \code{id} and

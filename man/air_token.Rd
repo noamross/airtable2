@@ -15,7 +15,7 @@ A string (the token).
 \description{
 Looks for a token in this order:
 \enumerate{
-\item Explicit \code{token} argument
+\item Explicit \code{.token} argument
 \item \code{getOption("airtable2.token")}
 \item \code{Sys.getenv("AIRTABLE_API_KEY")}
 }

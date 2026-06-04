@@ -8,17 +8,33 @@
 # free tier).
 #
 # Bases:
-#   - "airtable2_test_main" — for record CRUD (read/write/upsert/sync)
+#   - "airtable2_test_main" - for record CRUD (read/write/upsert/sync)
 #     Has a permanent "Contacts" table with standard fields.
-#   - "airtable2_test_schema" — for table/field creation/modification tests.
+#   - "airtable2_test_schema" - for table/field creation/modification tests.
 #     Only used when AIRTABLE_TEST_SCHEMA=true (to avoid cluttering workspace).
 #
 # Between tests: clear records. Between test files: nothing special needed.
 # Table creation tests mock by default, opt-in to live with env var.
 
+# Disable the on-disk API counter during tests so fixture-replay tests never
+# touch the user's real counter directory. Counter-specific tests re-enable it
+# locally with a temporary R_USER_DATA_DIR.
+options(airtable2.count_api = FALSE)
+
 # --- Skip conditions ---
 
+# Master switch for any test that hits the Airtable API. Airtable free/team plans
+# cap each workspace at ~1000 API calls/month, so live tests are opt-in only.
+# Set AIRTABLE_TEST_LIVE=true to enable them; otherwise we rely on mocked tests.
+skip_if_not_live <- function() {
+  live <- Sys.getenv("AIRTABLE_TEST_LIVE", unset = "false")
+  if (!tolower(trimws(live)) %in% c("true", "1", "yes")) {
+    testthat::skip("Set AIRTABLE_TEST_LIVE=true to run live API tests")
+  }
+}
+
 skip_if_no_token <- function() {
+  skip_if_not_live()
   token <- Sys.getenv("AIRTABLE_API_KEY", unset = "")
   if (!nzchar(token)) {
     testthat::skip("No AIRTABLE_API_KEY set")
@@ -48,9 +64,26 @@ test_env$schema_base_id <- NULL
 test_env$table_ids <- list()
 test_env$formula_field_added <- FALSE
 
-# Fixed base names
-TEST_MAIN_BASE_NAME <- "airtable2_test_main"
-TEST_SCHEMA_BASE_NAME <- "airtable2_test_schema"
+# Compute an 8-character hex suffix from the workspace ID so each workspace gets
+# its own set of test bases and never collides with another user's bases.
+# Falls back to "00000000" when no workspace is configured (no live tests run).
+.wsp_hash8 <- local({
+  cache <- NULL
+  function() {
+    if (is.null(cache)) {
+      wsp <- Sys.getenv("AIRTABLE_WORKSPACE_ID", "")
+      cache <<- if (nzchar(wsp)) {
+        substr(digest::digest(wsp, algo = "sha256", serialize = FALSE), 1L, 8L)
+      } else {
+        "00000000"
+      }
+    }
+    cache
+  }
+})
+
+TEST_MAIN_BASE_NAME <- paste0("airtable2_test_main_", .wsp_hash8())
+TEST_SCHEMA_BASE_NAME <- paste0("airtable2_test_schema_", .wsp_hash8())
 
 #' Find or create a base by fixed name
 #'
@@ -69,13 +102,8 @@ find_or_create_base <- function(name, tables) {
     return(existing$id[1])
   }
 
-  # Create it
-  workspace_id <- Sys.getenv("AIRTABLE_WORKSPACE_ID")
-  result <- at_create_base(
-    name = name,
-    workspace_id = workspace_id,
-    tables = tables
-  )
+  # Create it (workspace_id defaults to AIRTABLE_WORKSPACE_ID env var)
+  result <- at_create_base(name = name, tables = tables)
   result$id
 }
 
@@ -94,22 +122,30 @@ get_test_base <- function() {
 
   test_env$main_base_id <- find_or_create_base(
     TEST_MAIN_BASE_NAME,
-    tables = list(
-      list(
-        name = "Contacts",
-        fields = list(
-          list(name = "Name", type = "singleLineText"),
-          list(name = "Email", type = "email"),
-          list(name = "Age", type = "number", options = list(precision = 0L)),
-          list(name = "Active", type = "checkbox",
-               options = list(icon = "check", color = "greenBright")),
-          list(name = "Tags", type = "multipleSelects",
-               options = list(choices = list(
-                 list(name = "R"), list(name = "Python"), list(name = "Julia")
-               )))
+    tables = list(list(
+      name = "Contacts",
+      fields = list(
+        list(name = "Name", type = "singleLineText"),
+        list(name = "Email", type = "email"),
+        list(name = "Age", type = "number", options = list(precision = 0L)),
+        list(
+          name = "Active",
+          type = "checkbox",
+          options = list(icon = "check", color = "greenBright")
+        ),
+        list(
+          name = "Tags",
+          type = "multipleSelects",
+          options = list(
+            choices = list(
+              list(name = "R"),
+              list(name = "Python"),
+              list(name = "Julia")
+            )
+          )
         )
       )
-    )
+    ))
   )
 
   # Cache the table ID
@@ -137,14 +173,10 @@ get_schema_test_base <- function() {
 
   test_env$schema_base_id <- find_or_create_base(
     TEST_SCHEMA_BASE_NAME,
-    tables = list(
-      list(
-        name = "Scratch",
-        fields = list(
-          list(name = "Name", type = "singleLineText")
-        )
-      )
-    )
+    tables = list(list(
+      name = "Scratch",
+      fields = list(list(name = "Name", type = "singleLineText"))
+    ))
   )
 
   test_env$schema_base_id
@@ -189,21 +221,23 @@ get_test_table_id <- function(table = "Contacts") {
 #'
 #' @return Invisible NULL.
 ensure_formula_field <- function() {
-  if (test_env$formula_field_added) return(invisible(NULL))
+  if (test_env$formula_field_added) {
+    return(invisible(NULL))
+  }
 
   base_id <- get_test_base()
   table_id <- get_test_table_id("Contacts")
 
   # Check if it already exists
- schema <- at_get_schema(base_id)
+  schema <- at_get_schema(base_id)
   contacts <- Filter(function(t) t$name == "Contacts", schema)[[1]]
   field_names <- vapply(contacts$fields, function(f) f$name, character(1))
 
   if (!"NameUpper" %in% field_names) {
     at_create_field(
+      "NameUpper",
       base_id = base_id,
       table_id = table_id,
-      name = "NameUpper",
       type = "formula",
       options = list(formula = "UPPER({Name})")
     )

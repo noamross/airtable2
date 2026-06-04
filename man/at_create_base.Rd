@@ -4,7 +4,7 @@
 \alias{at_create_base}
 \title{Create a new base}
 \usage{
-at_create_base(name, workspace_id, tables, token = NULL)
+at_create_base(name, workspace_id = NULL, tables, token = NULL)
 }
 \arguments{
 \item{name}{Name for the new base.}

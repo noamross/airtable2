@@ -4,7 +4,15 @@
 \alias{air_sync_attachments}
 \title{Smart sync attachments}
 \usage{
-air_sync_attachments(base_id, table, field, data, key, .token = NULL)
+air_sync_attachments(
+  base_id,
+  table,
+  field,
+  data,
+  key,
+  parallel = NULL,
+  .token = NULL
+)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -16,6 +24,10 @@ air_sync_attachments(base_id, table, field, data, key, .token = NULL)
 \item{data}{A tibble with a key column and \code{file_path} column.}
 
 \item{key}{Column name that identifies which record to attach to.}
+
+\item{parallel}{Logical or \code{NULL}. If \code{TRUE}, attachment downloads use
+\code{\link[httr2:req_perform_parallel]{httr2::req_perform_parallel()}} (up to 5 concurrent). If \code{NULL}, uses
+option \code{airtable2.parallel} or env var \code{AIRTABLE2_PARALLEL} (default \code{TRUE}).}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

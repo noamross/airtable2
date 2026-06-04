@@ -11,7 +11,8 @@ at_update_records(
   method = c("PATCH", "PUT"),
   typecast = FALSE,
   upsert_fields = NULL,
-  token = NULL
+  token = NULL,
+  progress = NULL
 )
 }
 \arguments{
@@ -30,6 +31,10 @@ at_update_records(
 If \code{NULL}, performs a standard update.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR} (both default to \code{FALSE}).}
 }
 \value{
 A list with \code{records}, and (for upserts) \code{createdRecords} and

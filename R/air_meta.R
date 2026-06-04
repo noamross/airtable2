@@ -101,10 +101,10 @@ air_meta_push <- function(base_id, meta, .token = NULL) {
 #'
 #' @inheritParams air_read
 #' @param meta_table Name of the table to store metadata in.
-#'   Default `"_Meta Data"`.
+#'   Default `"_metadata"`.
 #' @return Invisible upsert result.
 #' @export
-air_meta_sync <- function(base_id, meta_table = "_Meta Data", .token = NULL) {
+air_meta_sync <- function(base_id, meta_table = "_metadata", .token = NULL) {
   check_string(base_id)
   check_string(meta_table)
 
@@ -114,9 +114,9 @@ air_meta_sync <- function(base_id, meta_table = "_Meta Data", .token = NULL) {
   meta$meta_key <- paste(meta$table_name, meta$field_name, sep = "||")
 
   air_upsert(
+    data = meta,
     base_id = base_id,
     table = meta_table,
-    data = meta,
     merge_on = "meta_key",
     typecast = TRUE,
     add_fields = "yes",

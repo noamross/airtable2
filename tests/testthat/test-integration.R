@@ -35,7 +35,7 @@ test_that("air_read returns typed tibble", {
     # Check metadata columns
     expect_true("airtable_id" %in% names(result))
     expect_true("airtable_created_time" %in% names(result))
-    expect_equal(result$airtable_id, c("recALICE1", "recBOB1"))
+    expect_equal(result$airtable_id, c("recALICE1", "recBOB1"), ignore_attr = TRUE)
 
     # Check type coercion
     expect_type(result$Name, "character")

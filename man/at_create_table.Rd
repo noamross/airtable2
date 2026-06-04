@@ -4,15 +4,16 @@
 \alias{at_create_table}
 \title{Create a table in a base}
 \usage{
-at_create_table(base_id, name, fields, description = NULL, token = NULL)
+at_create_table(name, fields, base_id = NULL, description = NULL, token = NULL)
 }
 \arguments{
-\item{base_id}{Base ID.}
-
 \item{name}{Table name.}
 
 \item{fields}{A list of field configurations. The first field becomes the
 primary field.}
+
+\item{base_id}{Base ID. If \code{NULL}, uses the session default set by
+\code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment variable.}
 
 \item{description}{Optional table description.}
 

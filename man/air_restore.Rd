@@ -7,7 +7,7 @@
 air_restore(
   dump,
   base_name = NULL,
-  workspace_id,
+  workspace_id = NULL,
   attachments = c("file", "meta"),
   attachment_dir = NULL,
   .token = NULL
@@ -15,7 +15,7 @@ air_restore(
 }
 \arguments{
 \item{dump}{Either a list (from \code{air_dump(format = "list")}) or a path to
-a dump directory (from \code{air_dump(format = "json")}).}
+a dump directory (from \code{air_dump(format = "json")} or \code{air_dump(format = "csv")}).}
 
 \item{base_name}{Name for the new base. If \code{NULL}, uses a generated name.}
 
@@ -37,11 +37,14 @@ The new base ID (invisibly).
 \description{
 Recreates a base from output of \code{\link[=air_dump]{air_dump()}}. When \code{attachments} is
 \code{"file"}, uploads attachment files from the dump directory after record
-creation.
+creation. For CSV dumps, automatically detects and parses the flattened format.
 }
 \examples{
 \dontrun{
 # Restore from a directory dump
 air_restore("backup/", workspace_id = "wspXXXXXX")
+
+# Restore from a CSV dump
+air_restore("backup/", workspace_id = "wspXXXXXX", format = "csv")
 }
 }

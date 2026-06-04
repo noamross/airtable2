@@ -17,6 +17,9 @@
 #' @param user_locale Locale for date formatting.
 #' @param return_fields_by_id If `TRUE`, use field IDs as keys instead of names.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
+#' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
+#'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`
+#'   or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
 #' @return A list of record objects (each with `id`, `createdTime`, `fields`).
 #' @export
 at_list_records <- function(base_id,
@@ -31,7 +34,8 @@ at_list_records <- function(base_id,
                             time_zone = NULL,
                             user_locale = NULL,
                             return_fields_by_id = FALSE,
-                            token = NULL) {
+                            token = NULL,
+                            progress = NULL) {
   check_string(base_id)
   check_string(table_id)
 
@@ -72,7 +76,7 @@ at_list_records <- function(base_id,
     req <- req |> httr2::req_url_query(returnFieldsByFieldId = "true")
   }
 
-  air_paginate(req, page_size = page_size, max_records = max_records)
+  air_paginate(req, page_size = page_size, max_records = max_records, progress = progress)
 }
 
 #' Get a single record
@@ -103,15 +107,28 @@ at_get_record <- function(base_id, table_id, record_id, token = NULL) {
 #' @return A list of created record objects (with assigned IDs).
 #' @export
 at_create_records <- function(base_id, table_id, records,
-                              typecast = FALSE, token = NULL) {
+                              typecast = FALSE, token = NULL,
+                              progress = NULL) {
   check_string(base_id)
   check_string(table_id)
   check_bool(typecast)
 
+  progress <- resolve_progress(progress)
   batches <- chunk(records, 10L)
   results <- list()
 
+  pb <- NULL
+  if (progress && length(batches) > 1) {
+    pb <- cli::cli_progress_bar(
+      total = length(batches),
+      clear = FALSE,
+      display = paste("Creating", length(records), "records in batches...")
+    )
+  }
+
+  batch_num <- 0L
   for (batch in batches) {
+    batch_num <- batch_num + 1L
     body <- compact(list(
       records = unname(batch),
       typecast = if (typecast) TRUE
@@ -123,6 +140,16 @@ at_create_records <- function(base_id, table_id, records,
 
     resp <- air_perform(req)
     results <- c(results, resp$records)
+    
+    # Update progress bar
+    if (!is.null(pb)) {
+      pb$set(batch_num, message = paste("Batch", batch_num, "of", length(batches)))
+    }
+  }
+
+  # Clear progress bar
+  if (!is.null(pb)) {
+    pb$set(length(batches), done = TRUE, message = "Creation complete")
   }
 
   results
@@ -148,18 +175,33 @@ at_update_records <- function(base_id, table_id, records,
                               method = c("PATCH", "PUT"),
                               typecast = FALSE,
                               upsert_fields = NULL,
-                              token = NULL) {
+                              token = NULL,
+                              progress = NULL) {
   check_string(base_id)
   check_string(table_id)
   method <- match.arg(method)
   check_bool(typecast)
+
+  progress <- resolve_progress(progress)
 
   batches <- chunk(records, 10L)
   all_records <- list()
   all_created <- character()
   all_updated <- character()
 
+  # Set up progress bar if requested
+  pb <- NULL
+  if (progress && length(batches) > 1) {
+    pb <- cli::cli_progress_bar(
+      total = length(batches),
+      clear = FALSE,
+      display = paste("Upserting", length(records), "records in batches...")
+    )
+  }
+
+  batch_num <- 0L
   for (batch in batches) {
+    batch_num <- batch_num + 1L
     body <- compact(list(
       records = unname(batch),
       typecast = if (typecast) TRUE,
@@ -180,6 +222,16 @@ at_update_records <- function(base_id, table_id, records,
     if (!is.null(resp$updatedRecords)) {
       all_updated <- c(all_updated, unlist(resp$updatedRecords))
     }
+    
+    # Update progress bar
+    if (!is.null(pb)) {
+      pb$set(batch_num, message = paste("Batch", batch_num, "of", length(batches)))
+    }
+  }
+
+  # Clear progress bar
+  if (!is.null(pb)) {
+    pb$set(length(batches), done = TRUE, message = "Upsert complete")
   }
 
   compact(list(
@@ -195,23 +247,49 @@ at_update_records <- function(base_id, table_id, records,
 #'
 #' @inheritParams at_list_records
 #' @param record_ids Character vector of record IDs to delete.
+#' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
+#'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`
+#'   or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @return A list of delete confirmation objects (each with `id` and
 #'   `deleted = TRUE`).
 #' @export
-at_delete_records <- function(base_id, table_id, record_ids, token = NULL) {
+at_delete_records <- function(base_id, table_id, record_ids, token = NULL,
+                              progress = NULL) {
   check_string(base_id)
   check_string(table_id)
 
+  progress <- resolve_progress(progress)
   batches <- chunk(record_ids, 10L)
   results <- list()
 
-  for (batch in batches) {
+  # Set up progress bar if requested
+  pb <- NULL
+  if (progress && length(batches) > 1) {
+    pb <- cli::cli_progress_bar(
+      "Deleting records",
+      total = length(batches),
+      clear = TRUE
+    )
+  }
+
+  for (i in seq_along(batches)) {
+    batch <- batches[[i]]
     req <- air_req(paste0(base_id, "/", table_id), token = token) |>
       httr2::req_method("DELETE") |>
       httr2::req_url_query(`records[]` = batch, .multi = "explode")
 
     resp <- air_perform(req)
     results <- c(results, resp$records)
+    
+    # Update progress bar
+    if (!is.null(pb)) {
+      cli::cli_progress_update(pb, pos = i)
+    }
+  }
+
+  # Clear progress bar
+  if (!is.null(pb)) {
+    cli::cli_progress_done(pb)
   }
 
   results

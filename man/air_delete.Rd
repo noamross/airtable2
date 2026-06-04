@@ -4,7 +4,7 @@
 \alias{air_delete}
 \title{Delete records from a table (high-level)}
 \usage{
-air_delete(base_id, table, record_ids, .token = NULL)
+air_delete(base_id, table, record_ids, .token = NULL, progress = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}).}
@@ -14,6 +14,10 @@ air_delete(base_id, table, record_ids, .token = NULL)
 \item{record_ids}{Character vector of record IDs to delete.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
+paginated requests. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
+or env var \code{AIRTABLE2_PROGRESS_BAR}.}
 }
 \value{
 Invisible \code{NULL}. Side effect: deletes records.

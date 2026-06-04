@@ -166,37 +166,41 @@ field type conversions.
 
 ### Making a base self-documenting with `air_meta_sync()`
 
-`air_meta_sync()` takes documentation one step further: it writes the full
-metadata tibble into a designated table *within the same base*. This means
-anyone browsing the base in the Airtable UI can see a `_metadata` table
-listing every table, field, type, and description — no external tooling
-required.
+`air_meta_sync()` takes documentation one step further. The recommended
+workflow:
+
+1. Call `air_meta_init()` to create a `_metadata` table in your base,
+   populated with the current schema.
+2. Open the base in Airtable and edit the description text directly in the
+   `_metadata` table — no R required.
+3. Call `air_meta_sync()` to read the updated `_metadata` table and push the
+   changes back to the field descriptions.
 
 ```{r air-meta-sync}
-# Upsert the current schema into a "_metadata" table in the same base
-air_meta_sync("appXXXXXX")
+# Step 1: create the _metadata table (one-time setup)
+air_meta_init("appXXXXXX")
 
-# Use a custom table name
-air_meta_sync("appXXXXXX", meta_table = "Data Dictionary")
+# Step 2: edit descriptions in Airtable web UI (no R code needed)
+
+# Step 3: sync changes back to field descriptions
+air_meta_sync("appXXXXXX")
 ```
 
-The merge key is a composite of `table_name` and `field_name`, so running
-`air_meta_sync()` repeatedly is idempotent — it updates existing rows and adds
-new ones as the schema evolves.
+`air_meta_sync()` is idempotent — running it again updates existing
+descriptions and adds new rows for any fields added since the last sync.
 
-**Workflow: documentation as code**
+**Alternative: sync from a local file**
 
-A typical pattern is to maintain `meta` as a CSV in your project repository,
-edit it locally, and push changes in a single step:
+If you prefer to manage descriptions in a CSV or data.frame:
 
 ```{r air-meta-workflow}
-# On first run: export the current metadata to a file
-meta <- air_meta("appXXXXXX")
-write.csv(meta, "base-metadata.csv", row.names = FALSE, na = "")
+# Sync from a local CSV
+air_meta_sync("appXXXXXX", source = "descriptions.csv")
 
-# Later: edit base-metadata.csv in a text editor or spreadsheet, then:
-meta <- read.csv("base-metadata.csv", na.strings = "")
-air_meta_push("appXXXXXX", meta)
+# Or build descriptions in R and sync directly
+meta <- air_meta("appXXXXXX")
+meta[meta$field_name == "Budget", "description"] <- "Total budget in USD"
+air_meta_sync("appXXXXXX", source = meta)
 ```
 
 ---
@@ -430,59 +434,61 @@ setdiff(original$table_name, restored$table_name)  # Should be character(0)
 
 ## Re-linking after restore (advanced)
 
-When a base is restored, every record receives a new Airtable record ID. Any
-`multipleRecordLinks` fields that were saved in the dump contain the *old* IDs,
-which no longer point to valid records in the restored base. After a restore,
-linked-record columns will be empty or invalid.
+When a base is restored, every record receives a new Airtable record ID.
+`air_restore()` handles this automatically: by default
+(`restore_linked_fields = TRUE`), after all records are created it runs a
+two-step pass:
 
-The general approach to repair links is:
-
-1. Identify a **natural key** — a field in the linked table whose values are
-   unique and stable across bases (e.g. a project code, an email address, or
-   an explicit external ID field).
-2. Build a mapping from old record IDs to new record IDs using that key.
-3. Rewrite the linked-record columns in the restored base using the new IDs.
+1. **Field definitions** — `multipleRecordLinks` fields are recreated with
+   their `linkedTableId` remapped to the new base's table IDs.
+2. **Cell values** — the link values from the dump (old record IDs) are
+   remapped to the new record IDs using the insertion-order mapping, then
+   written back via `air_upsert()`.
 
 ```{r relinking-example}
-# Illustrative approach — adapt to your specific tables and keys
-
-# Read the new IDs from the restored base (People table has email as natural key)
-people_new <- air_read(new_id, "People")
-# people_new has new `airtable_id` values, same `Email` values
-
-# Read the old data from the dump (load the JSON or use the in-memory dump)
-dump <- air_dump("appSOURCEBASE", format = "list")
-people_old <- dump[["People"]]
-
-# Build a mapping: old_id -> new_id via shared Email column
-id_map <- merge(
-  people_old[, c("airtable_id", "Email")],
-  people_new[, c("airtable_id", "Email")],
-  by = "Email",
-  suffixes = c("_old", "_new")
+# Full restore — linked-record fields AND cell values restored automatically
+new_base_id <- air_restore(
+  "backup/",
+  workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID"),
+  base_name = "Restored Base"
 )
+# Creating base "Restored Base"...
+# Adding fields...
+# Inserting records...
+# Recreated 2 link fields and 0 dependent fields.
+# Re-linked records in 1 table.
+# Restore complete. New base ID: appYYYYYYYY.
 
-# Rewrite the Owner column in the Projects table
-projects_new <- air_read(new_id, "Projects")
-
-remap_links <- function(old_ids, id_map) {
-  # old_ids is a list-column element (character vector of record IDs)
-  if (is.null(old_ids) || length(old_ids) == 0) return(old_ids)
-  new_ids <- id_map$airtable_id_new[match(old_ids, id_map$airtable_id_old)]
-  new_ids[!is.na(new_ids)]
-}
-
-projects_new$Owner <- lapply(projects_new$Owner, remap_links, id_map = id_map)
-
-# Write the corrected links back
-air_upsert(
-  projects_new[, c("airtable_id", "Owner")],
-  base_id  = new_id,
-  table    = "Projects",
-  merge_on = "airtable_id"
+# Skip the re-linking step (faster; links will be empty)
+new_base_id <- air_restore(
+  "backup/",
+  workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID"),
+  restore_linked_fields = FALSE
 )
 ```
 
-A planned `restore_linked_fields()` helper will automate this pattern. Track
-progress and add your use case at the
-[GitHub issues page](https://github.com/One-Health-Research-Consulting/airtabler/issues).
+**When automatic re-linking might not be sufficient:** the automatic approach
+matches records by insertion order, which works when the dump and restore are
+done as a unit. If you are merging records from multiple sources, or if some
+tables were partially restored, you may need to re-link manually using a
+natural key:
+
+```{r relinking-simple}
+# Manual re-link using a stable natural key (e.g. Name/Email)
+# Useful when insertion order doesn't reliably map old IDs to new ones.
+projects_new <- air_read("Projects", new_base_id)
+artists_new  <- air_read("Artists",  new_base_id)
+
+# Build old-to-new ID map using Name as stable key
+# (assumes artists_old was saved from the source base before restore)
+id_map <- stats::setNames(artists_new$airtable_id, artists_old$Name)
+remap  <- function(ids) lapply(ids, function(v) unname(id_map[v]))
+
+projects_new$`Lead Artist` <- remap(projects_new$`Lead Artist`)
+air_upsert(
+  projects_new[, c("airtable_id", "Lead Artist")],
+  "Projects",
+  merge_on = "airtable_id",
+  base_id = new_base_id
+)
+```

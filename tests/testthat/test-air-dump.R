@@ -675,6 +675,210 @@ test_that("restore_linked_fields warns and skips a link to an unmapped table", {
   expect_null(Find(function(c) c$type == "multipleRecordLinks", link_calls))
 })
 
+# ── restore_linked_fields argument ───────────────────────────────────────────
+
+test_that("air_restore restore_linked_fields = FALSE skips field and record relinking", {
+  field_calls <- list()
+  upsert_calls <- list()
+  local_mocked_bindings(
+    at_create_base = function(name, tables, workspace_id = NULL, token = NULL) {
+      list(id = "appNEWBASE", name = name, tables = tables)
+    },
+    at_get_schema = function(base_id, token = NULL) {
+      list(list(
+        id = "tblC", name = "Contacts",
+        fields = list(list(id = "fldN", name = "Name", type = "singleLineText")),
+        views = list()
+      ))
+    },
+    at_create_field = function(name, ...) {
+      field_calls[[length(field_calls) + 1L]] <<- name
+      list(id = "fldNEW")
+    },
+    air_write = function(...) invisible(c("recNEW1")),
+    air_upsert = function(...) {
+      upsert_calls[[length(upsert_calls) + 1L]] <<- list(...)
+      list(created = character(), updated = character())
+    }
+  )
+
+  dump <- list(
+    schema = list(list(
+      id = "tblAAA", name = "Contacts",
+      fields = list(
+        list(id = "fldN", name = "Name", type = "singleLineText"),
+        list(id = "fldL", name = "Ref", type = "multipleRecordLinks",
+             options = list(linkedTableId = "tblBBB"))
+      ), views = list()
+    )),
+    Contacts = tibble::tibble(
+      airtable_id = "recOLD1", Name = "Alice", Ref = list(list("recOLD2"))
+    )
+  )
+
+  air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = FALSE)
+
+  # at_create_field never called with link type
+  expect_false(any(vapply(field_calls, function(n) identical(n, "Ref"), logical(1))))
+  # air_upsert never called
+  expect_equal(length(upsert_calls), 0L)
+})
+
+# ── restore_linked_records ────────────────────────────────────────────────────
+
+test_that("restore_linked_records remaps old record IDs to new in link columns", {
+  upsert_calls <- list()
+  local_mocked_bindings(
+    air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
+      upsert_calls[[length(upsert_calls) + 1L]] <<- list(
+        data = data, table = table, merge_on = merge_on
+      )
+      list(created = character(), updated = character())
+    }
+  )
+
+  table_data <- list(
+    Tasks = tibble::tibble(
+      airtable_id = c("recOLD_T1", "recOLD_T2"),
+      Title = c("Alpha", "Beta"),
+      Assignee = list(list("recOLD_P1"), list("recOLD_P2", "recOLD_P1"))
+    )
+  )
+  id_map <- c(
+    recOLD_T1 = "recNEW_T1", recOLD_T2 = "recNEW_T2",
+    recOLD_P1 = "recNEW_P1", recOLD_P2 = "recNEW_P2"
+  )
+  schema <- list(list(
+    id = "tblT", name = "Tasks",
+    fields = list(
+      list(id = "fldT", name = "Title", type = "singleLineText"),
+      list(id = "fldA", name = "Assignee", type = "multipleRecordLinks",
+           options = list(linkedTableId = "tblP"))
+    ), views = list()
+  ))
+
+  restore_linked_records(table_data, "appNEW", id_map, schema)
+
+  expect_equal(length(upsert_calls), 1L)
+  call <- upsert_calls[[1]]
+  expect_equal(call$table, "Tasks")
+  expect_equal(call$merge_on, "airtable_id")
+  expect_equal(call$data$airtable_id, c("recNEW_T1", "recNEW_T2"))
+  expect_equal(call$data$Assignee[[1]], list("recNEW_P1"))
+  expect_equal(call$data$Assignee[[2]], list("recNEW_P2", "recNEW_P1"))
+})
+
+test_that("restore_linked_records skips tables with no link fields", {
+  upsert_calls <- list()
+  local_mocked_bindings(
+    air_upsert = function(...) {
+      upsert_calls[[length(upsert_calls) + 1L]] <<- TRUE
+      list(created = character(), updated = character())
+    }
+  )
+  table_data <- list(
+    NoLinks = tibble::tibble(airtable_id = "rec1", Name = "A")
+  )
+  schema <- list(list(
+    id = "tbl1", name = "NoLinks",
+    fields = list(list(id = "fldN", name = "Name", type = "singleLineText")),
+    views = list()
+  ))
+  restore_linked_records(table_data, "appNEW", c(rec1 = "recNEW1"), schema)
+  expect_equal(length(upsert_calls), 0L)
+})
+
+test_that("air_restore builds ID map and re-links records (integration)", {
+  write_calls <- list()
+  upsert_calls <- list()
+  schema_calls <- 0L
+
+  local_mocked_bindings(
+    at_create_base = function(name, tables, workspace_id = NULL, token = NULL) {
+      list(id = "appNEW", name = name, tables = tables)
+    },
+    at_get_schema = function(base_id, token = NULL) {
+      schema_calls <<- schema_calls + 1L
+      base_schema <- list(
+        list(
+          id = "tblTASKS_NEW", name = "Tasks",
+          fields = list(list(id = "fldT_NEW", name = "Title", type = "singleLineText")),
+          views = list()
+        ),
+        list(
+          id = "tblPEOPLE_NEW", name = "People",
+          fields = list(list(id = "fldN_NEW", name = "Name", type = "singleLineText")),
+          views = list()
+        )
+      )
+      if (schema_calls >= 3L) {
+        # After restore_linked_fields: Tasks has the new link field
+        base_schema[[1]]$fields[[2]] <- list(
+          id = "fldA_NEW", name = "Assignee", type = "multipleRecordLinks",
+          options = list(linkedTableId = "tblPEOPLE_NEW")
+        )
+      }
+      base_schema
+    },
+    at_create_field = function(...) list(id = "fldCREATED"),
+    air_write = function(data, table, base_id = NULL, ...) {
+      write_calls[[length(write_calls) + 1L]] <<- list(
+        data = data, table = table
+      )
+      if (table == "Tasks") c("recNEW_T1", "recNEW_T2")
+      else if (table == "People") c("recNEW_P1", "recNEW_P2")
+      else character(0)
+    },
+    air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
+      upsert_calls[[length(upsert_calls) + 1L]] <<- list(
+        data = data, table = table, merge_on = merge_on
+      )
+      list(created = character(), updated = character())
+    }
+  )
+
+  dump <- list(
+    schema = list(
+      list(
+        id = "tblTASKS_OLD", name = "Tasks",
+        fields = list(
+          list(id = "fldT_OLD", name = "Title", type = "singleLineText"),
+          list(id = "fldA_OLD", name = "Assignee", type = "multipleRecordLinks",
+               options = list(linkedTableId = "tblPEOPLE_OLD"))
+        ), views = list()
+      ),
+      list(
+        id = "tblPEOPLE_OLD", name = "People",
+        fields = list(list(id = "fldN_OLD", name = "Name", type = "singleLineText")),
+        views = list()
+      )
+    ),
+    Tasks = tibble::tibble(
+      airtable_id = c("recOLD_T1", "recOLD_T2"),
+      Title = c("Alpha", "Beta"),
+      Assignee = list(list("recOLD_P1"), list("recOLD_P2"))
+    ),
+    People = tibble::tibble(
+      airtable_id = c("recOLD_P1", "recOLD_P2"),
+      Name = c("Alice", "Bob")
+    )
+  )
+
+  air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = TRUE)
+
+  # Assignee column NOT in the initial Tasks write (link cols excluded)
+  tasks_write <- Find(function(c) c$table == "Tasks", write_calls)
+  expect_false("Assignee" %in% names(tasks_write$data))
+
+  # air_upsert called for Tasks to restore remapped link values
+  tasks_upsert <- Find(function(c) c$table == "Tasks", upsert_calls)
+  expect_false(is.null(tasks_upsert))
+  expect_equal(tasks_upsert$merge_on, "airtable_id")
+  expect_equal(tasks_upsert$data$airtable_id, c("recNEW_T1", "recNEW_T2"))
+  expect_equal(tasks_upsert$data$Assignee[[1]], list("recNEW_P1"))
+  expect_equal(tasks_upsert$data$Assignee[[2]], list("recNEW_P2"))
+})
+
 # ── round-trip: metadata stripping ───────────────────────────────────────────
 
 test_that("air_restore strips airtable_id and airtable_created_time before writing", {

@@ -232,11 +232,12 @@ assigned by Airtable and cannot be set on create. If you dump a base with
 get new IDs, so all `air_links` columns in the restored base point to the old
 IDs and the links are broken.
 
-Resolving this requires re-linking: match records in the restored base by a
-stable key field (e.g., a name or a surrogate key you maintain), look up the
-new record IDs, and then write the `air_links` columns back. This is a manual
-step; see the [Metadata and Backup vignette](metadata-backup.html) for the
-broader dump/restore workflow.
+`air_restore()` handles this automatically by default
+(`restore_linked_fields = TRUE`): after inserting all records it remaps the
+old record IDs to the new ones using the insertion-order mapping and writes
+the link values back. If you need manual control (e.g. merging data from
+multiple sources), the [Metadata and Backup vignette](metadata-backup.html)
+has a worked example using a natural key.
 
 ---
 
@@ -444,6 +445,38 @@ air_sync_attachments(
 )
 #> Attachment sync: 2 uploaded, 1 skipped.
 ```
+
+### Stable preview URLs and the temporary-URL caveat
+
+The `url` field in each attachment object is **temporary**: Airtable generates
+a signed `airtableusercontent.com` URL that expires approximately two hours
+after the API call. Never save this URL to a database or share it as a
+permanent link — it will stop working shortly after you fetch it.
+
+The function `air_attachment_preview_url()` always returns `NA_character_`.
+This is intentional and correct. Airtable does not expose stable viewer URLs
+through the REST API. The stable URL — the one hosted on `airtable.com` rather
+than `airtableusercontent.com` — can only be obtained by opening the
+attachment in the Airtable web app and copying the address bar URL.
+
+```{r att-preview-url}
+# The url field in each attachment expires after ~2 hours:
+projects$Files[[1]][[1]]$url
+#> [1] "https://v5.airtableusercontent.com/v3/..."  # <- expires soon
+
+# air_attachment_preview_url() always returns NA — this is correct behaviour:
+air_attachment_preview_url(projects$Files[[1]][[1]])
+#> [1] NA
+#> i Airtable does not expose stable viewer URLs through the REST API.
+#> i To get a permanent shareable link: open the record in the Airtable web app,
+#>   click the attachment, and copy the URL from your browser's address bar.
+#>   That URL (from airtable.com) does not expire.
+```
+
+**Workaround for a stable link:** navigate to the record in the Airtable web
+app, click the attachment thumbnail to open the viewer, and copy the URL from
+your browser's address bar. That URL originates from `airtable.com` and does
+not expire.
 
 ---
 

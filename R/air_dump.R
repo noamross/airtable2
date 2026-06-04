@@ -145,18 +145,24 @@ air_dump <- function(
 #' @param workspace_id Workspace ID to create the base in.
 #' @inheritParams air_read
 #' @return The new base ID (invisibly).
+#' @param restore_linked_fields If `TRUE` (the default), after all records are
+#'   created, linked-record fields (`multipleRecordLinks`) and their dependent
+#'   computed fields (`rollup`, `lookup`, `count`) are recreated with remapped
+#'   table/field IDs, and the link cell values (record-to-record connections)
+#'   are repopulated by remapping old record IDs to the newly created record
+#'   IDs. Set to `FALSE` to skip this step (faster, but links will be empty).
 #' @section Linked-record fields:
 #' Linked-record fields (`multipleRecordLinks`) and the computed fields that
 #' depend on them (`rollup`, `lookup`, `count`) are skipped during the initial
-#' field-creation pass because their options reference base-specific IDs that
-#' do not exist in the new base. After all tables and records have been
-#' created, `restore_linked_fields()` recreates these fields, remapping the
-#' linked-table and record-link-field references to the new base's IDs.
+#' field-creation pass because their options reference base-specific IDs.
+#' When `restore_linked_fields = TRUE` (the default), after all records are
+#' inserted a two-step pass runs:
 #'
-#' Note that the link FIELDS are recreated but their CELL VALUES (the specific
-#' record-to-record connections) are NOT repopulated: the old record IDs stored
-#' in the dump do not correspond to the newly created records' IDs. Re-linking
-#' cell values is left for a future pass.
+#' 1. **Field definitions**: `multipleRecordLinks` fields are recreated with
+#'    `linkedTableId` remapped to the new base's table IDs.
+#' 2. **Cell values**: the link columns in the dump contain old record IDs.
+#'    These are remapped to the new record IDs (matched by insertion order) and
+#'    written back via `air_upsert()`.
 #' @examples
 #' \dontrun{
 #' # Restore from a directory dump
@@ -172,6 +178,7 @@ air_restore <- function(
   workspace_id = NULL,
   attachments = c("file", "meta"),
   attachment_dir = NULL,
+  restore_linked_fields = TRUE,
   .token = NULL
 ) {
   workspace_id <- workspace_id %||% default_workspace_id()
@@ -235,15 +242,37 @@ air_restore <- function(
     error = function(e) NULL
   )
 
-  # Insert records
+  # Identify link-column names per table (must be excluded from initial write
+  # since they contain old record IDs that don't exist in the new base yet).
+  link_cols_by_table <- stats::setNames(
+    lapply(schema, function(t) {
+      vapply(
+        Filter(function(f) identical(f$type, "multipleRecordLinks"), t$fields),
+        function(f) f$name %||% "", character(1L)
+      )
+    }),
+    vapply(schema, function(t) t$name %||% "", character(1L))
+  )
+
+  # Insert records, tracking old->new record ID mapping for link restoration.
   cli_inform("Inserting records...")
+  record_id_maps <- list()
+
   for (tbl_name in names(table_data)) {
     data <- table_data[[tbl_name]]
     if (is.data.frame(data) && nrow(data) > 0L) {
+      old_ids <- data$airtable_id   # save before stripping
+
       data <- data[setdiff(
         names(data),
         c("airtable_id", "airtable_created_time")
       )]
+
+      # Drop link columns (contain old record IDs; restored in a second pass).
+      lf <- link_cols_by_table[[tbl_name]] %||% character(0)
+      if (length(lf) > 0L) {
+        data <- data[setdiff(names(data), lf)]
+      }
 
       # Drop columns for fields that were not successfully created.
       if (!is.null(restored_schema)) {
@@ -268,7 +297,7 @@ air_restore <- function(
         }
       }
 
-      tryCatch(
+      new_ids <- tryCatch(
         air_write(
           data,
           tbl_name,
@@ -282,22 +311,40 @@ air_restore <- function(
           cli_warn(
             "Could not write to {.val {tbl_name}}: {conditionMessage(e)}"
           )
+          character(0)
         }
       )
+
+      # Map old record IDs to new ones (matched by insertion order).
+      if (!is.null(old_ids) && length(new_ids) > 0L &&
+          length(new_ids) == length(old_ids)) {
+        record_id_maps[[tbl_name]] <- stats::setNames(new_ids, old_ids)
+      }
     }
   }
 
-  # Recreate linked-record fields and their dependent computed fields. These
-  # were skipped during restore_fields() because their options reference
-  # base-specific IDs. Build an old->new table id map (matched by table name)
-  # from the original schema and a freshly fetched new schema.
+  # Global old->new record ID map across all tables (used to re-link values).
+  # unname() prevents do.call(c, ...) from prefixing keys with table names.
+  global_id_map <- if (length(record_id_maps) > 0L) {
+    do.call(c, unname(record_id_maps))
+  } else {
+    character(0)
+  }
+
+  # Recreate linked-record field definitions and re-populate link cell values.
+  # Skipped when restore_linked_fields = FALSE.
   new_schema <- tryCatch(
     at_get_schema(new_base_id, token = .token),
     error = function(e) NULL
   )
-  if (!is.null(new_schema)) {
+  if (restore_linked_fields && !is.null(new_schema)) {
     table_id_map <- build_table_id_map(schema, new_schema)
     restore_linked_fields(schema, new_base_id, table_id_map, .token = .token)
+    if (length(global_id_map) > 0L) {
+      restore_linked_records(
+        table_data, new_base_id, global_id_map, schema, .token = .token
+      )
+    }
   }
 
   cli_inform("Restore complete. New base ID: {.val {new_base_id}}.")
@@ -728,5 +775,87 @@ restore_linked_fields <- function(
     "Recreated {n_links} link field{?s} and {n_deps} dependent \\
     field{?s}."
   )
+  invisible(NULL)
+}
+
+#' Re-link records after a restore by remapping old record IDs to new ones
+#'
+#' After [air_restore()] inserts records into the new base, any
+#' `multipleRecordLinks` columns in the dump still contain the original record
+#' IDs, which are no longer valid. This function remaps them to the new record
+#' IDs (collected during the write phase) and writes the corrected link values
+#' back via [air_upsert()].
+#'
+#' @param table_data Named list of tibbles from the dump (including
+#'   `airtable_id` and link columns).
+#' @param new_base_id ID of the newly created base.
+#' @param id_map Named character vector: names are old record IDs, values are
+#'   new record IDs.
+#' @param schema The original dump schema list.
+#' @param .token API token.
+#' @return Invisibly `NULL`.
+#' @noRd
+restore_linked_records <- function(
+  table_data,
+  new_base_id,
+  id_map,
+  schema,
+  .token = NULL
+) {
+  n_tables <- 0L
+
+  for (tbl_name in names(table_data)) {
+    data <- table_data[[tbl_name]]
+    if (!is.data.frame(data) || nrow(data) == 0L) next
+    if (!"airtable_id" %in% names(data)) next
+
+    tbl_schema <- Find(function(t) t$name == tbl_name, schema)
+    if (is.null(tbl_schema)) next
+
+    link_fields <- vapply(
+      Filter(function(f) identical(f$type, "multipleRecordLinks"), tbl_schema$fields),
+      function(f) f$name %||% "", character(1L)
+    )
+    link_fields <- intersect(link_fields, names(data))
+    if (length(link_fields) == 0L) next
+
+    old_ids <- data$airtable_id
+    new_ids <- id_map[old_ids]
+    if (any(is.na(new_ids))) {
+      cli_warn(
+        "Some records in {.val {tbl_name}} are not in the ID map; \\
+        skipping link-value restore for this table."
+      )
+      next
+    }
+
+    update_df <- tibble::tibble(airtable_id = unname(new_ids))
+    for (field in link_fields) {
+      update_df[[field]] <- lapply(data[[field]], function(old_link_ids) {
+        if (is.null(old_link_ids) || length(old_link_ids) == 0L) return(NULL)
+        remapped <- id_map[as.character(unlist(old_link_ids))]
+        remapped <- remapped[!is.na(remapped)]
+        if (length(remapped) == 0L) NULL else as.list(unname(remapped))
+      })
+    }
+
+    tryCatch(
+      air_upsert(
+        update_df, tbl_name,
+        merge_on = "airtable_id",
+        base_id = new_base_id,
+        .token = .token
+      ),
+      error = function(e) {
+        cli_warn(
+          "Could not restore link values for {.val {tbl_name}}: \\
+          {conditionMessage(e)}"
+        )
+      }
+    )
+    n_tables <- n_tables + 1L
+  }
+
+  cli_inform("Re-linked records in {n_tables} table{?s}.")
   invisible(NULL)
 }

@@ -1,4 +1,3 @@
-<!-- Source vignette — run tools/precompile_vignettes.R to update the .Rmd -->
 ---
 title: "Getting Started with airtable2"
 output: rmarkdown::html_vignette
@@ -8,9 +7,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
 
-
-
+```{r setup, eval=TRUE, echo=FALSE, message=FALSE}
+library(airtable2)
+```
 
 ## Overview
 
@@ -39,8 +42,7 @@ It provides:
 
 Install from GitHub using pak or remotes:
 
-
-``` r
+```{r install}
 # Recommended
 pak::pak("noamross/airtable2")
 
@@ -83,8 +85,7 @@ There are three ways to provide your token, checked in this order:
 The recommended approach for persistent credentials is `.Renviron` (or `.env` for
 multilingual projects), which keeps tokens out of your scripts:
 
-
-``` r
+```{r renviron}
 # Add these lines to ~/.Renviron (run usethis::edit_r_environ() to open it)
 AIRTABLE_API_KEY = patXXXXXXXXXXXXXX
 AIRTABLE_WORKSPACE_ID = wspXXXXXXXXXXXXXX
@@ -96,8 +97,7 @@ Never hardcode tokens in scripts or check them into version control.
 To set validate a token interactively, use `air_set_token()`, which confirms the
 token works and stores it for the session:
 
-
-``` r
+```{r set-token}
 air_set_token("patXXXXXXXX")
 # Token set. Authenticated as "you@example.com".
 ```
@@ -107,8 +107,7 @@ air_set_token("patXXXXXXXX")
 Most `air_*` functions accept `base_id = NULL` and will use the session default
 when none is supplied. Set it once per session:
 
-
-``` r
+```{r set-base}
 air_set_base("appXXXXXXXXXXXXXX")
 # Default base set to "My Base" (appXXXXXXXXXXXXXX).
 ```
@@ -124,8 +123,7 @@ The same resolution order applies to `base_id`:
 Run `at_sitrep()` to see who you are authenticated as and which bases are
 accessible:
 
-
-``` r
+```{r sitrep}
 at_sitrep()
 # ── Airtable situation report ───────────────────────────────────────────────
 # User: you@example.com (usrXXXXXX)
@@ -155,8 +153,7 @@ Free Airtable plans cap each **workspace** at approximately
 for type coercion, batch writes) can each consume many calls. The package
 keeps a best-effort on-disk counter per workspace.
 
-
-``` r
+```{r api-usage}
 # Check how many calls you have used this month
 air_api_usage()
 # Airtable API usage for wspXXXXXX
@@ -167,8 +164,7 @@ air_api_usage()
 To disable counting (e.g., in automated scripts where you track usage
 elsewhere):
 
-
-``` r
+```{r disable-counter}
 options(airtable2.count_api = FALSE) # or AIRTABLE2_COUNT_API=false environment variable
 ```
 
@@ -205,8 +201,7 @@ To follow along, create a demo base first (see Step 2).
 
 Set your token and default base, then confirm access:
 
-
-``` r
+```{r step1}
 library(airtable2)
 
 air_set_token(Sys.getenv("AIRTABLE_API_KEY"))
@@ -220,8 +215,7 @@ at_sitrep()
 special types. You need your workspace ID (see the section above on finding
 it).
 
-
-``` r
+```{r step2}
 demo_base_id <- air_demo_setup(
   workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID")
 )
@@ -236,14 +230,13 @@ Open the demo base in a browser to see its structure and watch it update.
 returns a tibble. Every result includes `airtable_id` (Airtable's internal
 record ID) and `airtable_created_time`.
 
-
-``` r
-artists <- air_read("Artists", demo_base_id)
-artists
-# A tibble: 15 × 10
-#   airtable_id  airtable_created_time Name            Age Active Role               Disciplines  `Member Since` Email
-#   <chr>        <dttm>                <chr>         <dbl> <lgl>  <chr>              <list>       <date>         <chr>
-# 1 recABCDEFGH  2026-05-01 10:00:00   Zara Okonkwo     33 TRUE   Guerilla Muralist  <chr[2]>     2022-03-15     zara@bollardsforart.org
+```{r step3}
+contacts <- air_read("app3ekMZ9QQTcSkYL", "People")
+contacts
+# A tibble: 25 × 6
+#   airtable_id  airtable_created_time Name  Email               Tags     Score
+#   <chr>        <dttm>                <chr> <chr>               <list>   <dbl>
+# 1 recABCDEFGH  2026-05-01 10:00:00   Alice alice@example.com   <chr[2]>  92.5
 # ...
 ```
 
@@ -253,14 +246,13 @@ returned as **list-columns**. See `vignette("special-types", package =
 
 You can filter and sort at read time:
 
-
-``` r
-active_artists <- air_read(
-  "Artists",
+```{r step3-filter}
+active_contacts <- air_read(
   demo_base_id,
-  formula = "AND({Active} = TRUE, {Age} > 30)",
-  sort = c(`Member Since` = "desc"),
-  fields = c("Name", "Role", "Disciplines")
+  "People",
+  formula = "AND({Active} = 1, {Score} > 80)",
+  sort = c(Score = "desc"),
+  fields = c("Name", "Email", "Score")
 )
 ```
 
@@ -271,22 +263,20 @@ an error by default; set `add_fields = "yes"` to create them automatically as
 `singleLineText` fields, or `add_fields = "warn"` to silently drop unknown
 columns.
 
-
-``` r
-new_artists <- data.frame(
-  Name   = c("Dana Reyes", "Eli Sato"),
-  Age    = c(28L, 34L),
-  Active = c(TRUE, TRUE),
-  Role   = c("Guerilla Muralist", "Kinetic Sculptor")
+```{r step4}
+new_contacts <- data.frame(
+  Name = c("Dana", "Eli"),
+  Email = c("dana@example.com", "eli@example.com"),
+  Score = c(88, 74)
 )
 
-ids <- air_write(new_artists, "Artists", demo_base_id)
+ids <- air_write(new_contacts, demo_base_id, "People")
 # Created 2 records.
 
-# Add a field that doesn't exist yet
-new_artists$Notes <- "Added via API"
-ids <- air_write(new_artists, "Artists", demo_base_id, add_fields = "yes")
-# Creating field "Notes" in "Artists".
+# Add a column that doesn't exist yet
+new_contacts$Notes <- "Added via API"
+ids <- air_write(new_contacts, demo_base_id, "People", add_fields = "yes")
+# Creating field "Notes" in "People".
 # Created 2 records.
 ```
 
@@ -297,14 +287,13 @@ Computed fields in your data frame are silently dropped before writing.
 `air_upsert()` uses Airtable's native upsert endpoint: records matching
 `merge_on` are updated; records without a match are created.
 
-
-``` r
+```{r step5-upsert}
 updated <- data.frame(
-  Name = c("Zara Okonkwo", "Dmitri Volkov", "New Collaborator"),
-  Age  = c(35L, 42L, 27L)
+  Name = c("Alice", "Bob", "New Person"),
+  Score = c(95, 80, 60)
 )
 
-result <- air_upsert(updated, "Artists", merge_on = "Name", base_id = demo_base_id)
+result <- air_upsert(updated, demo_base_id, "People", merge_on = "Name")
 # Upsert complete: 1 created, 2 updated.
 result$created # record IDs of new records
 result$updated # record IDs of updated records
@@ -314,12 +303,17 @@ result$updated # record IDs of updated records
 hashes non-key fields to detect changes, upserts only the changed rows, and
 optionally (but by default!) deletes rows that are absent from your local data.
 
+```{r step5-sync}
+desired_state <- data.frame(Name = c("Alice", "Bob"), Score = c(95, 80))
 
-``` r
-desired <- data.frame(Name = c("Zara Okonkwo", "Dmitri Volkov"), Age = c(35L, 42L))
-
-result <- air_sync(desired, "Artists", key = "Name", base_id = demo_base_id, delete_missing = TRUE)
-# Sync complete: 0 created, 2 updated, 13 deleted, 0 unchanged.
+result <- air_sync(
+  desired_state,
+  demo_base_id,
+  "People",
+  key = "Name",
+  delete_missing = TRUE
+)
+# Sync complete: 0 created, 1 updated, 3 deleted, 1 unchanged.
 ```
 
 Both functions exclude computed fields automatically.
@@ -330,14 +324,13 @@ Both functions exclude computed fields automatically.
 so you can enrich local data with Airtable fields (or vice versa) without
 pulling everything into memory first.
 
-
-``` r
+```{r step6}
 scores <- tibble::tibble(
-  Name  = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park"),
-  Score = c(98, 85, 92)
+  Name = c("Alice", "Bob", "Dana"),
+  Score = c(95, 80, 88)
 )
 
-enriched <- air_left_join(scores, "Artists", demo_base_id, by = "Name")
+enriched <- air_left_join(scores, "appXXXXXX", "People", by = "Name")
 # Joining on "Name".
 ```
 
@@ -347,25 +340,24 @@ enriched <- air_left_join(scores, "Artists", demo_base_id, by = "Name")
 
 Download attachments to disk or as in-memory blobs:
 
-
-``` r
+```{r step7-download}
 # Download attachment metadata only (default for air_read)
-df <- air_read("Projects", demo_base_id)
-# df$Files is a list-column of attachment metadata
+df <- air_read(demo_base_id, "Projects")
+# df$Documents is a list-column of attachment metadata
 
 # Download files to disk
 df_with_files <- air_read(
+  "appXXXXXX",
   "Projects",
-  demo_base_id,
   attachments = "file",
   attachment_dir = "downloads/"
 )
 
 # Or fetch attachments for specific records
 att <- air_read_attachments(
-  demo_base_id,
+  "appXXXXXX",
   "Projects",
-  field = "Files",
+  field = "Documents",
   dest = "file",
   dir = "downloads/"
 )
@@ -378,14 +370,18 @@ att
 
 Upload attachments:
 
-
-``` r
+```{r step7-upload}
 to_upload <- tibble::tibble(
   airtable_id = c("recABCDEFG"),
   file_path = c("new_report.pdf")
 )
 
-air_write_attachments(demo_base_id, "Projects", field = "Files", data = to_upload)
+air_write_attachments(
+  "appXXXXXX",
+  "Projects",
+  field = "Documents",
+  data = to_upload
+)
 # Uploading 1 attachment...
 # Upload complete.
 ```
@@ -400,21 +396,18 @@ Multi-select, linked records, collaborators, attachments, and barcodes are all
 returned as **list-columns** with custom print methods, so they display
 compactly in tibble output but retain their full structure.
 
+```{r step8}
+# Multi-select list-column
+contacts$Tags
+# <air_multiselect[25]>
+# [1] "R, Statistics"   "Marketing"       NA                ...
 
-``` r
-# Read Artists - Disciplines is a list-column (air_multiselect)
-artists <- air_read("Artists", demo_base_id)
-artists$Disciplines
-# <air_multiselect[15]>
-# [1] "Mural; Street Art"    "Sculpture; Community" ...
+# Flatten to a character column for display or export
+air_flatten_multiselect(contacts$Tags)
+# [1] "R, Statistics" "Marketing"     NA ...
 
-# Flatten to a character column
-air_flatten_multiselect(artists$Disciplines)
-# [1] "Mural; Street Art" "Sculpture; Community" ...
-
-# Upload with flat strings — auto-expanded (no manual air_expand_*() needed):
-new_row <- data.frame(Name = "New Artist", Disciplines = "Mural; Sculpture")
-air_write(new_row, "Artists", demo_base_id)
+# Round-trip: expand back to list-column for writing
+expanded <- air_expand_multiselect(c("R, Statistics", "Marketing"))
 ```
 
 See `vignette("special-types", package = "airtable2")` for full coverage of
@@ -424,76 +417,71 @@ all special types and their flatten/expand helpers.
 
 `air_schema()` returns a tidy tibble of tables and fields:
 
-
-``` r
-schema <- air_schema(demo_base_id)
+```{r step9-schema}
+schema <- air_schema("appXXXXXX")
 schema
 # A tibble: 3 × 4
-#   table_id       table_name  table_description fields
-#   <chr>          <chr>       <chr>             <list>
-# 1 tblXXXXXXXXXX  Artists     NA                <tibble[8 × 4]>
-# 2 tblXXXXXXXXXX  Projects    NA                <tibble[7 × 4]>
-# 3 tblXXXXXXXXXX  Grants      NA                <tibble[6 × 4]>
+#   table_id   table_name table_description fields
+#   <chr>      <chr>      <chr>             <list>
+# 1 tblXXXXXX  Contacts   NA                <tibble[10 × 4]>
+# ...
 
 # Drill into a table's fields
 schema$fields[[1]]
-# A tibble: 8 × 4
-#   id             name          type             description
-#   <chr>          <chr>         <chr>            <chr>
-# 1 fldXXXXXXXXXX  Name          singleLineText   Full name of the artist...
+# A tibble: 10 × 4
+#   id         name   type               description
+#   <chr>      <chr>  <chr>              <chr>
+# 1 fldXXXXXX  Name   singleLineText     NA
 # ...
 ```
 
 `air_meta()` returns the same information as a flat tibble (one row per
 field), which is easier to filter and edit:
 
-
-``` r
+```{r step9-meta}
 meta <- air_meta(demo_base_id)
-meta[meta$table_name == "Artists", c("field_name", "field_type")]
-# A tibble: 8 × 2
-#   field_name    field_type
-#   <chr>         <chr>
-# 1 Name          singleLineText
-# 2 Age           number
-# 3 Active        checkbox
-# 4 Role          singleSelect
-# 5 Disciplines   multipleSelects
-# 6 Member Since  date
-# 7 Email         email
-```
+meta[meta$table_name == "People", c("field_name", "field_type")]
+O
+``
+`
 
-See `vignette("metadata-backup", package = "airtable2")` for how to push
+See `
+vignette("metadata-backup", package = "airtable2")
+` for how to push
 metadata changes back to Airtable and keep bases self-documenting.
 
 ### Step 10 — Backup and restore
 
-`air_dump()` exports an entire base — schema plus all table data — in your
+`
+air_dump()
+` exports an entire base — schema plus all table data — in your
 choice of format:
 
-
-``` r
+`
+``
+{
+  r
+  step10 - dump
+}
 # Full JSON backup with attachment files
-air_dump(demo_base_id, dir = "backup/", attachments = "file")
-# Dumping 3 tables from base "bollardsforart_demo"...
-#   Reading "Artists"...
+air_dump("appXXXXXX", dir = "backup/", attachments = "file")
+# Dumping 3 tables from base "appXXXXXX"...
+#   Reading "People"...
 #   Reading "Projects"...
-#   Reading "Grants"...
+#   Reading "Tasks"...
 # Dump written to backup/
 
 # Quick in-memory dump without downloading attachments
-snapshot <- air_dump(demo_base_id, format = "list", attachments = "meta")
+snapshot <- air_dump("appXXXXXX", format = "list", attachments = "meta")
 # snapshot$schema     — list of table + field definitions
-# snapshot$Artists    — tibble of Artists records
+# snapshot$Contacts   — tibble of Contacts records
 # snapshot$Projects   — tibble of Projects records
-# snapshot$Grants     — tibble of Grants records
 ```
 
 `air_restore()` recreates a base from a dump. You must specify the workspace to restore into,
-or use the default one from the session.
+or use the default one from the session. 
 
-
-``` r
+```{r step10-restore}
 new_base_id <- air_restore(
   "backup/",
   workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID"),
@@ -502,14 +490,8 @@ new_base_id <- air_restore(
 # Creating base "Restored Base"...
 # Adding fields...
 # Inserting records...
-# Recreated 2 link fields and 0 dependent fields.
-# Re-linked records in 1 table.
 # Restore complete. New base ID: appYYYYYYYY.
 ```
-
-By default (`restore_linked_fields = TRUE`), linked-record fields and their
-cell values are restored automatically. Set `restore_linked_fields = FALSE` to
-skip this step.
 
 Note: some field types (rollup, lookup, `lastModifiedTime`, etc.) cannot be
 created via the API; `air_restore()` warns about them and you will need to
@@ -522,8 +504,7 @@ backup/restore workflow.
 
 Check how many calls you have used this month:
 
-
-``` r
+```{r step11}
 air_api_usage()
 # Airtable API usage for wspXXXXXXXXXXXXXX
 # 127 API calls since start of month (2026-06-01T00:00:00Z)
@@ -537,12 +518,6 @@ best-effort (failed requests may still be counted if they reached Airtable's
 servers). Opt out with `options(airtable2.count_api = FALSE)`.
 
 ### Step 12 — Teardown
-
-
-``` r
-# Browse the base before cleaning up
-air_browse(demo_base_id)
-```
 
 Bases cannot be deleted via the API on free and team plans. After a demo or
 experiment, delete the base manually in the Airtable web UI at

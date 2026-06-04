@@ -21,3 +21,13 @@ A single record object (list with \code{id}, \code{createdTime}, \code{fields}).
 \description{
 Get a single record
 }
+\examples{
+\dontrun{
+rec <- at_get_record(
+  "appXXXXXXXXXXXXXX",
+  "Contacts",
+  "recXXXXXXXXXXXXXX"
+)
+rec$fields$Name
+}
+}

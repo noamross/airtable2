@@ -26,3 +26,12 @@ A list of delete confirmation objects (each with \code{id} and
 \description{
 Deletes up to 10 records per API call. Automatically batched.
 }
+\examples{
+\dontrun{
+at_delete_records(
+  "appXXXXXXXXXXXXXX",
+  "Contacts",
+  c("recXXXXXXXXXXXXXX", "recYYYYYYYYYYYYYY")
+)
+}
+}

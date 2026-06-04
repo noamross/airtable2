@@ -21,3 +21,14 @@ A list with view metadata (name, type, formula, filterByFormula, etc.).
 \description{
 Get a specific view's metadata
 }
+\examples{
+\dontrun{
+view <- at_get_view(
+  "appXXXXXXXXXXXXXX",
+  "tblXXXXXXXXXXXXXX",
+  "viwXXXXXXXXXXXXXX"
+)
+view$name
+view$type
+}
+}

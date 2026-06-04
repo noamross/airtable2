@@ -19,3 +19,9 @@ A tibble with columns \code{id}, \code{name}, and \code{type}.
 \description{
 List views in a table
 }
+\examples{
+\dontrun{
+views <- at_list_views("appXXXXXXXXXXXXXX", "tblXXXXXXXXXXXXXX")
+views$name
+}
+}

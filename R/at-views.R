@@ -6,6 +6,11 @@
 #' @param table_id Table ID.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A tibble with columns `id`, `name`, and `type`.
+#' @examples
+#' \dontrun{
+#' views <- at_list_views("appXXXXXXXXXXXXXX", "tblXXXXXXXXXXXXXX")
+#' views$name
+#' }
 #' @export
 at_list_views <- function(base_id, table_id, token = NULL) {
   check_string(base_id)
@@ -32,6 +37,16 @@ at_list_views <- function(base_id, table_id, token = NULL) {
 #' @param view_id View ID.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list with view metadata (name, type, formula, filterByFormula, etc.).
+#' @examples
+#' \dontrun{
+#' view <- at_get_view(
+#'   "appXXXXXXXXXXXXXX",
+#'   "tblXXXXXXXXXXXXXX",
+#'   "viwXXXXXXXXXXXXXX"
+#' )
+#' view$name
+#' view$type
+#' }
 #' @export
 at_get_view <- function(base_id, table_id, view_id, token = NULL) {
   check_string(base_id)

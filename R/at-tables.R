@@ -10,6 +10,21 @@
 #' @param description Optional table description.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created table object (list with `id`, `name`, `fields`).
+#' @examples
+#' \dontrun{
+#' tbl <- at_create_table(
+#'   name = "Tasks",
+#'   fields = list(
+#'     list(name = "Title",  type = "singleLineText"),
+#'     list(name = "Done",   type = "checkbox",
+#'          options = list(icon = "check", color = "greenBright")),
+#'     list(name = "Due",    type = "date",
+#'          options = list(dateFormat = list(name = "iso")))
+#'   ),
+#'   base_id = "appXXXXXXXXXXXXXX"
+#' )
+#' tbl$id
+#' }
 #' @export
 at_create_table <- function(
   name,
@@ -43,6 +58,14 @@ at_create_table <- function(
 #' @param description New description (or `NULL` to leave unchanged).
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The updated table object.
+#' @examples
+#' \dontrun{
+#' at_update_table(
+#'   base_id  = "appXXXXXXXXXXXXXX",
+#'   table_id = "tblXXXXXXXXXXXXXX",
+#'   name     = "Renamed Table"
+#' )
+#' }
 #' @export
 at_update_table <- function(
   base_id,
@@ -82,6 +105,26 @@ at_update_table <- function(
 #' @param options Field-specific options (list). Depends on field type.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created field object.
+#' @examples
+#' \dontrun{
+#' # Add a number field
+#' at_create_field(
+#'   name     = "Score",
+#'   table_id = "tblXXXXXXXXXXXXXX",
+#'   type     = "number",
+#'   base_id  = "appXXXXXXXXXXXXXX",
+#'   options  = list(precision = 1L)
+#' )
+#'
+#' # Add a single-select field
+#' at_create_field(
+#'   name     = "Status",
+#'   table_id = "tblXXXXXXXXXXXXXX",
+#'   type     = "singleSelect",
+#'   base_id  = "appXXXXXXXXXXXXXX",
+#'   options  = list(choices = list(list(name = "Open"), list(name = "Closed")))
+#' )
+#' }
 #' @export
 at_create_field <- function(
   name,
@@ -124,6 +167,16 @@ at_create_field <- function(
 #' @param description New description (or `NULL` to leave unchanged).
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The updated field object.
+#' @examples
+#' \dontrun{
+#' at_update_field(
+#'   base_id     = "appXXXXXXXXXXXXXX",
+#'   table_id    = "tblXXXXXXXXXXXXXX",
+#'   field_id    = "fldXXXXXXXXXXXXXX",
+#'   name        = "Full Name",
+#'   description = "First and last name"
+#' )
+#' }
 #' @export
 at_update_field <- function(
   base_id,

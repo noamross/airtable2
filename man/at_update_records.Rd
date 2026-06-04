@@ -45,3 +45,19 @@ Updates records using PATCH (partial) or PUT (destructive). Handles
 auto-batching in groups of 10. Also supports upsert via the
 \code{upsert_fields} argument.
 }
+\examples{
+\dontrun{
+# Patch an existing record
+at_update_records(
+  "appXXXXXXXXXXXXXX", "Contacts",
+  records = list(list(id = "recXXXXXXXXXXXXXX", fields = list(Age = 31)))
+)
+
+# Upsert by Name field
+at_update_records(
+  "appXXXXXXXXXXXXXX", "Contacts",
+  records = list(list(fields = list(Name = "Alice", Age = 31))),
+  upsert_fields = "Name"
+)
+}
+}

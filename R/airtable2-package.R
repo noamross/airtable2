@@ -1,3 +1,38 @@
+#' airtable2: An Airtable REST client for R
+#'
+#' @description
+#' airtable2 provides a complete httr2-based interface to the Airtable REST API,
+#' with type-aware data handling, a DBI S4 interface, backup/restore, metadata
+#' management, and join helpers.
+#'
+#' @details
+#' ## Three API layers
+#'
+#' - `at_*` functions: raw Airtable REST API wrappers (explicit `token` arg)
+#' - `air_*` functions: high-level helpers with type coercion, schema caching,
+#'   and computed-field exclusion (optional `.token` arg)
+#' - DBI S4 interface: [AirtableDriver-class], [AirtableConnection-class] for
+#'   standard database workflows and the RStudio/Positron connection pane
+#'
+#' ## Documentation
+#'
+#' - [pkgdown site](https://noamross.github.io/airtable2/) and
+#'   [vignettes](https://noamross.github.io/airtable2/articles/). For
+#'   LLM-assisted development, use
+#'   [`llms.txt`](https://noamross.github.io/airtable2/llms.txt) as the
+#'   primary doc source.
+#'
+#' ## Credentials
+#'
+#' Set credentials with [air_set_token()] and [air_set_base()], or via the
+#' `AIRTABLE_API_KEY` and `AIRTABLE_BASE_ID` environment variables.
+#'
+#' @seealso
+#' - [air_read()], [air_write()], [air_sync()], [air_upsert()] for record operations
+#' - [air_dump()], [air_restore()] for backup/restore
+#' - [air_meta()], [air_schema()] for metadata
+#' - [at_sitrep()] to check credentials and accessible bases
+#'
 #' @keywords internal
 "_PACKAGE"
 

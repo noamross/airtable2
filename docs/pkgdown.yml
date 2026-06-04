@@ -1,0 +1,11 @@
+pandoc: 3.9.0.2
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  airtable2: airtable2.html
+  metadata-backup: metadata-backup.html
+  special-types: special-types.html
+last_built: 2026-06-04T10:02Z
+urls:
+  reference: https://noamross.github.io/airtable2/reference
+  article: https://noamross.github.io/airtable2/articles

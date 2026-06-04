@@ -18,3 +18,10 @@ found.
 \description{
 Get information about a single base
 }
+\examples{
+\dontrun{
+info <- at_get_base("appXXXXXXXXXXXXXX")
+info$name
+info$permissionLevel
+}
+}

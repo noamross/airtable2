@@ -21,6 +21,18 @@
 #'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`
 #'   or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
 #' @return A list of record objects (each with `id`, `createdTime`, `fields`).
+#' @examples
+#' \dontrun{
+#' # List all records from a table
+#' records <- at_list_records("appXXXXXXXXXXXXXX", "Contacts")
+#'
+#' # Filter records with a formula
+#' records <- at_list_records(
+#'   "appXXXXXXXXXXXXXX", "Contacts",
+#'   formula = "{Active} = TRUE()",
+#'   fields  = c("Name", "Email")
+#' )
+#' }
 #' @export
 at_list_records <- function(base_id,
                             table_id,
@@ -84,6 +96,15 @@ at_list_records <- function(base_id,
 #' @inheritParams at_list_records
 #' @param record_id Record ID (e.g., `"recXXXXXX"`).
 #' @return A single record object (list with `id`, `createdTime`, `fields`).
+#' @examples
+#' \dontrun{
+#' rec <- at_get_record(
+#'   "appXXXXXXXXXXXXXX",
+#'   "Contacts",
+#'   "recXXXXXXXXXXXXXX"
+#' )
+#' rec$fields$Name
+#' }
 #' @export
 at_get_record <- function(base_id, table_id, record_id, token = NULL) {
   check_string(base_id)
@@ -105,6 +126,15 @@ at_get_record <- function(base_id, table_id, record_id, token = NULL) {
 #' @param typecast If `TRUE`, Airtable will attempt to cast values to the
 #'   correct type.
 #' @return A list of created record objects (with assigned IDs).
+#' @examples
+#' \dontrun{
+#' records <- list(
+#'   list(fields = list(Name = "Alice", Age = 30)),
+#'   list(fields = list(Name = "Bob",   Age = 25))
+#' )
+#' created <- at_create_records("appXXXXXXXXXXXXXX", "Contacts", records)
+#' vapply(created, function(r) r$id, character(1))
+#' }
 #' @export
 at_create_records <- function(base_id, table_id, records,
                               typecast = FALSE, token = NULL,
@@ -170,6 +200,21 @@ at_create_records <- function(base_id, table_id, records,
 #'   If `NULL`, performs a standard update.
 #' @return A list with `records`, and (for upserts) `createdRecords` and
 #'   `updatedRecords` character vectors.
+#' @examples
+#' \dontrun{
+#' # Patch an existing record
+#' at_update_records(
+#'   "appXXXXXXXXXXXXXX", "Contacts",
+#'   records = list(list(id = "recXXXXXXXXXXXXXX", fields = list(Age = 31)))
+#' )
+#'
+#' # Upsert by Name field
+#' at_update_records(
+#'   "appXXXXXXXXXXXXXX", "Contacts",
+#'   records = list(list(fields = list(Name = "Alice", Age = 31))),
+#'   upsert_fields = "Name"
+#' )
+#' }
 #' @export
 at_update_records <- function(base_id, table_id, records,
                               method = c("PATCH", "PUT"),
@@ -252,6 +297,14 @@ at_update_records <- function(base_id, table_id, records,
 #'   or env var `AIRTABLE2_PROGRESS_BAR`.
 #' @return A list of delete confirmation objects (each with `id` and
 #'   `deleted = TRUE`).
+#' @examples
+#' \dontrun{
+#' at_delete_records(
+#'   "appXXXXXXXXXXXXXX",
+#'   "Contacts",
+#'   c("recXXXXXXXXXXXXXX", "recYYYYYYYYYYYYYY")
+#' )
+#' }
 #' @export
 at_delete_records <- function(base_id, table_id, record_ids, token = NULL,
                               progress = NULL) {

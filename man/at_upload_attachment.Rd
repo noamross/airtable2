@@ -32,3 +32,14 @@ The attachment object returned by the API.
 \description{
 Upload an attachment to a record field
 }
+\examples{
+\dontrun{
+at_upload_attachment(
+  base_id   = "appXXXXXXXXXXXXXX",
+  table_id  = "Projects",
+  record_id = "recXXXXXXXXXXXXXX",
+  field_id  = "Files",
+  file      = "report.pdf"
+)
+}
+}

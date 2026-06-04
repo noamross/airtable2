@@ -3,17 +3,46 @@
 \docType{package}
 \name{airtable2-package}
 \alias{airtable2-package}
-\title{airtable2: Pure R Client for the 'Airtable' REST API}
+\title{airtable2: An Airtable REST client for R}
 \description{
-A modern R client for the 'Airtable' REST API. Provides low-level wrappers for all API endpoints, high-level functions for reading, writing, upserting, and syncing records, and a DBI-compliant interface for RStudio/Positron connection pane integration.
+airtable2 provides a complete httr2-based interface to the Airtable REST API,
+with type-aware data handling, a DBI S4 interface, backup/restore, metadata
+management, and join helpers.
 }
-\seealso{
-Useful links:
+\details{
+\subsection{Three API layers}{
 \itemize{
-  \item \url{https://github.com/noamross/airtable2}
-  \item Report bugs at \url{https://github.com/noamross/airtable2/issues}
+\item \verb{at_*} functions: raw Airtable REST API wrappers (explicit \code{token} arg)
+\item \verb{air_*} functions: high-level helpers with type coercion, schema caching,
+and computed-field exclusion (optional \code{.token} arg)
+\item DBI S4 interface: \link[=AirtableDriver-class]{AirtableDriver}, \link[=AirtableConnection-class]{AirtableConnection} for
+standard database workflows and the RStudio/Positron connection pane
+}
 }
 
+\subsection{Documentation}{
+\itemize{
+\item \href{https://noamross.github.io/airtable2/}{pkgdown site} and
+\href{https://noamross.github.io/airtable2/articles/}{vignettes}. For
+LLM-assisted development, use
+\href{https://noamross.github.io/airtable2/llms.txt}{\code{llms.txt}} as the
+primary doc source.
+}
+}
+
+\subsection{Credentials}{
+
+Set credentials with \code{\link[=air_set_token]{air_set_token()}} and \code{\link[=air_set_base]{air_set_base()}}, or via the
+\code{AIRTABLE_API_KEY} and \code{AIRTABLE_BASE_ID} environment variables.
+}
+}
+\seealso{
+\itemize{
+\item \code{\link[=air_read]{air_read()}}, \code{\link[=air_write]{air_write()}}, \code{\link[=air_sync]{air_sync()}}, \code{\link[=air_upsert]{air_upsert()}} for record operations
+\item \code{\link[=air_dump]{air_dump()}}, \code{\link[=air_restore]{air_restore()}} for backup/restore
+\item \code{\link[=air_meta]{air_meta()}}, \code{\link[=air_schema]{air_schema()}} for metadata
+\item \code{\link[=at_sitrep]{at_sitrep()}} to check credentials and accessible bases
+}
 }
 \author{
 \strong{Maintainer}: Noam Ross \email{noam.ross@gmail.com} (author with heavy LLM assistance)

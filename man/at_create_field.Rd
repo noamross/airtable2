@@ -36,3 +36,24 @@ The created field object.
 \description{
 Create a field in a table
 }
+\examples{
+\dontrun{
+# Add a number field
+at_create_field(
+  name     = "Score",
+  table_id = "tblXXXXXXXXXXXXXX",
+  type     = "number",
+  base_id  = "appXXXXXXXXXXXXXX",
+  options  = list(precision = 1L)
+)
+
+# Add a single-select field
+at_create_field(
+  name     = "Status",
+  table_id = "tblXXXXXXXXXXXXXX",
+  type     = "singleSelect",
+  base_id  = "appXXXXXXXXXXXXXX",
+  options  = list(choices = list(list(name = "Open"), list(name = "Closed")))
+)
+}
+}

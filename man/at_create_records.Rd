@@ -37,3 +37,13 @@ A list of created record objects (with assigned IDs).
 Creates up to 10 records per API call. If more than 10 records are provided,
 they are automatically batched.
 }
+\examples{
+\dontrun{
+records <- list(
+  list(fields = list(Name = "Alice", Age = 30)),
+  list(fields = list(Name = "Bob",   Age = 25))
+)
+created <- at_create_records("appXXXXXXXXXXXXXX", "Contacts", records)
+vapply(created, function(r) r$id, character(1))
+}
+}

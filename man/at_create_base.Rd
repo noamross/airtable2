@@ -22,3 +22,16 @@ The created base object (list with \code{id}, \code{name}, \code{tables}).
 \description{
 Create a new base
 }
+\examples{
+\dontrun{
+new_base <- at_create_base(
+  name = "My New Base",
+  workspace_id = "wspXXXXXXXXXXXXXX",
+  tables = list(list(
+    name = "Items",
+    fields = list(list(name = "Name", type = "singleLineText"))
+  ))
+)
+new_base$id
+}
+}

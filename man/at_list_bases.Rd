@@ -15,3 +15,9 @@ A tibble with columns \code{id}, \code{name}, and \code{permissionLevel}.
 \description{
 List all accessible bases
 }
+\examples{
+\dontrun{
+# List all bases accessible with the current token
+at_list_bases()
+}
+}

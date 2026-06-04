@@ -25,3 +25,19 @@ The created table object (list with \code{id}, \code{name}, \code{fields}).
 \description{
 Create a table in a base
 }
+\examples{
+\dontrun{
+tbl <- at_create_table(
+  name = "Tasks",
+  fields = list(
+    list(name = "Title",  type = "singleLineText"),
+    list(name = "Done",   type = "checkbox",
+         options = list(icon = "check", color = "greenBright")),
+    list(name = "Due",    type = "date",
+         options = list(dateFormat = list(name = "iso")))
+  ),
+  base_id = "appXXXXXXXXXXXXXX"
+)
+tbl$id
+}
+}

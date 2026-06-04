@@ -4,6 +4,11 @@
 #'
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A tibble with columns `id`, `name`, and `permissionLevel`.
+#' @examples
+#' \dontrun{
+#' # List all bases accessible with the current token
+#' at_list_bases()
+#' }
 #' @export
 at_list_bases <- function(token = NULL) {
   req <- air_req("meta/bases", token = token)
@@ -26,6 +31,11 @@ at_list_bases <- function(token = NULL) {
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list of table objects, each containing `id`, `name`,
 #'   `description`, `fields`, and `views`.
+#' @examples
+#' \dontrun{
+#' tables <- at_get_schema("appXXXXXXXXXXXXXX")
+#' vapply(tables, function(t) t$name, character(1))
+#' }
 #' @export
 at_get_schema <- function(base_id, token = NULL) {
   check_string(base_id)
@@ -40,6 +50,12 @@ at_get_schema <- function(base_id, token = NULL) {
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list with `id`, `name`, and `permissionLevel`, or `NULL` if not
 #'   found.
+#' @examples
+#' \dontrun{
+#' info <- at_get_base("appXXXXXXXXXXXXXX")
+#' info$name
+#' info$permissionLevel
+#' }
 #' @export
 at_get_base <- function(base_id, token = NULL) {
   check_string(base_id)
@@ -57,6 +73,10 @@ at_get_base <- function(base_id, token = NULL) {
 #'
 #' @inheritParams at_get_schema
 #' @return The parsed collaborator response (list).
+#' @examples
+#' \dontrun{
+#' collabs <- at_get_collaborators("appXXXXXXXXXXXXXX")
+#' }
 #' @export
 at_get_collaborators <- function(base_id, token = NULL) {
   check_string(base_id)
@@ -75,6 +95,18 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #'   `name` and `fields` (a list of field configs).
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The created base object (list with `id`, `name`, `tables`).
+#' @examples
+#' \dontrun{
+#' new_base <- at_create_base(
+#'   name = "My New Base",
+#'   workspace_id = "wspXXXXXXXXXXXXXX",
+#'   tables = list(list(
+#'     name = "Items",
+#'     fields = list(list(name = "Name", type = "singleLineText"))
+#'   ))
+#' )
+#' new_base$id
+#' }
 #' @export
 at_create_base <- function(name, workspace_id = NULL, tables, token = NULL) {
   check_string(name)

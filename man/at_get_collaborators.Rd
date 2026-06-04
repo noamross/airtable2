@@ -17,3 +17,8 @@ The parsed collaborator response (list).
 \description{
 Get collaborators for a base
 }
+\examples{
+\dontrun{
+collabs <- at_get_collaborators("appXXXXXXXXXXXXXX")
+}
+}

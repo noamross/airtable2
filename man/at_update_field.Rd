@@ -32,3 +32,14 @@ The updated field object.
 \description{
 Update field metadata
 }
+\examples{
+\dontrun{
+at_update_field(
+  base_id     = "appXXXXXXXXXXXXXX",
+  table_id    = "tblXXXXXXXXXXXXXX",
+  field_id    = "fldXXXXXXXXXXXXXX",
+  name        = "Full Name",
+  description = "First and last name"
+)
+}
+}

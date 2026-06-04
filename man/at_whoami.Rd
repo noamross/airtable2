@@ -15,3 +15,10 @@ A list with \code{id} and (if scoped) \code{email}, \code{scopes}.
 \description{
 Get current user info
 }
+\examples{
+\dontrun{
+me <- at_whoami()
+me$email
+me$id
+}
+}

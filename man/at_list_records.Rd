@@ -59,3 +59,16 @@ A list of record objects (each with \code{id}, \code{createdTime}, \code{fields}
 \description{
 List records from a table
 }
+\examples{
+\dontrun{
+# List all records from a table
+records <- at_list_records("appXXXXXXXXXXXXXX", "Contacts")
+
+# Filter records with a formula
+records <- at_list_records(
+  "appXXXXXXXXXXXXXX", "Contacts",
+  formula = "{Active} = TRUE()",
+  fields  = c("Name", "Email")
+)
+}
+}

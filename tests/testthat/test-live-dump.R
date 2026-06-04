@@ -51,7 +51,7 @@ test_that("air_dump/air_restore round-trip preserves table structure and record 
 
   # ── Assert: field names and types (Contacts table) ──────────────────────────
   # All fields should be fully restored. The only exceptions are types that
-  # are documented as unrestorable in inst/airtable-api-notes.md
+  # are documented as unrestorable in .github/CONTRIBUTING.md (API quirks section)
   # (multipleRecordLinks, rollup, lookup, count, and read-only auto-fields).
   # The test base uses only restorable types.
   schema1 <- Filter(function(t) t$name == "Contacts", dump1$schema)[[1]]

@@ -8,3 +8,7 @@ doc/
 Meta/
 .positai/*
 .agents/*
+NOTES.md
+.claude/worktrees/*
+agent-*/*
+*/agent-*/*

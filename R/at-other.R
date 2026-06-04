@@ -129,6 +129,12 @@ print.at_sitrep <- function(x, ...) {
 #'
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return A list with `id` and (if scoped) `email`, `scopes`.
+#' @examples
+#' \dontrun{
+#' me <- at_whoami()
+#' me$email
+#' me$id
+#' }
 #' @export
 at_whoami <- function(token = NULL) {
   req <- air_req("meta/whoami", token = token)
@@ -144,6 +150,16 @@ at_whoami <- function(token = NULL) {
 #' @param file Path to the file to upload.
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The attachment object returned by the API.
+#' @examples
+#' \dontrun{
+#' at_upload_attachment(
+#'   base_id   = "appXXXXXXXXXXXXXX",
+#'   table_id  = "Projects",
+#'   record_id = "recXXXXXXXXXXXXXX",
+#'   field_id  = "Files",
+#'   file      = "report.pdf"
+#' )
+#' }
 #' @export
 at_upload_attachment <- function(
   base_id,

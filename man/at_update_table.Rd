@@ -29,3 +29,12 @@ The updated table object.
 \description{
 Update table metadata
 }
+\examples{
+\dontrun{
+at_update_table(
+  base_id  = "appXXXXXXXXXXXXXX",
+  table_id = "tblXXXXXXXXXXXXXX",
+  name     = "Renamed Table"
+)
+}
+}

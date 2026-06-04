@@ -4,6 +4,8 @@
 ^\.agents$
 ^AGENTS\.md$
 ^AirTable-Package-Refactor\.md$
+^README\.Rmd$
+^README\.md$
 ^readme\.Rmd$
 ^readme\.md$
 ^\.github$
@@ -12,3 +14,9 @@
 ^\.DS_Store$
 ^\.Renviron$
 ^air\.toml$
+^_pkgdown\.yml$
+^docs$
+^tools$
+^NEWS\.md$
+^\.claude$
+^NOTES.md$

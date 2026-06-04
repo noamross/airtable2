@@ -18,3 +18,9 @@ A list of table objects, each containing \code{id}, \code{name},
 \description{
 Get the schema (tables + fields) for a base
 }
+\examples{
+\dontrun{
+tables <- at_get_schema("appXXXXXXXXXXXXXX")
+vapply(tables, function(t) t$name, character(1))
+}
+}

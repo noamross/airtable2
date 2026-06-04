@@ -20,6 +20,12 @@ delete the whole testing workspace and set a new AIRTABLE_WORKSPACE_ID (giving y
 
 When submitting a PR, no live tests are run without approval of a reviewer.  Other tests tests and reviews must pass before first, then a live test is run before approving for merge.
 
+## Scope
+
+Package scope to is AirTable API interactions and working with AirTable's as data in integrated projects with other workflows especially, R-focused, with convenience functions for R and R-focused IDEs.  Development has focused on free/teams-tier API interactions.  Contributions
+for Enterprise-level API interactions are welcome, but we do not have access to them and a sharing of resources for testing should be discussed.
+Nonstandard interactions like browser automation to get around API limitations are in-scope.
+
 ## Code of Conduct
 
 Please note that the airtable2 project is released with a

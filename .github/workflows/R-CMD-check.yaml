@@ -19,12 +19,12 @@ jobs:
       fail-fast: true
       matrix:
         config:
-          - {os: macos-latest,   r: 'release', env: 'standard-testing'}
-          - {os: windows-latest, r: 'release', env: 'standard-testing'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', env: 'standard-testing'}
-          - {os: ubuntu-latest,   r: 'release', env: 'standard-testing'}
-          - {os: ubuntu-latest,   r: 'oldrel-1', env: 'standard-testing'}
-          - {os: ubuntu-latest,   r: 'release', env: 'protected-testing'}
+          - {os: macos-latest,   r: 'release', env: 'standard-testing', label: 'macos-release-standard'}
+          - {os: windows-latest, r: 'release', env: 'standard-testing', label: 'windows-release-standard'}
+          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release', env: 'standard-testing', label: 'ubuntu-devel-standard'}
+          - {os: ubuntu-latest,   r: 'release', env: 'standard-testing', label: 'ubuntu-release-standard'}
+          - {os: ubuntu-latest,   r: 'oldrel-1', env: 'standard-testing', label: 'ubuntu-oldrel-1-standard'}
+          - {os: ubuntu-latest,   r: 'release', env: 'protected-testing', label: 'ubuntu-release-protected'}
 
     environment: ${{ matrix.config.env }}
 

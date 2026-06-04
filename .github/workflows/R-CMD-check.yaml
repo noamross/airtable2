@@ -16,7 +16,7 @@ jobs:
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         config:
           - {os: macos-latest,   r: 'release', env: 'standard-testing'}
@@ -48,10 +48,11 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
-        env: 
+        env:
           AIRTABLE_WORKSPACE_ID: ${{ secrets.AIRTABLE_WORKSPACE_ID }}
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
           AIRTABLE_TEST_SCHEMA: ${{ vars.AIRTABLE_TEST_SCHEMA }}
+          AIRTABLE_TEST_LIVE: ${{ vars.AIRTABLE_TEST_LIVE }}
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'

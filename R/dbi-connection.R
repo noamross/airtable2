@@ -55,7 +55,7 @@ connection_observer_close <- function(conn) {
     try(
       observer$connectionClosed(
         type = "Airtable",
-        host = conn@base_id %||% "Airtable"
+        host = if (nzchar(conn@base_id)) conn@base_id else "Airtable"
       ),
       silent = TRUE
     )

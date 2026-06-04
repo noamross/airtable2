@@ -90,7 +90,13 @@ connection_actions <- function(con) {
     actions$Browse <- list(
       icon = icon_path("airtable-icon-32-32"),
       callback = function() {
-        utils::browseURL("https://airtable.com")
+        ws <- default_workspace_id()
+        url <- if (nzchar(ws)) {
+          paste0("https://airtable.com/workspaces/", ws)
+        } else {
+          "https://airtable.com"
+        }
+        utils::browseURL(url)
       }
     )
   }
@@ -122,6 +128,7 @@ connection_observer_open <- function(con, connect_code) {
 
   # Helpers reused by both single-base and multi-base list callbacks
   list_tables_for_base <- function(base_id) {
+    schema_cache_invalidate(base_id)
     tables <- tryCatch(DBI::dbListTables(
       methods::new("AirtableConnection",
         token = con@token, base_id = base_id,

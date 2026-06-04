@@ -297,3 +297,170 @@ test_that("listObjects with include_views=TRUE returns views alongside tables", 
   # Should include "Projects:Grid view" in addition to base table names
   expect_true(any(grepl("Grid view", result$name)))
 })
+
+# ============================================================================
+# Bug fix tests — added 2026-06-04
+# ============================================================================
+
+# Bug 1 — connectionClosed host mismatch (no-base connection)
+# ---------------------------------------------------------------------------
+# When base_id = "" (no-base mode), connectionOpened registers host = "Airtable"
+# but the old connectionClosed code sent host = "" (empty string via %||%).
+# The IDs must match or the connections pane cannot close the entry.
+
+test_that("connectionClosed uses host='Airtable' for no-base connections", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema()
+  )
+  withr::with_options(
+    list(connectionObserver = obs),
+    {
+      con <- air_connect()           # no base_id → base_id = ""
+      DBI::dbDisconnect(con)
+    }
+  )
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  closed <- Filter(function(x) x$type == "connectionClosed", obs$calls)
+  expect_length(closed, 1L)
+  # Host in connectionClosed must match host in connectionOpened
+  expect_equal(closed[[1L]]$args$host, opened[[1L]]$args$host)
+  # For a no-base connection both must be "Airtable", not ""
+  expect_equal(closed[[1L]]$args$host, "Airtable")
+})
+
+test_that("connectionClosed uses base_id as host for single-base connections", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema(),
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base")
+  )
+  withr::with_options(
+    list(connectionObserver = obs),
+    {
+      con <- air_connect(base = "appFAKE")
+      DBI::dbDisconnect(con)
+    }
+  )
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  closed <- Filter(function(x) x$type == "connectionClosed", obs$calls)
+  expect_length(closed, 1L)
+  expect_equal(closed[[1L]]$args$host, opened[[1L]]$args$host)
+  expect_equal(closed[[1L]]$args$host, "appFAKE")
+})
+
+# Bug 2 — Browse button uses workspace URL when AIRTABLE_WORKSPACE_ID is set
+# ---------------------------------------------------------------------------
+# In no-base mode, Browse should open the workspace URL when a workspace ID
+# is configured, not always fall back to "https://airtable.com".
+
+test_that("Browse action in no-base mode opens workspace URL when workspace ID is set", {
+  con <- fake_conn(base_id = "")
+  urls_opened <- character()
+  local_mocked_bindings(
+    default_workspace_id = function() "wspTEST123",
+    .package = "airtable2"
+  )
+  # Capture the URL that browseURL would be called with
+  actions <- withr::with_options(
+    list(airtable2.workspace_id = "wspTEST123"),
+    connection_actions(con)
+  )
+  expect_true(!is.null(actions$Browse))
+  # Invoke the callback with browseURL mocked so we capture the URL
+  local_mocked_bindings(
+    .package = "utils",
+    browseURL = function(url, ...) { urls_opened <<- c(urls_opened, url) }
+  )
+  withr::with_options(
+    list(airtable2.workspace_id = "wspTEST123"),
+    actions$Browse$callback()
+  )
+  expect_length(urls_opened, 1L)
+  expect_match(urls_opened[[1L]], "wspTEST123")
+  expect_match(urls_opened[[1L]], "workspaces")
+})
+
+test_that("Browse action in no-base mode opens airtable.com when no workspace ID is set", {
+  con <- fake_conn(base_id = "")
+  urls_opened <- character()
+  local_mocked_bindings(
+    .package = "utils",
+    browseURL = function(url, ...) { urls_opened <<- c(urls_opened, url) }
+  )
+  withr::with_options(
+    list(airtable2.workspace_id = NULL),
+    {
+      actions <- connection_actions(con)
+      withr::with_envvar(
+        list(AIRTABLE_WORKSPACE_ID = ""),
+        actions$Browse$callback()
+      )
+    }
+  )
+  expect_length(urls_opened, 1L)
+  expect_equal(urls_opened[[1L]], "https://airtable.com")
+})
+
+# Bug 3 — listObjects invalidates schema cache before fetching
+# ---------------------------------------------------------------------------
+# When the connections pane expands a base, listObjects must call
+# schema_cache_invalidate() so that schema changes made since the last
+# fetch are visible immediately on reconnect / expand.
+
+test_that("listObjects invalidates schema cache and returns fresh data in base mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+
+  # First schema: only "Projects"
+  schema_v1 <- list(
+    list(
+      id = "tbl001", name = "Projects",
+      fields = list(list(id = "fld001", name = "Title", type = "singleLineText")),
+      views = list()
+    )
+  )
+  # Second schema: "Projects" + new "Archive" table
+  schema_v2 <- list(
+    list(
+      id = "tbl001", name = "Projects",
+      fields = list(list(id = "fld001", name = "Title", type = "singleLineText")),
+      views = list()
+    ),
+    list(
+      id = "tbl002", name = "Archive",
+      fields = list(list(id = "fld002", name = "Name", type = "singleLineText")),
+      views = list()
+    )
+  )
+
+  call_count <- 0L
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base"),
+    at_get_schema = function(base_id, token = NULL) {
+      call_count <<- call_count + 1L
+      if (call_count == 1L) schema_v1 else schema_v2
+    }
+  )
+
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(base = "appFAKE")
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_objects <- opened[[1L]]$args$listObjects
+
+  # First call populates cache from schema_v1 (one table: "Projects")
+  result1 <- list_objects(type = "table")
+  expect_setequal(result1$name, "Projects")
+
+  # Second call must bypass cache and see schema_v2 (two tables: "Projects" + "Archive")
+  result2 <- list_objects(type = "table")
+  expect_setequal(result2$name, c("Projects", "Archive"))
+})

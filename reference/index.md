@@ -1,0 +1,188 @@
+# Package index
+
+## High-level functions (air\_\*)
+
+User-facing functions for reading, writing, and working with Airtable
+data
+
+- [`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+  : Read records from an Airtable table
+- [`air_read_attachments()`](https://noamross.github.io/airtable2/reference/air_read_attachments.md)
+  : Read attachments from records
+- [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+  : Write (create) records in an Airtable table
+- [`air_write_attachments()`](https://noamross.github.io/airtable2/reference/air_write_attachments.md)
+  : Upload attachments to records
+- [`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+  : Smart sync: diff-based upsert + delete
+- [`air_sync_attachments()`](https://noamross.github.io/airtable2/reference/air_sync_attachments.md)
+  : Smart sync attachments
+- [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md)
+  : Upsert records into an Airtable table
+- [`air_delete()`](https://noamross.github.io/airtable2/reference/air_delete.md)
+  : Delete records from a table (high-level)
+- [`air_left_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+  [`air_inner_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+  [`air_full_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+  : Join local data with an Airtable table
+- [`air_left_join_upload()`](https://noamross.github.io/airtable2/reference/air_left_join_upload.md)
+  : Upload local data to matched Airtable records
+- [`air_api_usage()`](https://noamross.github.io/airtable2/reference/air_api_usage.md)
+  : Report Airtable API usage for a workspace
+- [`air_set_token()`](https://noamross.github.io/airtable2/reference/air_set_token.md)
+  : Set the default Airtable token for this session
+- [`air_set_base()`](https://noamross.github.io/airtable2/reference/air_set_base.md)
+  : Set the default Airtable base for this session
+- [`air_browse()`](https://noamross.github.io/airtable2/reference/air_browse.md)
+  : Open an Airtable workspace, base, table, or view in the browser
+- [`air_connect()`](https://noamross.github.io/airtable2/reference/air_connect.md)
+  : Connect to Airtable via DBI
+- [`air_pane()`](https://noamross.github.io/airtable2/reference/air_pane.md)
+  : Open the Airtable Connection Pane
+- [`air_resolve_id()`](https://noamross.github.io/airtable2/reference/air_resolve_id.md)
+  : Resolve an Airtable ID or URL to its component parts
+
+## Demo
+
+Functions for creating and running a live demo walkthrough
+
+- [`air_demo()`](https://noamross.github.io/airtable2/reference/air_demo.md)
+  : Run an interactive airtable2 demo walkthrough
+- [`air_demo_setup()`](https://noamross.github.io/airtable2/reference/air_demo_setup.md)
+  : Set up a demo Airtable base for exploration
+
+## Special types & helpers
+
+S3 classes and helpers for Airtable special field types
+
+- [`air_flatten()`](https://noamross.github.io/airtable2/reference/air_flatten.md)
+  : Flatten a complex Airtable column to a simple atomic vector
+- [`air_flatten_multiselect()`](https://noamross.github.io/airtable2/reference/air_flatten_multiselect.md)
+  : Flatten a multi-select list-column to delimited strings
+- [`air_flatten_links()`](https://noamross.github.io/airtable2/reference/air_flatten_links.md)
+  : Flatten a record-links list-column to delimited strings
+- [`air_flatten_attachments()`](https://noamross.github.io/airtable2/reference/air_flatten_attachments.md)
+  : Flatten an attachments list-column to a summary string
+- [`air_flatten_collaborator()`](https://noamross.github.io/airtable2/reference/air_flatten_collaborator.md)
+  : Flatten a collaborator list-column to strings
+- [`air_expand_multiselect()`](https://noamross.github.io/airtable2/reference/air_expand_multiselect.md)
+  : Expand delimited strings to a multi-select list-column
+- [`air_expand_collaborator()`](https://noamross.github.io/airtable2/reference/air_expand_collaborator.md)
+  : Expand collaborator strings to list-column
+- [`air_simplify()`](https://noamross.github.io/airtable2/reference/air_simplify.md)
+  : Simplify all complex columns in a tibble for display/export
+- [`air_attachment_preview_url()`](https://noamross.github.io/airtable2/reference/air_attachment_preview_url.md)
+  : Get a stable preview URL for an Airtable attachment
+
+## Metadata & backup
+
+Schema inspection, base metadata, and backup/restore
+
+- [`air_meta()`](https://noamross.github.io/airtable2/reference/air_meta.md)
+  : Get base metadata as a flat tibble
+- [`air_meta_push()`](https://noamross.github.io/airtable2/reference/air_meta_push.md)
+  : Push metadata changes back to the base
+- [`air_meta_sync()`](https://noamross.github.io/airtable2/reference/air_meta_sync.md)
+  : Sync a metadata source to patch the base schema
+- [`air_meta_init()`](https://noamross.github.io/airtable2/reference/air_meta_init.md)
+  : Seed the \_metadata table from the live schema
+- [`air_schema()`](https://noamross.github.io/airtable2/reference/air_schema.md)
+  : Get schema for a base as a tidy tibble
+- [`air_dump()`](https://noamross.github.io/airtable2/reference/air_dump.md)
+  : Dump an entire base (schema + data) for backup
+- [`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md)
+  : Restore a base from a dump
+- [`air_field_template()`](https://noamross.github.io/airtable2/reference/air_field_template.md)
+  : Build a field template specification
+- [`air_table_template()`](https://noamross.github.io/airtable2/reference/air_table_template.md)
+  : Build a table template specification
+
+## Request building & authentication
+
+Low-level helpers for constructing and authenticating API requests
+
+- [`air_req()`](https://noamross.github.io/airtable2/reference/air_req.md)
+  : Build an httr2 request to the Airtable API
+- [`air_token()`](https://noamross.github.io/airtable2/reference/air_token.md)
+  : Resolve an Airtable personal access token
+
+## Low-level API wrappers (at\_\*)
+
+Direct Airtable REST API wrappers — use air\_\* for most tasks
+
+- [`at_sitrep()`](https://noamross.github.io/airtable2/reference/at_sitrep.md)
+  : Summarize Airtable situation report
+- [`at_list_records()`](https://noamross.github.io/airtable2/reference/at_list_records.md)
+  : List records from a table
+- [`at_get_record()`](https://noamross.github.io/airtable2/reference/at_get_record.md)
+  : Get a single record
+- [`at_create_records()`](https://noamross.github.io/airtable2/reference/at_create_records.md)
+  : Create records in a table
+- [`at_update_records()`](https://noamross.github.io/airtable2/reference/at_update_records.md)
+  : Update multiple records
+- [`at_delete_records()`](https://noamross.github.io/airtable2/reference/at_delete_records.md)
+  : Delete records
+- [`at_list_bases()`](https://noamross.github.io/airtable2/reference/at_list_bases.md)
+  : List all accessible bases
+- [`at_get_base()`](https://noamross.github.io/airtable2/reference/at_get_base.md)
+  : Get information about a single base
+- [`at_get_schema()`](https://noamross.github.io/airtable2/reference/at_get_schema.md)
+  : Get the schema (tables + fields) for a base
+- [`at_get_collaborators()`](https://noamross.github.io/airtable2/reference/at_get_collaborators.md)
+  : Get collaborators for a base
+- [`at_create_base()`](https://noamross.github.io/airtable2/reference/at_create_base.md)
+  : Create a new base
+- [`at_create_table()`](https://noamross.github.io/airtable2/reference/at_create_table.md)
+  : Create a table in a base
+- [`at_update_table()`](https://noamross.github.io/airtable2/reference/at_update_table.md)
+  : Update table metadata
+- [`at_create_field()`](https://noamross.github.io/airtable2/reference/at_create_field.md)
+  : Create a field in a table
+- [`at_update_field()`](https://noamross.github.io/airtable2/reference/at_update_field.md)
+  : Update field metadata
+- [`at_list_views()`](https://noamross.github.io/airtable2/reference/at_list_views.md)
+  : List views in a table
+- [`at_get_view()`](https://noamross.github.io/airtable2/reference/at_get_view.md)
+  : Get a specific view's metadata
+- [`at_upload_attachment()`](https://noamross.github.io/airtable2/reference/at_upload_attachment.md)
+  : Upload an attachment to a record field
+- [`at_whoami()`](https://noamross.github.io/airtable2/reference/at_whoami.md)
+  : Get current user info
+
+## DBI interface
+
+DBI-compatible S4 interface for Airtable connections
+
+- [`AirtableDriver-class`](https://noamross.github.io/airtable2/reference/AirtableDriver-class.md)
+  [`AirtableDriver`](https://noamross.github.io/airtable2/reference/AirtableDriver-class.md)
+  : Airtable DBI driver class
+- [`dbDisconnect(`*`<AirtableConnection>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbIsValid(`*`<AirtableConnection>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbListTables(`*`<AirtableConnection>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbExistsTable(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbListFields(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbReadTable(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbWriteTable(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbRemoveTable(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  [`dbGetInfo(`*`<AirtableConnection>`*`)`](https://noamross.github.io/airtable2/reference/AirtableConnection-class.md)
+  : Airtable DBI connection
+- [`dbSendQuery(`*`<AirtableConnection>`*`,`*`<character>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbFetch(`*`<AirtableResult>`*`,`*`<numeric>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbClearResult(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbHasCompleted(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbGetRowCount(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbGetStatement(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbIsValid(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbGetRowsAffected(`*`<AirtableResult>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  [`dbFetch(`*`<AirtableResult>`*`,`*`<missing>`*`)`](https://noamross.github.io/airtable2/reference/AirtableResult-class.md)
+  : Airtable DBI result
+
+## Internal
+
+- [`airtable2()`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  [`at()`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  [`airtable()`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  [`dbConnect(`*`<AirtableDriver>`*`)`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  [`dbDataType(`*`<AirtableDriver>`*`)`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  [`dbUnloadDriver(`*`<AirtableDriver>`*`)`](https://noamross.github.io/airtable2/reference/airtable2.md)
+  : Airtable DBI driver

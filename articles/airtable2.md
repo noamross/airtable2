@@ -1,0 +1,600 @@
+# 
+
+## 
+
+title: “Getting Started with airtable2” output: rmarkdown::html_vignette
+vignette: \> % % % —
+
+## Overview
+
+**airtable2** is an httr2-based R client for the [Airtable REST
+API](https://airtable.com/developers/web/api/introduction). It provides:
+
+- High-level functions (`air_*`) for reading, writing, upserting, and
+  syncing records with automatic pagination, type coercion, and schema
+  caching.
+- Low-level wrappers (`at_*`) that map directly to Airtable API
+  endpoints for advanced use.
+- A DBI interface for use with the RStudio/Positron connection pane.
+- Backup and restore functions
+  ([`air_dump()`](https://noamross.github.io/airtable2/reference/air_dump.md)
+  /
+  [`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md))
+  for full base exports.
+- Special handling for Airtable-specific types such as multi-select,
+  attachments, collaborators, and linked records.
+
+**Other vignettes:**
+
+- [`vignette("special-types", package = "airtable2")`](https://noamross.github.io/airtable2/articles/special-types.md)
+  — working with Airtable’s rich column types (multi-select,
+  attachments, collaborators, linked records).
+- [`vignette("metadata-backup", package = "airtable2")`](https://noamross.github.io/airtable2/articles/metadata-backup.md)
+  — inspecting schema, pushing metadata changes, and performing full
+  base backups.
+
+## Installation
+
+Install from GitHub using pak or remotes:
+
+``` r
+
+# Recommended
+pak::pak("noamross/airtable2")
+
+# Alternative
+remotes::install_github("noamross/airtable2")
+```
+
+------------------------------------------------------------------------
+
+## Credentials and Authentication
+
+### Create a Personal Access Token
+
+airtable2 uses Airtable **Personal Access Tokens (PATs)**. OAuth is not
+supported; you create tokens yourself at
+<https://airtable.com/create/tokens>.
+
+When creating a token, grant at minimum the following scopes depending
+on what you need:
+
+| Scope | Required for |
+|----|----|
+| `data.records:read` | Reading records |
+| `data.records:write` | Writing / upserting / deleting records |
+| `schema.bases:read` | Type coercion, schema inspection, [`air_schema()`](https://noamross.github.io/airtable2/reference/air_schema.md) |
+| `schema.bases:write` | Creating bases, tables, fields |
+| `webhook:manage` | (Optional) Webhooks |
+
+For most workflows, enabling all scopes on the workspaces you need is
+simplest.
+
+### Supplying your token
+
+There are three ways to provide your token, checked in this order:
+
+1.  **Function argument** — pass `.token = "patXXXXX"` to any `air_*`
+    function.
+2.  **R option** — `options(airtable2.token = "patXXXXX")` for the
+    session.
+3.  **Environment variable** — `AIRTABLE_API_KEY=patXXXXX` in your shell
+    or `.Renviron`.
+
+The recommended approach for persistent credentials is `.Renviron` (or
+`.env` for multilingual projects), which keeps tokens out of your
+scripts:
+
+``` r
+
+# Add these lines to ~/.Renviron (run usethis::edit_r_environ() to open it)
+AIRTABLE_API_KEY = patXXXXXXXXXXXXXX
+AIRTABLE_WORKSPACE_ID = wspXXXXXXXXXXXXXX
+AIRTABLE_BASE_ID = appXXXXXXXXXXXXXX # convenient if all your work is one one base
+```
+
+Never hardcode tokens in scripts or check them into version control.
+
+To set validate a token interactively, use
+[`air_set_token()`](https://noamross.github.io/airtable2/reference/air_set_token.md),
+which confirms the token works and stores it for the session:
+
+``` r
+
+air_set_token("patXXXXXXXX")
+# Token set. Authenticated as "you@example.com".
+```
+
+### Setting a default base
+
+Most `air_*` functions accept `base_id = NULL` and will use the session
+default when none is supplied. Set it once per session:
+
+``` r
+
+air_set_base("appXXXXXXXXXXXXXX")
+# Default base set to "My Base" (appXXXXXXXXXXXXXX).
+```
+
+The same resolution order applies to `base_id`:
+
+1.  Function argument.
+2.  `getOption("airtable2.base_id")`.
+3.  `Sys.getenv("AIRTABLE_BASE_ID")`.
+
+### Checking access
+
+Run
+[`at_sitrep()`](https://noamross.github.io/airtable2/reference/at_sitrep.md)
+to see who you are authenticated as and which bases are accessible:
+
+``` r
+
+at_sitrep()
+# ── Airtable situation report ───────────────────────────────────────────────
+# User: you@example.com (usrXXXXXX)
+# Scopes: (not exposed by this token type)
+# Accessible bases: 3
+#   My Base (appXXXXXX) [create]
+#   Shared Base (appYYYYYY) [read]
+#   ...
+```
+
+### Finding your workspace ID
+
+Airtable does not expose workspace IDs through its API for
+non-enterprise accounts. To find yours, open Airtable in a browser — the
+URL looks like `https://airtable.com/wspXXXXXXXXXXXXXX/...`. The
+`wspXXXXXXXXXXXXXX` portion is your workspace ID. You will need this for
+[`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md)
+and
+[`at_create_base()`](https://noamross.github.io/airtable2/reference/at_create_base.md).
+
+------------------------------------------------------------------------
+
+## API Limitations
+
+### Monthly call quota
+
+Free Airtable plans cap each **workspace** at approximately **1,000 API
+calls per month**. Complex operations (pagination, schema fetches for
+type coercion, batch writes) can each consume many calls. The package
+keeps a best-effort on-disk counter per workspace.
+
+``` r
+
+# Check how many calls you have used this month
+air_api_usage()
+# Airtable API usage for wspXXXXXX
+# 47 API calls since start of month (2026-06-01T00:00:00Z)
+# Free/team plan ceiling: ~1000 calls per workspace per month
+```
+
+To disable counting (e.g., in automated scripts where you track usage
+elsewhere):
+
+``` r
+
+options(airtable2.count_api = FALSE) # or AIRTABLE2_COUNT_API=false environment variable
+```
+
+### No API deletion of bases, tables, or fields on free tier
+
+`DELETE /meta/bases/{baseId}` returns 403 on free and team plans. There
+is no programmatic way to delete bases. Bases, tables, and most fields
+must be deleted via the Airtable web interface.
+
+### Checkbox fields
+
+Airtable omits unchecked checkbox fields from API responses rather than
+returning `FALSE`.
+[`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+fills these in automatically using the schema, so checkbox columns
+always contain `TRUE`/`FALSE` with no missing values.
+
+### Computed and read-only fields
+
+Formula, rollup, lookup, count, `autoNumber`, `createdTime`,
+`lastModifiedTime`, `createdBy`, and `lastModifiedBy` fields are
+read-only.
+[`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md),
+[`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md),
+and
+[`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+automatically detect these from the schema and silently exclude them
+from write payloads, so you can safely pass a full tibble (including
+computed columns) and the package handles the rest.
+
+------------------------------------------------------------------------
+
+## Walkthrough
+
+The examples below cover the full airtable2 workflow. All code uses
+`eval = FALSE` because vignettes are built without a live Airtable
+token. To follow along, create a demo base first (see Step 2).
+
+### Step 1 — Setup
+
+Set your token and default base, then confirm access:
+
+``` r
+
+library(airtable2)
+
+air_set_token(Sys.getenv("AIRTABLE_API_KEY"))
+
+at_sitrep()
+```
+
+### Step 2 — Create a demo base
+
+[`air_demo_setup()`](https://noamross.github.io/airtable2/reference/air_demo_setup.md)
+creates a small base that exercises all of airtable2’s special types.
+You need your workspace ID (see the section above on finding it).
+
+``` r
+
+demo_base_id <- air_demo_setup(
+  workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID")
+)
+air_set_base(demo_base_id)
+```
+
+Open the demo base in a browser to see its structure and watch it
+update.
+
+### Step 3 — Read records
+
+[`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+auto-paginates, fetches the table schema for type coercion, and returns
+a tibble. Every result includes `airtable_id` (Airtable’s internal
+record ID) and `airtable_created_time`.
+
+``` r
+
+artists <- air_read("Artists", demo_base_id)
+artists
+# A tibble: 15 × 10
+#   airtable_id  airtable_created_time Name            Age Active Role               Disciplines  `Member Since` Email
+#   <chr>        <dttm>                <chr>         <dbl> <lgl>  <chr>              <list>       <date>         <chr>
+# 1 recABCDEFGH  2026-05-01 10:00:00   Zara Okonkwo     33 TRUE   Guerilla Muralist  <chr[2]>     2022-03-15     zara@bollardsforart.org
+# ...
+```
+
+Fields with multiple values (multi-select, linked records, attachments)
+are returned as **list-columns**. See
+[`vignette("special-types", package = "airtable2")`](https://noamross.github.io/airtable2/articles/special-types.md)
+for how to work with them.
+
+You can filter and sort at read time:
+
+``` r
+
+active_artists <- air_read(
+  "Artists",
+  demo_base_id,
+  formula = "AND({Active} = TRUE, {Age} > 30)",
+  sort = c(`Member Since` = "desc"),
+  fields = c("Name", "Role", "Disciplines")
+)
+```
+
+### Step 4 — Write records
+
+[`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+creates new records. Columns not present in the table generate an error
+by default; set `add_fields = "yes"` to create them automatically as
+`singleLineText` fields, or `add_fields = "warn"` to silently drop
+unknown columns.
+
+``` r
+
+new_artists <- data.frame(
+  Name   = c("Dana Reyes", "Eli Sato"),
+  Age    = c(28L, 34L),
+  Active = c(TRUE, TRUE),
+  Role   = c("Guerilla Muralist", "Kinetic Sculptor")
+)
+
+ids <- air_write(new_artists, "Artists", demo_base_id)
+# Created 2 records.
+
+# Add a field that doesn't exist yet
+new_artists$Notes <- "Added via API"
+ids <- air_write(new_artists, "Artists", demo_base_id, add_fields = "yes")
+# Creating field "Notes" in "Artists".
+# Created 2 records.
+```
+
+Computed fields in your data frame are silently dropped before writing.
+
+### Step 5 — Upsert and sync
+
+[`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md)
+uses Airtable’s native upsert endpoint: records matching `merge_on` are
+updated; records without a match are created.
+
+``` r
+
+updated <- data.frame(
+  Name = c("Zara Okonkwo", "Dmitri Volkov", "New Collaborator"),
+  Age  = c(35L, 42L, 27L)
+)
+
+result <- air_upsert(updated, "Artists", merge_on = "Name", base_id = demo_base_id)
+# Upsert complete: 1 created, 2 updated.
+result$created # record IDs of new records
+result$updated # record IDs of updated records
+```
+
+[`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+is a more aggressive diff-based sync: it reads the current table, hashes
+non-key fields to detect changes, upserts only the changed rows, and
+optionally (but by default!) deletes rows that are absent from your
+local data.
+
+``` r
+
+desired <- data.frame(Name = c("Zara Okonkwo", "Dmitri Volkov"), Age = c(35L, 42L))
+
+result <- air_sync(desired, "Artists", key = "Name", base_id = demo_base_id, delete_missing = TRUE)
+# Sync complete: 0 created, 2 updated, 13 deleted, 0 unchanged.
+```
+
+Both functions exclude computed fields automatically.
+
+### Step 6 — Join local data with an Airtable table
+
+[`air_left_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+fetches a remote table and joins it with a local data frame, so you can
+enrich local data with Airtable fields (or vice versa) without pulling
+everything into memory first.
+
+``` r
+
+scores <- tibble::tibble(
+  Name  = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park"),
+  Score = c(98, 85, 92)
+)
+
+enriched <- air_left_join(scores, "Artists", demo_base_id, by = "Name")
+# Joining on "Name".
+```
+
+[`air_inner_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+and
+[`air_full_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)
+are also available.
+
+### Step 7 — Attachments
+
+Download attachments to disk or as in-memory blobs:
+
+``` r
+
+# Download attachment metadata only (default for air_read)
+df <- air_read("Projects", demo_base_id)
+# df$Files is a list-column of attachment metadata
+
+# Download files to disk
+df_with_files <- air_read(
+  "Projects",
+  demo_base_id,
+  attachments = "file",
+  attachment_dir = "downloads/"
+)
+
+# Or fetch attachments for specific records
+att <- air_read_attachments(
+  demo_base_id,
+  "Projects",
+  field = "Files",
+  dest = "file",
+  dir = "downloads/"
+)
+att
+# A tibble: 5 × 6
+#   airtable_id filename  url         size  type            local_path
+#   <chr>       <chr>     <chr>      <int>  <chr>           <chr>
+# 1 recABCDEFG  report.pdf https://… 24601  application/pdf downloads/report.pdf
+```
+
+Upload attachments:
+
+``` r
+
+to_upload <- tibble::tibble(
+  airtable_id = c("recABCDEFG"),
+  file_path = c("new_report.pdf")
+)
+
+air_write_attachments(demo_base_id, "Projects", field = "Files", data = to_upload)
+# Uploading 1 attachment...
+# Upload complete.
+```
+
+Attachment downloads are parallelised by default (up to 5 concurrent)
+using
+[`httr2::req_perform_parallel()`](https://httr2.r-lib.org/reference/req_perform_parallel.html).
+Disable with `options(airtable2.parallel = FALSE)`.
+
+### Step 8 — Special types
+
+Multi-select, linked records, collaborators, attachments, and barcodes
+are all returned as **list-columns** with custom print methods, so they
+display compactly in tibble output but retain their full structure.
+
+``` r
+
+# Read Artists - Disciplines is a list-column (air_multiselect)
+artists <- air_read("Artists", demo_base_id)
+artists$Disciplines
+# <air_multiselect[15]>
+# [1] "Mural; Street Art"    "Sculpture; Community" ...
+
+# Flatten to a character column
+air_flatten_multiselect(artists$Disciplines)
+# [1] "Mural; Street Art" "Sculpture; Community" ...
+
+# Upload with flat strings — auto-expanded (no manual air_expand_*() needed):
+new_row <- data.frame(Name = "New Artist", Disciplines = "Mural; Sculpture")
+air_write(new_row, "Artists", demo_base_id)
+```
+
+See
+[`vignette("special-types", package = "airtable2")`](https://noamross.github.io/airtable2/articles/special-types.md)
+for full coverage of all special types and their flatten/expand helpers.
+
+### Step 9 — Schema and metadata
+
+[`air_schema()`](https://noamross.github.io/airtable2/reference/air_schema.md)
+returns a tidy tibble of tables and fields:
+
+``` r
+
+schema <- air_schema(demo_base_id)
+schema
+# A tibble: 3 × 4
+#   table_id       table_name  table_description fields
+#   <chr>          <chr>       <chr>             <list>
+# 1 tblXXXXXXXXXX  Artists     NA                <tibble[8 × 4]>
+# 2 tblXXXXXXXXXX  Projects    NA                <tibble[7 × 4]>
+# 3 tblXXXXXXXXXX  Grants      NA                <tibble[6 × 4]>
+
+# Drill into a table's fields
+schema$fields[[1]]
+# A tibble: 8 × 4
+#   id             name          type             description
+#   <chr>          <chr>         <chr>            <chr>
+# 1 fldXXXXXXXXXX  Name          singleLineText   Full name of the artist...
+# ...
+```
+
+[`air_meta()`](https://noamross.github.io/airtable2/reference/air_meta.md)
+returns the same information as a flat tibble (one row per field), which
+is easier to filter and edit:
+
+``` r
+
+meta <- air_meta(demo_base_id)
+meta[meta$table_name == "Artists", c("field_name", "field_type")]
+# A tibble: 8 × 2
+#   field_name    field_type
+#   <chr>         <chr>
+# 1 Name          singleLineText
+# 2 Age           number
+# 3 Active        checkbox
+# 4 Role          singleSelect
+# 5 Disciplines   multipleSelects
+# 6 Member Since  date
+# 7 Email         email
+```
+
+See
+[`vignette("metadata-backup", package = "airtable2")`](https://noamross.github.io/airtable2/articles/metadata-backup.md)
+for how to push metadata changes back to Airtable and keep bases
+self-documenting.
+
+### Step 10 — Backup and restore
+
+[`air_dump()`](https://noamross.github.io/airtable2/reference/air_dump.md)
+exports an entire base — schema plus all table data — in your choice of
+format:
+
+``` r
+
+# Full JSON backup with attachment files
+air_dump(demo_base_id, dir = "backup/", attachments = "file")
+# Dumping 3 tables from base "bollardsforart_demo"...
+#   Reading "Artists"...
+#   Reading "Projects"...
+#   Reading "Grants"...
+# Dump written to backup/
+
+# Quick in-memory dump without downloading attachments
+snapshot <- air_dump(demo_base_id, format = "list", attachments = "meta")
+# snapshot$schema     — list of table + field definitions
+# snapshot$Artists    — tibble of Artists records
+# snapshot$Projects   — tibble of Projects records
+# snapshot$Grants     — tibble of Grants records
+```
+
+[`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md)
+recreates a base from a dump. You must specify the workspace to restore
+into, or use the default one from the session.
+
+``` r
+
+new_base_id <- air_restore(
+  "backup/",
+  workspace_id = Sys.getenv("AIRTABLE_WORKSPACE_ID"),
+  base_name = "Restored Base"
+)
+# Creating base "Restored Base"...
+# Adding fields...
+# Inserting records...
+# Recreated 2 link fields and 0 dependent fields.
+# Re-linked records in 1 table.
+# Restore complete. New base ID: appYYYYYYYY.
+```
+
+By default (`restore_linked_fields = TRUE`), linked-record fields and
+their cell values are restored automatically. Set
+`restore_linked_fields = FALSE` to skip this step.
+
+Note: some field types (rollup, lookup, `lastModifiedTime`, etc.) cannot
+be created via the API;
+[`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md)
+warns about them and you will need to recreate those fields manually in
+the web UI.
+
+See
+[`vignette("metadata-backup", package = "airtable2")`](https://noamross.github.io/airtable2/articles/metadata-backup.md)
+for the full backup/restore workflow.
+
+### Step 11 — Monitor API usage
+
+Check how many calls you have used this month:
+
+``` r
+
+air_api_usage()
+# Airtable API usage for wspXXXXXXXXXXXXXX
+# 127 API calls since start of month (2026-06-01T00:00:00Z)
+# Most recent call: 2026-06-04T14:22:10Z
+# Free/team plan ceiling: ~1000 calls per workspace per month
+```
+
+The counter is per-workspace, resets at the start of each UTC month, and
+is stored on disk in `tools::R_user_dir("airtable2", "data")`. It counts
+best-effort (failed requests may still be counted if they reached
+Airtable’s servers). Opt out with
+`options(airtable2.count_api = FALSE)`.
+
+### Step 12 — Teardown
+
+``` r
+
+# Browse the base before cleaning up
+air_browse(demo_base_id)
+```
+
+Bases cannot be deleted via the API on free and team plans. After a demo
+or experiment, delete the base manually in the Airtable web UI at
+<https://airtable.com>.
+
+------------------------------------------------------------------------
+
+## Further resources
+
+- [`vignette("special-types", package = "airtable2")`](https://noamross.github.io/airtable2/articles/special-types.md)
+  — detailed guide to list-column types and flatten/expand helpers.
+- [`vignette("metadata-backup", package = "airtable2")`](https://noamross.github.io/airtable2/articles/metadata-backup.md)
+  — schema inspection, metadata push, and full backup/restore workflows.
+- Package reference: all exported functions are documented at
+  [`help(package = "airtable2")`](https://rdrr.io/pkg/airtable2/man) or
+  on the pkgdown site.
+- LLM-assisted development: an `llms.txt` file is included in the
+  package installation directory
+  (`system.file("llms.txt", package = "airtable2")`) summarising the
+  package API in a format optimised for language models.

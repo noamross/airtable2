@@ -35,6 +35,8 @@ The demo base contains:
 (15+ rows with diverse international artists)
 \item \strong{Projects} table: text, number, date, single-select, attachments,
 linked records to Artists (15+ rows with imaginative installation names)
+\item \strong{Supporters} table: text, email, date  --  starts empty; \code{\link[=air_demo]{air_demo()}} step 3
+bulk-writes 120 records to demonstrate the progress bar over 12 batches
 \item \strong{Grants} table: text, number, date, single-select, linked records to
 Projects (15+ rows of funding sources and applications)
 }

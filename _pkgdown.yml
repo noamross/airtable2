@@ -21,6 +21,7 @@ articles:
   - airtable2
   - special-types
   - metadata-backup
+  - dbi
 reference:
 - title: High-level functions (air_*)
   desc: User-facing functions for reading, writing, and working with Airtable data
@@ -34,6 +35,7 @@ reference:
   - air_upsert
   - air_delete
   - air_left_join
+  - air_left_join_upload
   - air_inner_join
   - air_full_join
   - air_api_usage
@@ -51,6 +53,7 @@ reference:
 - title: Special types & helpers
   desc: S3 classes and helpers for Airtable special field types
   contents:
+  - air_flatten
   - air_flatten_multiselect
   - air_flatten_links
   - air_flatten_attachments
@@ -58,12 +61,14 @@ reference:
   - air_expand_multiselect
   - air_expand_collaborator
   - air_simplify
+  - air_attachment_preview_url
 - title: Metadata & backup
   desc: Schema inspection, base metadata, and backup/restore
   contents:
   - air_meta
   - air_meta_push
   - air_meta_sync
+  - air_meta_init
   - air_schema
   - air_dump
   - air_restore

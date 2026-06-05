@@ -237,8 +237,8 @@ test_that("air_meta_init() upserts schema into _metadata table", {
     code = {
       air_meta_init(base_id, .token = "tok")
     },
-    air_meta   = function(base_id, .token = NULL) current_meta,
-    air_upsert = function(data, table, merge_on, base_id, ...) {
+    air_meta      = function(base_id, .token = NULL) current_meta,
+    air_upsert    = function(data, table, merge_on, base_id, ...) {
       upsert_args <<- list(
         table    = table,
         merge_on = merge_on,
@@ -246,6 +246,8 @@ test_that("air_meta_init() upserts schema into _metadata table", {
       )
       invisible(NULL)
     },
+    at_get_schema  = function(...) list(),
+    at_create_table = function(...) invisible(NULL),
     .package = "airtable2"
   )
 
@@ -262,11 +264,13 @@ test_that("air_meta_init() respects custom meta_table name", {
     code = {
       air_meta_init(base_id, meta_table = "_docs", .token = "tok")
     },
-    air_meta   = function(base_id, .token = NULL) current_meta,
-    air_upsert = function(data, table, merge_on, base_id, ...) {
+    air_meta        = function(base_id, .token = NULL) current_meta,
+    air_upsert      = function(data, table, merge_on, base_id, ...) {
       upsert_table <<- table
       invisible(NULL)
     },
+    at_get_schema   = function(...) list(),
+    at_create_table = function(...) invisible(NULL),
     .package = "airtable2"
   )
 

@@ -16,6 +16,10 @@
 # Between tests: clear records. Between test files: nothing special needed.
 # Table creation tests mock by default, opt-in to live with env var.
 
+# Absolute path to httptest2 mock fixtures, captured here when CWD is the
+# testthat directory (before tests change the working directory).
+.fixture_path <- normalizePath("fixtures", mustWork = FALSE)
+
 # Disable the on-disk API counter during tests so fixture-replay tests never
 # touch the user's real counter directory. Counter-specific tests re-enable it
 # locally with a temporary R_USER_DATA_DIR.

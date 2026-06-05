@@ -20,6 +20,30 @@ files (`todo.md`, `decisions.md`, `architecture.md`) over provider-specific
 memory. This enables cross-agent and cross-session handoff. Graduate stable items
 to committed docs (CONTRIBUTING.md, pkgdown).
 
+## Testing Strategy (TDD — mandatory)
+
+**Iterative cycle for any new or broken feature hitting the API:**
+
+1. **Write the failing test first** (or reproduce the failure in a targeted live
+   call). Never implement before tests.
+2. **Targeted live run**: `AIRTABLE_TEST_LIVE=true AIRTABLE_TEST_SCHEMA=true
+   Rscript -e "devtools::test(filter='<file>', reporter='progress')"` — fix until
+   the targeted tests pass.
+3. **Full mocked suite**: `Rscript -e "devtools::test(reporter='progress')"` —
+   fix any regressions.
+4. **Full live suite**: `AIRTABLE_TEST_LIVE=true AIRTABLE_TEST_SCHEMA=true
+   Rscript -e "devtools::test(reporter='progress')"` — fix any live regressions.
+5. **Add/update mocked tests** that cover the same scenario offline (use
+   `local_mocked_bindings()`). Live tests stay in `test-live-*.R`; mocked
+   counterparts go in the corresponding `test-air-*.R` file.
+6. **Iterate** between targeted live ↔ full mocked ↔ full live as needed.
+7. Push and verify CI.
+
+**Live test gates**: `AIRTABLE_TEST_LIVE=true` enables read-only live calls.
+`AIRTABLE_TEST_SCHEMA=true` (+ LIVE) enables base/table creation. Require both
+for scheme, dump/restore, or other tests generating new bases. 
+`.Renviron` has real credentials — never expose or create bases without the schema gate.
+
 ## Coding Conventions
 
 **Testing**: testthat v3. Mocked tests run by default using

@@ -40,6 +40,12 @@ are shown as schemas in the connection pane.}
 \item{include_views}{Logical. If \code{TRUE}, views are listed in the connection
 pane as separate objects alongside tables.}
 
+\item{connect_code}{Optional custom reconnect code string for the IDE
+connection pane. If \code{NULL} (default), a code snippet is auto-generated.}
+
+\item{bases_filter}{Optional character vector of base IDs or names to
+restrict the connection pane to specific bases.}
+
 \item{...}{Additional arguments passed to DBI methods.}
 
 \item{obj}{An R object to map to an Airtable field type.}

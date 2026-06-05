@@ -17,6 +17,10 @@
 #'   are shown as schemas in the connection pane.
 #' @param include_views Logical. If `TRUE`, views are listed in the connection
 #'   pane as separate objects alongside tables.
+#' @param connect_code Optional custom reconnect code string for the IDE
+#'   connection pane. If `NULL` (default), a code snippet is auto-generated.
+#' @param bases_filter Optional character vector of base IDs or names to
+#'   restrict the connection pane to specific bases.
 #' @param obj An R object to map to an Airtable field type.
 #' @param ... Additional arguments passed to DBI methods.
 #' @return An `AirtableDriver` object.

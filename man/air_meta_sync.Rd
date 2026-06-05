@@ -16,6 +16,8 @@ variable.}
 be a \code{data.frame}, a path to a \code{.csv} file, or a path to a \code{.json} file
 (see \emph{Source precedence} above).}
 
+\item{...}{Ignored; forces \code{.token} to be named.}
+
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{

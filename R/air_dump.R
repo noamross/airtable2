@@ -233,7 +233,7 @@ air_restore <- function(
 
   # Add remaining fields to each table
   cli_inform("Adding fields...")
-  restore_fields(schema, new_base_id, .token)
+  restore_fields(schema, new_base_id, .token, warn_links = !restore_linked_fields)
 
   # Fetch the actual restored schema so we only write fields that exist.
   # restore_fields() warns-and-continues, so some fields may not have been created.
@@ -517,7 +517,7 @@ sanitize_field_for_create <- function(field_def, table_fields) {
 
 #' Add fields from schema to a newly created base
 #' @noRd
-restore_fields <- function(schema, new_base_id, .token) {
+restore_fields <- function(schema, new_base_id, .token, warn_links = TRUE) {
   for (tbl_schema in schema) {
     new_tables <- at_get_schema(new_base_id, token = .token)
     new_tbl <- Find(function(t) t$name == tbl_schema$name, new_tables)
@@ -529,10 +529,12 @@ restore_fields <- function(schema, new_base_id, .token) {
       for (f in tbl_schema$fields[-1]) {
         sanitized <- sanitize_field_for_create(f, tbl_schema$fields)
         if (is.null(sanitized)) {
-          cli_warn(
-            "Field {.field {f$name}} (type {.val {f$type}}) cannot be \\
-            restored via the API - create it manually in the web UI."
-          )
+          if (warn_links || !identical(f$type, "multipleRecordLinks")) {
+            cli_warn(
+              "Field {.field {f$name}} (type {.val {f$type}}) cannot be \\
+              restored via the API - create it manually in the web UI."
+            )
+          }
           next
         }
         tryCatch(
@@ -634,6 +636,20 @@ restore_linked_fields <- function(
   n_links <- 0L
   n_deps <- 0L
 
+  # Build a lookup: old field id -> the name of the table that contains it.
+  # Used to identify auto-created reverse links by name heuristic below.
+  old_tbl_name_by_field_id <- character(0L)
+  old_tbl_name_by_id <- character(0L)
+  for (tbl_schema in schema) {
+    tbl_name <- tbl_schema$name %||% NA_character_
+    tbl_id <- tbl_schema$id %||% NA_character_
+    if (!is.na(tbl_id)) old_tbl_name_by_id[[tbl_id]] <- tbl_name
+    for (f in tbl_schema$fields) {
+      fld_id <- f$id %||% NA_character_
+      if (!is.na(fld_id)) old_tbl_name_by_field_id[[fld_id]] <- tbl_name
+    }
+  }
+
   # --- Pass 1: create multipleRecordLinks fields ---
   for (tbl_schema in schema) {
     new_tbl_id <- lookup(new_tbl_id_by_name, tbl_schema$name %||% "")
@@ -647,8 +663,26 @@ restore_linked_fields <- function(
       }
 
       opts <- f$options %||% list()
-      old_linked <- opts$linkedTableId %||% NA_character_
-      new_linked <- lookup(table_id_map, old_linked)
+
+      # Skip the auto-created reverse side of each symmetric pair.
+      # Two heuristics (either triggers a skip):
+      # 1. isReversed = TRUE  (old Airtable API behaviour, may still appear)
+      # 2. Field name equals the name of the linked TABLE  (new behaviour:
+      #    Airtable names the auto-created reverse link after the source table,
+      #    so e.g. a link "Owner" in Projects auto-creates "Projects" in Contacts)
+      # Creating one side always auto-creates the other, so one per pair is enough.
+      if (isTRUE(opts$isReversed)) {
+        next
+      }
+      old_linked_tbl_id <- opts$linkedTableId %||% NA_character_
+      linked_tbl_name <- lookup(old_tbl_name_by_id, old_linked_tbl_id)
+      if (!is.null(linked_tbl_name) &&
+          !is.na(linked_tbl_name) &&
+          identical(f$name, linked_tbl_name)) {
+        next
+      }
+
+      new_linked <- lookup(table_id_map, old_linked_tbl_id)
 
       if (is.null(new_linked) || is.na(new_linked)) {
         cli_warn(
@@ -658,9 +692,10 @@ restore_linked_fields <- function(
         next
       }
 
-      opts$linkedTableId <- new_linked
-      opts$inverseLinkFieldId <- NULL
-      opts$viewIdForRecordSelection <- NULL
+      # Only linkedTableId is accepted by the create-field API;
+      # isReversed, prefersSingleRecordLink, inverseLinkFieldId, and
+      # viewIdForRecordSelection are read-only or auto-set by Airtable.
+      create_opts <- list(linkedTableId = new_linked)
 
       tryCatch(
         {
@@ -670,7 +705,7 @@ restore_linked_fields <- function(
             table_id = new_tbl_id,
             type = "multipleRecordLinks",
             description = f$description,
-            options = opts,
+            options = create_opts,
             token = .token
           )
           n_links <- n_links + 1L

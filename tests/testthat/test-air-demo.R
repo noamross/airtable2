@@ -303,8 +303,9 @@ test_that("air_demo_setup() warns (not errors) when linked field creation fails 
         )
       )
     },
-    at_create_field = function(...) {
-      stop("Simulated field creation failure")
+    at_create_field = function(name, ...) {
+      if (identical(name, "Funded Projects")) stop("Simulated field creation failure")
+      list(id = "fldX", name = name, type = "t")
     },
     at_get_schema  = function(...) .fake_schema(),
     at_update_field = function(...) list(id = "fldX"),

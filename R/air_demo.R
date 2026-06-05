@@ -19,7 +19,7 @@
 #'   (15+ rows with diverse international artists)
 #' - **Projects** table: text, number, date, single-select, attachments,
 #'   linked records to Artists (15+ rows with imaginative installation names)
-#' - **Supporters** table: text, email, date — starts empty; [air_demo()] step 3
+#' - **Supporters** table: text, email, date  --  starts empty; [air_demo()] step 3
 #'   bulk-writes 120 records to demonstrate the progress bar over 12 batches
 #' - **Grants** table: text, number, date, single-select, linked records to
 #'   Projects (15+ rows of funding sources and applications)
@@ -63,7 +63,7 @@ air_demo_setup <- function(
   cli::cli_inform(
     c(
       "i" = "Creating demo base {.val {name}} in workspace {.val {workspace_id}}.",
-      "i" = "Theme: BollardsForArt — creative-arts advocacy nonprofit.",
+      "i" = "Theme: BollardsForArt \u2014 creative-arts advocacy nonprofit.",
       "i" = "This uses several API calls and creates a real base."
     )
   )
@@ -255,10 +255,10 @@ air_demo_setup <- function(
   artists_data <- tibble::tibble(
     Name           = c(
       "Zara Okonkwo",         "Dmitri Volkov",       "Sun-Li Park",
-      "Fatima El-Rashid",     "Carlos Mendes",       "Ingrid Holmås",
+      "Fatima El-Rashid",     "Carlos Mendes",       "Ingrid Holm\u00e5s",
       "Kofi Asante",          "Priya Nair",          "Tomasz Wierzbicki",
       "Amara Diallo",         "Hiroshi Nakamura",    "Beatriz Santos",
-      "Rashida Osei",         "Lukaš Novaček",  "Miriam Khoury"
+      "Rashida Osei",         "Luka\u0161 Nova\u010dek",  "Miriam Khoury"
     ),
     Age            = c(34L, 41L, 28L, 36L, 45L, 29L, 38L, 32L, 44L,
                        27L, 51L, 33L, 39L, 25L, 47L),
@@ -499,7 +499,7 @@ air_demo_setup <- function(
       "v" = "Demo base created: {.val {name}} ({.val {base_id}})",
       "*" = "Artists: {nrow(artists_data)} records",
       "*" = "Projects: {nrow(projects_data)} records (with image attachments)",
-      "*" = "Supporters: (empty — filled by {.fn air_demo} step 3)",
+      "*" = "Supporters: (empty \u2014 filled by {.fn air_demo} step 3)",
       "*" = "Grants: {nrow(grants_data)} records",
       "i" = "Set as default with {.run air_set_base(\"{base_id}\")}",
       "i" = "Open in browser: {.url {base_url}}",
@@ -536,7 +536,7 @@ air_demo_setup <- function(
 #' Steps covered:
 #' 1. Read all Artists with a progress bar
 #' 2. Write one new artist; read back showing `airtable_created_time`
-#' 3. Write 120 community supporters in 12 batches — progress bar is clearly
+#' 3. Write 120 community supporters in 12 batches  --  progress bar is clearly
 #'    visible; read back over 2 pages to demonstrate read pagination
 #' 4. Bulk-upsert 30 artists with a progress bar
 #' 5. Sync back to the original 15 with a progress bar (watch deletions)
@@ -616,7 +616,7 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 2: Write one new artist")
   cli::cli_inform(
-    "Watch {.strong Artists} — {.val Demo Artist} will appear with today's created time."
+    "Watch {.strong Artists} \u2014 {.val Demo Artist} will appear with today's created time."
   )
   .demo_code('air_write(new_artist, "Artists", base_id, typecast = TRUE)')
   .demo_wait()
@@ -640,7 +640,7 @@ air_demo <- function(
   cli::cli_inform(c(
     "i" = "Switch to the {.strong Supporters} table.",
     "i" = paste0(
-      "Watch the table and the console — 120 records will be written ",
+      "Watch the table and the console \u2014 120 records will be written ",
       "in 12 batches of 10, making the progress bar clearly visible."
     )
   ))
@@ -671,7 +671,7 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 4: Bulk-upsert 30 artists (with progress bar)")
   cli::cli_inform(
-    "Watch {.strong Artists} — 15 rows update, ~15 new rows appear."
+    "Watch {.strong Artists} \u2014 15 rows update, ~15 new rows appear."
   )
   .demo_code('air_upsert(artists_30, "Artists", merge_on = "Name", progress = TRUE)')
   .demo_wait()
@@ -688,7 +688,7 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 5: Sync back to original 15 (with progress bar)")
   cli::cli_inform(
-    "Watch {.strong Artists} — the extra rows will be deleted."
+    "Watch {.strong Artists} \u2014 the extra rows will be deleted."
   )
   .demo_code('air_sync(original_artists, "Artists", key = "Name", progress = TRUE)')
   .demo_wait()
@@ -703,7 +703,7 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 6: Push a new column from R into Airtable")
   cli::cli_inform(
-    "Watch {.strong Artists} — an {.field Engagement Score} column will appear."
+    "Watch {.strong Artists} \u2014 an {.field Engagement Score} column will appear."
   )
   .demo_code('air_upsert(scores, "Artists", merge_on = "Name", add_fields = "yes")')
   .demo_wait()
@@ -716,13 +716,13 @@ air_demo <- function(
   after_score <- air_read("Artists", base_id, .token = .token)
   .demo_print(after_score, c("Name", "Engagement Score", "airtable_created_time"))
 
-  # ---- Step 7: Attachments — read existing, then add one via URL -----------
+  # ---- Step 7: Attachments  --  read existing, then add one via URL -----------
   .demo_sleep()
   cli::cli_h1("Step 7: Attachments")
   cli::cli_inform(c(
     "i" = "Switch to the {.strong Projects} table.",
     "i" = paste0(
-      "Watch the {.field Files} column — a second image will be added ",
+      "Watch the {.field Files} column \u2014 a second image will be added ",
       "to the first project via {.fn air_upsert}."
     )
   ))
@@ -757,7 +757,7 @@ air_demo <- function(
       row1 <- after_att[after_att$`Project Name` == first_proj, ]
       n_att <- length(row1$Files[[1L]])
       cli::cli_inform(
-        "{.val {first_proj}} now has {n_att} attachment{?s} — check the {.field Files} column in the browser."
+        "{.val {first_proj}} now has {n_att} attachment{?s} \u2014 check the {.field Files} column in the browser."
       )
     }
   }
@@ -767,7 +767,7 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 8: Link artists to projects")
   cli::cli_inform(
-    "Watch {.strong Projects} — {.field Lead Artist} cells will populate."
+    "Watch {.strong Projects} \u2014 {.field Lead Artist} cells will populate."
   )
   .demo_code('air_upsert(link_data, "Projects", merge_on = "Project Name")')
   .demo_wait()
@@ -793,12 +793,12 @@ air_demo <- function(
   .demo_sleep()
   cli::cli_h1("Step 9: Left-join local data with Artists")
   cli::cli_inform(
-    "Joining local workshop hours with Artists — Role and Active pulled from Airtable."
+    "Joining local workshop hours with Artists \u2014 Role and Active pulled from Airtable."
   )
   .demo_code('air_left_join(local_hours, "Artists", base_id, by = "Name")')
   local_hours <- tibble::tibble(
     Name            = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park",
-                        "Fatima El-Rashid", "Carlos Mendes", "Ingrid Holmås"),
+                        "Fatima El-Rashid", "Carlos Mendes", "Ingrid Holm\u00e5s"),
     `Workshop Hours` = c(12L, 8L, 15L, 10L, 6L, 14L)
   )
   joined <- air_left_join(local_hours, "Artists", base_id, by = "Name", .token = .token)
@@ -818,7 +818,7 @@ air_demo <- function(
   cli::cli_h1("Step 11: Seed and sync field metadata")
   cli::cli_inform(c(
     "i" = paste0(
-      "Watch the base navigation — a new {.strong _metadata} table is about ",
+      "Watch the base navigation \u2014 a new {.strong _metadata} table is about ",
       "to appear, seeded from the live schema."
     )
   ))
@@ -827,7 +827,7 @@ air_demo <- function(
   air_meta_init(base_id, .token = .token)
 
   cli::cli_inform(c(
-    "i" = "Switch to the {.strong _metadata} table — every field in the base",
+    "i" = "Switch to the {.strong _metadata} table \u2014 every field in the base",
     "i" = "is now a row you can edit directly in Airtable.",
     "i" = paste0(
       "We will rename the {.strong Grants} table to ",
@@ -855,7 +855,7 @@ air_demo <- function(
 
   edit_rows <- if (length(grants_rows) && length(age_row)) grants_rows | age_row else logical(0)
   cli::cli_inform(
-    "Watch {.strong _metadata} — {sum(edit_rows)} rows updating..."
+    "Watch {.strong _metadata} \u2014 {sum(edit_rows)} rows updating..."
   )
   .demo_wait()
   if (any(edit_rows)) {
@@ -869,7 +869,7 @@ air_demo <- function(
   cli::cli_inform(c(
     "i" = "Applying schema changes with {.fn air_meta_sync}...",
     "i" = paste0(
-      "Watch the base navigation — {.strong Grants} will become ",
+      "Watch the base navigation \u2014 {.strong Grants} will become ",
       "{.strong Grants & Funding}."
     )
   ))
@@ -877,7 +877,7 @@ air_demo <- function(
   .demo_wait()
   air_meta_sync(base_id, .token = .token)
   cli::cli_inform(
-    "Done — {.strong Grants} is now {.strong Grants & Funding} and {.field Age (years)} is the new column name in Artists."
+    "Done \u2014 {.strong Grants} is now {.strong Grants & Funding} and {.field Age (years)} is the new column name in Artists."
   )
   results$meta_sync <- meta_edit
 
@@ -887,7 +887,7 @@ air_demo <- function(
   cli::cli_inform(c(
     "i" = "Switch back to the {.strong Artists} table.",
     "i" = paste0(
-      "airtable2 implements the DBI interface — {.fn dbConnect}, ",
+      "airtable2 implements the DBI interface \u2014 {.fn dbConnect}, ",
       "{.fn dbListTables}, {.fn dbReadTable}, and {.fn dbWriteTable} all work."
     )
   ))
@@ -921,7 +921,7 @@ air_demo <- function(
     }
 
     .demo_code('DBI::dbWriteTable(con, "Artists", new_row, append = TRUE)')
-    cli::cli_inform("Watch {.strong Artists} — a DBI-written row will appear.")
+    cli::cli_inform("Watch {.strong Artists} \u2014 a DBI-written row will appear.")
     .demo_wait()
     new_dbi_row <- tibble::tibble(
       Name = "DBI Artist", Role = "Street Typographer", Active = TRUE,
@@ -1038,18 +1038,18 @@ air_demo <- function(
   first <- c(
     "Zara",    "Dmitri",  "Sun-Li",  "Fatima",  "Carlos",
     "Ingrid",  "Kofi",    "Priya",   "Tomasz",  "Amara",
-    "Hiroshi", "Beatriz", "Rashida", "Lukaš",   "Miriam",
+    "Hiroshi", "Beatriz", "Rashida", "Luka\u0161",   "Miriam",
     "Xavier",  "Aisha",   "Piotr",   "Yuki",    "Leila",
     "Nadia",   "Elan",    "Rosa",    "Obi",     "Cleo",
     "Sven",    "Tamar",   "Felix",   "Yara",    "Joaquin"
   )
   last <- c(
     "Okonkwo",   "Volkov",      "Park",        "El-Rashid",  "Mendes",
-    "Holmås",    "Asante",      "Nair",        "Wierzbicki", "Diallo",
-    "Nakamura",  "Santos",      "Osei",        "Novaček",    "Khoury",
+    "Holm\u00e5s",    "Asante",      "Nair",        "Wierzbicki", "Diallo",
+    "Nakamura",  "Santos",      "Osei",        "Nova\u010dek",    "Khoury",
     "Fontaine",  "Bakr",        "Kowalski",    "Tanaka",     "Ahmadi",
     "Petrov",    "Reyes",       "Abramowitz",  "Okafor",     "Marchetti",
-    "Lindqvist", "Cohen",       "Müller",      "Hassan",     "Lima"
+    "Lindqvist", "Cohen",       "M\u00fcller",      "Hassan",     "Lima"
   )
   roles <- c(
     "Guerilla Muralist",          "Kinetic Sculptor",
@@ -1072,7 +1072,7 @@ air_demo <- function(
   tibble::tibble(
     Name               = c(
       "Zara Okonkwo",    "Dmitri Volkov",  "Sun-Li Park",
-      "Fatima El-Rashid","Carlos Mendes",  "Ingrid Holmås",
+      "Fatima El-Rashid","Carlos Mendes",  "Ingrid Holm\u00e5s",
       "Kofi Asante",     "Priya Nair"
     ),
     `Engagement Score` = c(98L, 85L, 92L, 88L, 74L, 95L, 81L, 90L)

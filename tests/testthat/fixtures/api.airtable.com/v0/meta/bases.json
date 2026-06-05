@@ -1,0 +1,9 @@
+{
+  "bases": [
+    {
+      "id": "appTEST123",
+      "name": "Test Base",
+      "permissionLevel": "create"
+    }
+  ]
+}

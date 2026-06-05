@@ -5,7 +5,7 @@
 .Renviron
 .vscode/
 doc/
-Meta/
+/Meta/
 .positai/*
 .agents/*
 NOTES.md
@@ -13,3 +13,4 @@ NOTES.md
 agent-*/*
 */agent-*/*
 docs
+*.tar.gz

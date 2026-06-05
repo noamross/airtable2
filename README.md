@@ -8,8 +8,8 @@
 <!-- badges: end -->
 
 An [httr2](https://httr2.r-lib.org/)-based Airtable client package.
-`airtable2` is a refactor of `airtabler` originally by Darko Bergant and then extended by myself,
-Collin Schwantes and Nathan Layman. 
+`airtable2` is a refactor of `airtabler` originally by Darko Bergant and then extended by
+Collin Schwantes, Nathan Layman, and Noam Ross.
 
 - **Full CRUD** for records, tables, and bases via the Airtable REST API
 - **Type-aware** reading and writing: multiselect, linked records, attachments, collaborators, and barcodes as S3 list-columns

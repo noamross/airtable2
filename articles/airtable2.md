@@ -1,9 +1,4 @@
-# 
-
-## 
-
-title: “Getting Started with airtable2” output: rmarkdown::html_vignette
-vignette: \> % % % —
+# Getting Started with airtable2
 
 ## Overview
 
@@ -592,8 +587,8 @@ or experiment, delete the base manually in the Airtable web UI at
 - [`vignette("metadata-backup", package = "airtable2")`](https://noamross.github.io/airtable2/articles/metadata-backup.md)
   — schema inspection, metadata push, and full backup/restore workflows.
 - Package reference: all exported functions are documented at
-  [`help(package = "airtable2")`](https://rdrr.io/pkg/airtable2/man) or
-  on the pkgdown site.
+  [`help(package = "airtable2")`](https://noamross.github.io/airtable2/reference)
+  or on the pkgdown site.
 - LLM-assisted development: an `llms.txt` file is included in the
   package installation directory
   (`system.file("llms.txt", package = "airtable2")`) summarising the

@@ -1,9 +1,4 @@
-# 
-
-## 
-
-title: “Using airtable2 with DBI” output: rmarkdown::html_vignette
-vignette: \> % % % —
+# Using airtable2 with DBI
 
 ## Introduction
 

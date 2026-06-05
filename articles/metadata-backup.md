@@ -1,9 +1,4 @@
-# 
-
-## 
-
-title: “Metadata, Schema, and Backup in airtable2” output:
-rmarkdown::html_vignette vignette: \> % % % —
+# Metadata, Schema, and Backup in airtable2
 
 ``` r
 

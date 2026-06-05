@@ -1,9 +1,4 @@
-# 
-
-## 
-
-title: “Special Field Types in airtable2” output:
-rmarkdown::html_vignette vignette: \> % % % —
+# Special Field Types in airtable2
 
 ``` r
 

@@ -360,10 +360,10 @@ the table generate an error by default; set
 to silently drop unknown columns.</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">new_artists</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  Name   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Dana Reyes"</span>, <span class="st">"Eli Sato"</span><span class="op">)</span>,</span>
-<span>  Age    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">28L</span>, <span class="fl">34L</span><span class="op">)</span>,</span>
+<span>  Name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Dana Reyes"</span>, <span class="st">"Eli Sato"</span><span class="op">)</span>,</span>
+<span>  Age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">28L</span>, <span class="fl">34L</span><span class="op">)</span>,</span>
 <span>  Active <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>  Role   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Guerilla Muralist"</span>, <span class="st">"Kinetic Sculptor"</span><span class="op">)</span></span>
+<span>  Role <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Guerilla Muralist"</span>, <span class="st">"Kinetic Sculptor"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">ids</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/air_write.html">air_write</a></span><span class="op">(</span><span class="va">new_artists</span>, <span class="st">"Artists"</span>, <span class="va">demo_base_id</span><span class="op">)</span></span>
@@ -386,10 +386,15 @@ match are created.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">updated</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  Name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Zara Okonkwo"</span>, <span class="st">"Dmitri Volkov"</span>, <span class="st">"New Collaborator"</span><span class="op">)</span>,</span>
-<span>  Age  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">35L</span>, <span class="fl">42L</span>, <span class="fl">27L</span><span class="op">)</span></span>
+<span>  Age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">35L</span>, <span class="fl">42L</span>, <span class="fl">27L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/air_upsert.html">air_upsert</a></span><span class="op">(</span><span class="va">updated</span>, <span class="st">"Artists"</span>, merge_on <span class="op">=</span> <span class="st">"Name"</span>, base_id <span class="op">=</span> <span class="va">demo_base_id</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/air_upsert.html">air_upsert</a></span><span class="op">(</span></span>
+<span>  <span class="va">updated</span>,</span>
+<span>  <span class="st">"Artists"</span>,</span>
+<span>  merge_on <span class="op">=</span> <span class="st">"Name"</span>,</span>
+<span>  base_id <span class="op">=</span> <span class="va">demo_base_id</span></span>
+<span><span class="op">)</span></span>
 <span><span class="co"># Upsert complete: 1 created, 2 updated.</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">created</span> <span class="co"># record IDs of new records</span></span>
 <span><span class="va">result</span><span class="op">$</span><span class="va">updated</span> <span class="co"># record IDs of updated records</span></span></code></pre></div>
@@ -398,9 +403,18 @@ reads the current table, hashes non-key fields to detect changes,
 upserts only the changed rows, and optionally (but by default!) deletes
 rows that are absent from your local data.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">desired</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>Name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Zara Okonkwo"</span>, <span class="st">"Dmitri Volkov"</span><span class="op">)</span>, Age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">35L</span>, <span class="fl">42L</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">desired</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  Name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Zara Okonkwo"</span>, <span class="st">"Dmitri Volkov"</span><span class="op">)</span>,</span>
+<span>  Age <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">35L</span>, <span class="fl">42L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/air_sync.html">air_sync</a></span><span class="op">(</span><span class="va">desired</span>, <span class="st">"Artists"</span>, key <span class="op">=</span> <span class="st">"Name"</span>, base_id <span class="op">=</span> <span class="va">demo_base_id</span>, delete_missing <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/air_sync.html">air_sync</a></span><span class="op">(</span></span>
+<span>  <span class="va">desired</span>,</span>
+<span>  <span class="st">"Artists"</span>,</span>
+<span>  key <span class="op">=</span> <span class="st">"Name"</span>,</span>
+<span>  base_id <span class="op">=</span> <span class="va">demo_base_id</span>,</span>
+<span>  delete_missing <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
 <span><span class="co"># Sync complete: 0 created, 2 updated, 13 deleted, 0 unchanged.</span></span></code></pre></div>
 <p>Both functions exclude computed fields automatically.</p>
 </div>
@@ -412,7 +426,7 @@ a local data frame, so you can enrich local data with Airtable fields
 (or vice versa) without pulling everything into memory first.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scores</span> <span class="op">&lt;-</span> <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>  Name  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Zara Okonkwo"</span>, <span class="st">"Dmitri Volkov"</span>, <span class="st">"Sun-Li Park"</span><span class="op">)</span>,</span>
+<span>  Name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Zara Okonkwo"</span>, <span class="st">"Dmitri Volkov"</span>, <span class="st">"Sun-Li Park"</span><span class="op">)</span>,</span>
 <span>  Score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">98</span>, <span class="fl">85</span>, <span class="fl">92</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -458,7 +472,12 @@ also available.</p>
 <span>  file_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"new_report.pdf"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/air_write_attachments.html">air_write_attachments</a></span><span class="op">(</span><span class="va">demo_base_id</span>, <span class="st">"Projects"</span>, field <span class="op">=</span> <span class="st">"Files"</span>, data <span class="op">=</span> <span class="va">to_upload</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/air_write_attachments.html">air_write_attachments</a></span><span class="op">(</span></span>
+<span>  <span class="va">demo_base_id</span>,</span>
+<span>  <span class="st">"Projects"</span>,</span>
+<span>  field <span class="op">=</span> <span class="st">"Files"</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">to_upload</span></span>
+<span><span class="op">)</span></span>
 <span><span class="co"># Uploading 1 attachment...</span></span>
 <span><span class="co"># Upload complete.</span></span></code></pre></div>
 <p>Attachment downloads are parallelised by default (up to 5 concurrent)

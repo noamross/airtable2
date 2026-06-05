@@ -12,14 +12,14 @@ standard database connections, and enables the RStudio and Positron
 connection pane for point-and-click table browsing.
 
 The DBI interface covers the most common database operations, but
-Airtable is not an SQL database, though it has many relational database
-features. Some functionality is intentionally absent. **Capabilities:**
-reading tables, listing tables and fields, appending records, and
-overwrite-syncing records. **Limitations:** no SQL queries (use Airtable
-formula syntax instead), no table creation or deletion via DBI, no
-transactions, and no `dbplyr` lazy `tbl()` support (deferred). For the
-full feature set — type coercion, attachments, multi-select, upsert by
-key — use the `air_*` functions directly.
+Airtable is not a relational database, so some functionality is
+intentionally absent. **Capabilities:** reading tables, listing tables
+and fields, appending records, and overwrite-syncing records.
+**Limitations:** no SQL queries (use Airtable formula syntax instead),
+no table creation or deletion via DBI, no transactions, and no `dbplyr`
+lazy `tbl()` support (deferred). For the full feature set — type
+coercion, attachments, multi-select, upsert by key — use the `air_*`
+functions directly.
 
 ## Connecting
 

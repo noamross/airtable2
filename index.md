@@ -31,9 +31,7 @@ then extended by myself, Collin Schwantes and Nathan Layman.
 # From R-universe (recommended)
 install.packages("airtable2", repos = c("https://noamross.r-universe.dev", "https://cloud.r-project.org"))
 
-# From GitHub
-pak::pak("noamross/airtable2")
-# or
+# From GitHub (or use pak::pkg_install() or renv::install())
 remotes::install_github("noamross/airtable2")
 ```
 

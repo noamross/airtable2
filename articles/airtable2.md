@@ -285,10 +285,10 @@ unknown columns.
 ``` r
 
 new_artists <- data.frame(
-  Name   = c("Dana Reyes", "Eli Sato"),
-  Age    = c(28L, 34L),
+  Name = c("Dana Reyes", "Eli Sato"),
+  Age = c(28L, 34L),
   Active = c(TRUE, TRUE),
-  Role   = c("Guerilla Muralist", "Kinetic Sculptor")
+  Role = c("Guerilla Muralist", "Kinetic Sculptor")
 )
 
 ids <- air_write(new_artists, "Artists", demo_base_id)
@@ -313,10 +313,15 @@ updated; records without a match are created.
 
 updated <- data.frame(
   Name = c("Zara Okonkwo", "Dmitri Volkov", "New Collaborator"),
-  Age  = c(35L, 42L, 27L)
+  Age = c(35L, 42L, 27L)
 )
 
-result <- air_upsert(updated, "Artists", merge_on = "Name", base_id = demo_base_id)
+result <- air_upsert(
+  updated,
+  "Artists",
+  merge_on = "Name",
+  base_id = demo_base_id
+)
 # Upsert complete: 1 created, 2 updated.
 result$created # record IDs of new records
 result$updated # record IDs of updated records
@@ -330,9 +335,18 @@ local data.
 
 ``` r
 
-desired <- data.frame(Name = c("Zara Okonkwo", "Dmitri Volkov"), Age = c(35L, 42L))
+desired <- data.frame(
+  Name = c("Zara Okonkwo", "Dmitri Volkov"),
+  Age = c(35L, 42L)
+)
 
-result <- air_sync(desired, "Artists", key = "Name", base_id = demo_base_id, delete_missing = TRUE)
+result <- air_sync(
+  desired,
+  "Artists",
+  key = "Name",
+  base_id = demo_base_id,
+  delete_missing = TRUE
+)
 # Sync complete: 0 created, 2 updated, 13 deleted, 0 unchanged.
 ```
 
@@ -348,7 +362,7 @@ everything into memory first.
 ``` r
 
 scores <- tibble::tibble(
-  Name  = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park"),
+  Name = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park"),
   Score = c(98, 85, 92)
 )
 
@@ -403,7 +417,12 @@ to_upload <- tibble::tibble(
   file_path = c("new_report.pdf")
 )
 
-air_write_attachments(demo_base_id, "Projects", field = "Files", data = to_upload)
+air_write_attachments(
+  demo_base_id,
+  "Projects",
+  field = "Files",
+  data = to_upload
+)
 # Uploading 1 attachment...
 # Upload complete.
 ```

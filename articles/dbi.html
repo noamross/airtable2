@@ -80,15 +80,15 @@ integrate Airtable into existing R workflows that expect standard
 database connections, and enables the RStudio and Positron connection
 pane for point-and-click table browsing.</p>
 <p>The DBI interface covers the most common database operations, but
-Airtable is not an SQL database, though it has many relational database
-features. Some functionality is intentionally absent.
-<strong>Capabilities:</strong> reading tables, listing tables and
-fields, appending records, and overwrite-syncing records.
-<strong>Limitations:</strong> no SQL queries (use Airtable formula
-syntax instead), no table creation or deletion via DBI, no transactions,
-and no <code>dbplyr</code> lazy <code>tbl()</code> support (deferred).
-For the full feature set — type coercion, attachments, multi-select,
-upsert by key — use the <code>air_*</code> functions directly.</p>
+Airtable is not a relational database, so some functionality is
+intentionally absent. <strong>Capabilities:</strong> reading tables,
+listing tables and fields, appending records, and overwrite-syncing
+records. <strong>Limitations:</strong> no SQL queries (use Airtable
+formula syntax instead), no table creation or deletion via DBI, no
+transactions, and no <code>dbplyr</code> lazy <code>tbl()</code> support
+(deferred). For the full feature set — type coercion, attachments,
+multi-select, upsert by key — use the <code>air_*</code> functions
+directly.</p>
 </div>
 <div class="section level2">
 <h2 id="connecting">Connecting<a class="anchor" aria-label="anchor" href="#connecting"></a>

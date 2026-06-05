@@ -1,0 +1,43 @@
+{
+  "tables": [
+    {
+      "id": "tblTEST123",
+      "name": "Contacts",
+      "primaryFieldId": "fldNAME1",
+      "fields": [
+        {
+          "id": "fldNAME1",
+          "name": "Name",
+          "type": "singleLineText"
+        },
+        {
+          "id": "fldEMAIL1",
+          "name": "Email",
+          "type": "email"
+        },
+        {
+          "id": "fldAGE1",
+          "name": "Age",
+          "type": "number"
+        },
+        {
+          "id": "fldACTIVE1",
+          "name": "Active",
+          "type": "checkbox"
+        },
+        {
+          "id": "fldTAGS1",
+          "name": "Tags",
+          "type": "multipleSelects"
+        }
+      ],
+      "views": [
+        {
+          "id": "viwGRID1",
+          "name": "Grid view",
+          "type": "grid"
+        }
+      ]
+    }
+  ]
+}

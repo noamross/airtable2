@@ -58,6 +58,8 @@ jobs:
 
     needs: R-CMD-check
 
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
     environment: protected-testing
 
     env:

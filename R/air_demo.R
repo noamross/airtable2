@@ -187,18 +187,7 @@ air_demo_setup <- function(
 
   # --- Invite user to open base in browser -----------------------------------
   base_url <- paste0("https://airtable.com/", base_id)
-  cli::cli_inform(
-    c(
-      "i" = "Base created: {.url {base_url}}",
-      "i" = paste0(
-        "Open that URL in your browser and arrange the browser and this ",
-        "console side by side to watch the setup proceed."
-      )
-    )
-  )
-  if (interactive()) {
-    readline(prompt = "  Press <Enter> to continue setup... ")
-  }
+  cli::cli_inform("Base created: {.url {base_url}}")
 
   # --- Identify created tables -----------------------------------------------
   created_tables <- new_base$tables %||% list()

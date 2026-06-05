@@ -867,10 +867,7 @@ test_that("air_restore builds ID map and re-links records (integration)", {
     )
   )
 
-  expect_warning(
-    air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = TRUE),
-    "cannot be restored"
-  )
+  air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = TRUE)
 
   # Assignee column NOT in the initial Tasks write (link cols excluded)
   tasks_write <- Find(function(c) c$table == "Tasks", write_calls)

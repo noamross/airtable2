@@ -233,7 +233,7 @@ air_restore <- function(
 
   # Add remaining fields to each table
   cli_inform("Adding fields...")
-  restore_fields(schema, new_base_id, .token)
+  restore_fields(schema, new_base_id, .token, warn_links = !restore_linked_fields)
 
   # Fetch the actual restored schema so we only write fields that exist.
   # restore_fields() warns-and-continues, so some fields may not have been created.
@@ -517,7 +517,7 @@ sanitize_field_for_create <- function(field_def, table_fields) {
 
 #' Add fields from schema to a newly created base
 #' @noRd
-restore_fields <- function(schema, new_base_id, .token) {
+restore_fields <- function(schema, new_base_id, .token, warn_links = TRUE) {
   for (tbl_schema in schema) {
     new_tables <- at_get_schema(new_base_id, token = .token)
     new_tbl <- Find(function(t) t$name == tbl_schema$name, new_tables)
@@ -529,10 +529,12 @@ restore_fields <- function(schema, new_base_id, .token) {
       for (f in tbl_schema$fields[-1]) {
         sanitized <- sanitize_field_for_create(f, tbl_schema$fields)
         if (is.null(sanitized)) {
-          cli_warn(
-            "Field {.field {f$name}} (type {.val {f$type}}) cannot be \\
-            restored via the API - create it manually in the web UI."
-          )
+          if (warn_links || !identical(f$type, "multipleRecordLinks")) {
+            cli_warn(
+              "Field {.field {f$name}} (type {.val {f$type}}) cannot be \\
+              restored via the API - create it manually in the web UI."
+            )
+          }
           next
         }
         tryCatch(
@@ -647,6 +649,14 @@ restore_linked_fields <- function(
       }
 
       opts <- f$options %||% list()
+
+      # Skip reverse-side fields: when we create the forward direction Airtable
+      # auto-creates the reciprocal, so explicitly creating isReversed = TRUE
+      # fields would produce duplicate/conflicting links.
+      if (isTRUE(opts$isReversed)) {
+        next
+      }
+
       old_linked <- opts$linkedTableId %||% NA_character_
       new_linked <- lookup(table_id_map, old_linked)
 
@@ -661,6 +671,7 @@ restore_linked_fields <- function(
       opts$linkedTableId <- new_linked
       opts$inverseLinkFieldId <- NULL
       opts$viewIdForRecordSelection <- NULL
+      opts$isReversed <- NULL
 
       tryCatch(
         {

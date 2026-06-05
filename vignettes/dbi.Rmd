@@ -1,4 +1,3 @@
-<!-- Source vignette — run tools/precompile_vignettes.R to update the .Rmd -->
 ---
 title: "Using airtable2 with DBI"
 output: rmarkdown::html_vignette
@@ -7,6 +6,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+<!-- Source vignette — run tools/precompile_vignettes.R to update the .Rmd -->
 
 
 ## Introduction

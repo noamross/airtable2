@@ -56,13 +56,14 @@ air_upsert <- function(
   check_bool(typecast)
   add_fields <- match.arg(add_fields)
   attachments <- match.arg(attachments)
+  progress <- resolve_progress(progress)
 
   # Prepare write fields: identify computed/attachment fields, validate unknowns.
   # Uses the session schema cache (same as air_write).
   wf <- prepare_write_fields(base_id, table, data, add_fields, .token)
-  computed  <- wf$computed
+  computed   <- wf$computed
   att_fields <- wf$att_fields
-  exclude    <- wf$exclude
+  exclude    <- if (attachments == "meta") wf$computed else wf$exclude
 
   # Use airtable_id for direct matching when available, merge_on otherwise.
   records <- tibble_to_records(

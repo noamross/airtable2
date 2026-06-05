@@ -43,7 +43,7 @@
 #' @importClassesFrom DBI DBIConnection DBIDriver DBIResult
 #' @importMethodsFrom DBI dbClearResult dbConnect dbDataType dbDisconnect
 #' @importMethodsFrom DBI dbExistsTable dbFetch dbGetInfo dbGetRowCount
-#' @importMethodsFrom DBI dbGetStatement dbHasCompleted dbIsValid dbListFields
+#' @importMethodsFrom DBI dbGetRowsAffected dbGetStatement dbHasCompleted dbIsValid dbListFields
 #' @importMethodsFrom DBI dbListTables dbReadTable dbRemoveTable dbSendQuery
 #' @importMethodsFrom DBI dbUnloadDriver dbWriteTable
 ## usethis namespace: end
@@ -52,6 +52,8 @@ NULL
 .onLoad <- function(libname, pkgname) {
   # Package-level state
   pkg_env$base_url <- "https://api.airtable.com/v0"
+  # Attachment uploads use a separate host (the standard API host returns 404).
+  pkg_env$content_url <- "https://content.airtable.com/v0"
 
   # Note: the airtabler/airtable2 conflict warning lives in .onAttach (zzz.R),
   # which is the conventional place for user-facing startup messages.

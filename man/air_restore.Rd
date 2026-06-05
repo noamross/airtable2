@@ -10,6 +10,7 @@ air_restore(
   workspace_id = NULL,
   attachments = c("file", "meta"),
   attachment_dir = NULL,
+  restore_linked_fields = TRUE,
   .token = NULL
 )
 }
@@ -29,6 +30,13 @@ only metadata (filename, url, size, type); \code{"file"} downloads to
 \code{attachments = "file"}). Files are saved as
 \code{{attachment_dir}/{record_id}/{filename}}.}
 
+\item{restore_linked_fields}{If \code{TRUE} (the default), after all records are
+created, linked-record fields (\code{multipleRecordLinks}) and their dependent
+computed fields (\code{rollup}, \code{lookup}, \code{count}) are recreated with remapped
+table/field IDs, and the link cell values (record-to-record connections)
+are repopulated by remapping old record IDs to the newly created record
+IDs. Set to \code{FALSE} to skip this step (faster, but links will be empty).}
+
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
@@ -43,15 +51,16 @@ creation. For CSV dumps, automatically detects and parses the flattened format.
 
 Linked-record fields (\code{multipleRecordLinks}) and the computed fields that
 depend on them (\code{rollup}, \code{lookup}, \code{count}) are skipped during the initial
-field-creation pass because their options reference base-specific IDs that
-do not exist in the new base. After all tables and records have been
-created, \code{restore_linked_fields()} recreates these fields, remapping the
-linked-table and record-link-field references to the new base's IDs.
-
-Note that the link FIELDS are recreated but their CELL VALUES (the specific
-record-to-record connections) are NOT repopulated: the old record IDs stored
-in the dump do not correspond to the newly created records' IDs. Re-linking
-cell values is left for a future pass.
+field-creation pass because their options reference base-specific IDs.
+When \code{restore_linked_fields = TRUE} (the default), after all records are
+inserted a two-step pass runs:
+\enumerate{
+\item \strong{Field definitions}: \code{multipleRecordLinks} fields are recreated with
+\code{linkedTableId} remapped to the new base's table IDs.
+\item \strong{Cell values}: the link columns in the dump contain old record IDs.
+These are remapped to the new record IDs (matched by insertion order) and
+written back via \code{air_upsert()}.
+}
 }
 
 \examples{

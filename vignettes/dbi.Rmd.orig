@@ -1,0 +1,200 @@
+<!-- Source vignette — run tools/precompile_vignettes.R to update the .Rmd -->
+---
+title: "Using airtable2 with DBI"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using airtable2 with DBI}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+```{r setup, eval=TRUE, echo=FALSE, message=FALSE}
+library(airtable2)
+```
+
+## Introduction
+
+**airtable2** provides a DBI interface so you can use the familiar
+`DBI::dbConnect()`, `DBI::dbReadTable()`, `DBI::dbWriteTable()`, and related
+functions to interact with Airtable bases. This makes it easy to integrate
+Airtable into existing R workflows that expect standard database connections, and
+enables the RStudio and Positron connection pane for point-and-click table
+browsing.
+
+The DBI interface covers the most common database operations, but Airtable is
+not a relational database, so some functionality is intentionally absent.
+**Capabilities:** reading tables, listing tables and fields, appending records,
+and overwrite-syncing records. **Limitations:** no SQL queries (use Airtable
+formula syntax instead), no table creation or deletion via DBI, no transactions,
+and no `dbplyr` lazy `tbl()` support (deferred). For the full feature set — type
+coercion, attachments, multi-select, upsert by key — use the `air_*` functions
+directly.
+
+## Connecting
+
+The primary way to open a DBI connection to Airtable is `air_connect()`. You
+can connect to a single base by name or ID, or open a multi-base connection that
+exposes all accessible bases as schemas.
+
+```{r connecting}
+library(airtable2)
+library(DBI)
+
+# Connect to a specific base by name
+con <- air_connect(base = "BollardsForArt")
+
+# Connect to a specific base by ID (replace with your own base ID)
+con <- air_connect(base = "appXXXXXXXXXXXXXX")  # placeholder — use your base ID
+
+# Using the raw DBI interface directly
+con <- DBI::dbConnect(airtable2(), base_id = "appXXXXXXXXXXXXXX")
+
+# Connect to all bases (multi-base mode — all bases appear as schemas)
+con_all <- air_connect()
+
+# Open in the RStudio / Positron connection pane
+air_pane(base = "appXXXXXXXXXXXXXX")
+
+# Always disconnect when done
+DBI::dbDisconnect(con)
+```
+
+If you have set a default base via `air_set_base()` or the `AIRTABLE_BASE_ID`
+environment variable, `air_connect()` will use it when called with no arguments.
+
+## Exploring the connection
+
+Once connected, standard DBI introspection functions work as expected:
+
+```{r exploring}
+# List all tables in the base
+DBI::dbListTables(con)
+#> [1] "Artists"  "Grants"   "Projects"
+
+# Check whether a table exists
+DBI::dbExistsTable(con, "Artists")
+#> [1] TRUE
+
+# List the fields (columns) of a table
+DBI::dbListFields(con, "Artists")
+#> [1] "airtable_id"           "airtable_created_time" "Name"
+#> [4] "Age"                   "Active"                "Role"
+#> [7] "Disciplines"           "Member Since"          "Email"
+```
+
+Note that every table includes the `airtable_id` and `airtable_created_time`
+columns, which are Airtable's internal record identifier and creation timestamp.
+
+## Reading data
+
+`DBI::dbReadTable()` reads an entire table and returns a data frame:
+
+```{r reading}
+# Read the entire Artists table
+artists <- DBI::dbReadTable(con, "Artists")
+artists
+#>   airtable_id airtable_created_time          Name Age Active              Role
+#> 1 recABCDEFGH 2026-05-01 10:00:00   Zara Okonkwo  33   TRUE Guerilla Muralist
+#> ...
+```
+
+For filtered queries, use `DBI::dbSendQuery()` with Airtable's formula syntax
+(not SQL). The query string is of the form `"TableName WHERE <formula>"`:
+
+```{r querying}
+# Filtered query using Airtable formula syntax
+res <- DBI::dbSendQuery(con, "Artists WHERE {Active} = 1")
+active_artists <- DBI::dbFetch(res)
+DBI::dbClearResult(res)
+
+# The high-level air_read() helper is equivalent and more idiomatic
+active_artists2 <- air_read("Artists", formula = "{Active} = 1")
+```
+
+Both approaches return the same result. `air_read()` also supports sorting,
+field selection, and type coercion via the table schema.
+
+## Writing data
+
+Use `DBI::dbWriteTable()` to add or sync records. The `append` and `overwrite`
+arguments control the write mode:
+
+```{r writing}
+# Append new records (append = TRUE is required to add rows)
+new_artists <- data.frame(
+  Name = c("Frida K.", "Diego R."),
+  Age  = c(47L, 53L)
+)
+DBI::dbWriteTable(con, "Artists", new_artists, append = TRUE)
+#> Inserted 2 records.
+
+# Sync / overwrite: upserts by the first column as the key,
+# and deletes any Airtable records not present in updated_artists
+updated_artists <- data.frame(
+  Name = c("Frida K.", "Diego R.", "Georgia O."),
+  Age  = c(47L, 53L, 98L)
+)
+DBI::dbWriteTable(con, "Artists", updated_artists, overwrite = TRUE)
+#> Sync complete: 1 created, 2 updated, 0 deleted, 0 unchanged.
+```
+
+`overwrite = TRUE` maps to `air_sync()` under the hood: it upserts records
+whose key (first column) matches and deletes records that are absent from the
+supplied data frame. Use `air_upsert()` directly if you want upsert-without-
+delete semantics.
+
+## Multi-base mode
+
+When `air_connect()` is called without a `base` argument, it opens a multi-base
+connection. In this mode all accessible bases are exposed as DBI schemas, and
+table names use a `"BaseName.TableName"` dotted format:
+
+```{r multi-base}
+# Open a connection to all accessible bases
+con_all <- air_connect()
+
+# Tables are listed in "BaseName.TableName" format
+DBI::dbListTables(con_all)
+#> [1] "BollardsForArt.Artists"  "BollardsForArt.Grants"
+#> [3] "BollardsForArt.Projects" "OtherBase.Contacts"
+#> ...
+
+# Check existence and read using the dotted name
+DBI::dbExistsTable(con_all, "BollardsForArt.Artists")
+#> [1] TRUE
+
+DBI::dbReadTable(con_all, "BollardsForArt.Artists")
+
+# Alternatively, use DBI::Id() for qualified schema + table names
+DBI::dbReadTable(con_all, DBI::Id(schema = "BollardsForArt", table = "Artists"))
+
+DBI::dbDisconnect(con_all)
+```
+
+## Limitations
+
+The DBI interface provides a convenient entry point, but it does not expose the
+full power of airtable2. Key limitations:
+
+- **No SQL.** Airtable does not have a SQL engine. `DBI::dbSendQuery()` accepts
+  Airtable formula syntax (`"TableName WHERE <formula>"`), not SQL.
+- **No table creation or deletion.** `DBI::dbCreateTable()` and
+  `DBI::dbRemoveTable()` are not implemented. Use the Airtable web UI or the
+  low-level `at_create_table()` / `at_delete_table()` functions for these
+  operations.
+- **No transactions.** `DBI::dbBegin()`, `DBI::dbCommit()`, and
+  `DBI::dbRollback()` are not supported.
+- **No `dbplyr` lazy tables.** `dplyr::tbl(con, "Artists")` is not yet
+  supported.
+
+For the full feature set, use the `air_*` high-level functions:
+
+- `air_read()` — read with formula filtering, sorting, field selection, and type
+  coercion
+- `air_write()` — create new records, optionally creating missing fields
+- `air_upsert()` — upsert by key without deleting unmatched records
+- `air_sync()` — diff-based sync with optional deletion of missing records

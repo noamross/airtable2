@@ -150,10 +150,10 @@ at_whoami <- function(token = NULL) {
 #' Upload an attachment to a record field
 #'
 #' @param base_id Base ID.
-#' @param table_id Table ID or name.
+#' @param table_id Table ID or name containing the record.
 #' @param record_id Record ID.
 #' @param field_id Field ID or name.
-#' @param file Path to the file to upload.
+#' @param file Path to the file to upload (max 5 MB).
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @return The attachment object returned by the API.
 #' @examples
@@ -176,7 +176,6 @@ at_upload_attachment <- function(
   token = NULL
 ) {
   check_string(base_id)
-  check_string(table_id)
   check_string(record_id)
   check_string(field_id)
   check_string(file)
@@ -185,30 +184,32 @@ at_upload_attachment <- function(
     cli_abort("File {.file {file}} does not exist.")
   }
 
-  endpoint <- paste0(
-    base_id,
-    "/",
-    table_id,
-    "/",
-    record_id,
-    "/",
-    field_id,
-    "/uploadAttachment"
+  # table_id is accepted for backward compatibility but not used in the URL.
+  # The upload endpoint identifies records by ID alone.
+
+  ext <- tolower(tools::file_ext(file))
+  content_type <- switch(ext,
+    jpg = , jpeg = "image/jpeg",
+    png  = "image/png",
+    gif  = "image/gif",
+    pdf  = "application/pdf",
+    "application/octet-stream"
   )
-  token_resolved <- air_token(token)
 
-  ua <- paste0("airtable2/", utils::packageVersion("airtable2"))
-  req <- httr2::request(base_url()) |>
-    httr2::req_url_path_append(endpoint) |>
-    httr2::req_auth_bearer_token(token_resolved) |>
-    httr2::req_user_agent(ua) |>
-    httr2::req_retry(
-      max_tries = 3,
-      is_transient = function(resp) httr2::resp_status(resp) == 429L,
-      backoff = ~30
-    ) |>
-    httr2::req_method("POST") |>
-    httr2::req_body_multipart(file = curl::form_file(file))
+  raw_bytes <- readBin(file, "raw", n = file.info(file)$size)
+  # base64_enc may insert newlines; strip them — Airtable requires clean base64
+  file_b64 <- gsub("\n", "", jsonlite::base64_enc(raw_bytes), fixed = TRUE)
 
-  air_perform(req)
+  # POST content.airtable.com/v0/{baseId}/{recordId}/{fieldIdOrName}/uploadAttachment
+  # Note: uploads use the dedicated content host (the standard api.airtable.com
+  # host returns 404), and table_id is NOT part of this URL per the API spec.
+  endpoint <- paste0(base_id, "/", record_id, "/", field_id, "/uploadAttachment")
+
+  air_req(endpoint, token = token, host = "content") |>
+    httr2::req_body_json(list(
+      contentType = content_type,
+      file        = file_b64,
+      filename    = basename(file)
+    )) |>
+    air_perform()
 }

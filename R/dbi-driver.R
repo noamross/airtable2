@@ -73,6 +73,13 @@ dbi_base_mode <- function(conn) {
   nzchar(conn@base_id)
 }
 
+#' Check if rstudioapi is available and functional
+#' @noRd
+rstudioapi_available <- function() {
+  requireNamespace("rstudioapi", quietly = TRUE) &&
+    rstudioapi::isAvailable()
+}
+
 #' Connection actions for the RStudio/Positron connection pane
 #' @noRd
 connection_actions <- function(con) {
@@ -100,6 +107,57 @@ connection_actions <- function(con) {
       }
     )
   }
+
+  # New Base action - prompt for a name and create a new base
+  actions[["New Base"]] <- list(
+    icon = NULL,
+    callback = function() {
+      name <- if (rstudioapi_available()) {
+        rstudioapi::showPrompt(
+          title   = "Create Airtable Base",
+          message = "Enter a name for the new base:",
+          default = ""
+        )
+      } else {
+        readline("New base name: ")
+      }
+      if (!is.null(name) && nzchar(trimws(name))) {
+        tryCatch(
+          {
+            result <- at_create_base(
+              name,
+              tables       = list(list(
+                name   = "Table 1",
+                fields = list(list(name = "Name", type = "singleLineText"))
+              )),
+              workspace_id = default_workspace_id() %||% NULL,
+              token        = con@token
+            )
+            cli::cli_inform("Created base {.val {name}} ({result$id}).")
+          },
+          error = function(e) {
+            cli::cli_warn("Could not create base: {conditionMessage(e)}")
+          }
+        )
+      }
+    }
+  )
+
+  # Refresh action - invalidate schema cache and re-open the pane entry
+  actions[["Refresh"]] <- list(
+    icon = NULL,
+    callback = function() {
+      if (dbi_base_mode(con)) {
+        schema_cache_invalidate(con@base_id)
+      } else {
+        schema_cache_invalidate()
+      }
+      connection_observer_open(
+        con,
+        connect_code = con@state$connect_code %||% ""
+      )
+    }
+  )
 
   actions
 }
@@ -176,42 +234,59 @@ connection_observer_open <- function(con, connect_code) {
     connectCode = connect_code,
     disconnect  = function() DBI::dbDisconnect(con),
     listObjectTypes = function() {
+      browse_action <- list(
+        icon = icon_path("airtable-icon-32-32"),
+        callback = function(table, ...) {
+          utils::browseURL(
+            paste0("https://airtable.com/", con@base_id, "/", table)
+          )
+        }
+      )
       if (dbi_base_mode(con)) {
-        list(table = list(contains = "data"))
+        list(table = list(
+          contains = "data",
+          actions  = list(Browse = browse_action)
+        ))
       } else {
-        list(schema = list(contains = list(table = list(contains = "data"))))
+        list(schema = list(contains = list(
+          table = list(
+            contains = "data",
+            actions  = list(Browse = browse_action)
+          )
+        )))
       }
     },
-    listObjects = function(type = "table", ...) {
+    listObjects = function(...) {
       args <- list(...)
       if (dbi_base_mode(con)) {
+        # Single-base mode: always return tables for this base
         tables <- list_tables_for_base(con@base_id)
         data.frame(name = tables, type = rep("table", length(tables)),
                    stringsAsFactors = FALSE)
-      } else if (type == "schema") {
-        bases <- dbi_list_bases(con)
-        data.frame(
-          name = vapply(bases, `[[`, character(1), "name"),
-          type = rep("schema", length(bases)),
-          stringsAsFactors = FALSE
-        )
-      } else if (type == "table") {
+      } else {
         schema_name <- args$schema %||% NULL
         if (is.null(schema_name)) {
-          return(data.frame(name = character(), type = character(),
-                            stringsAsFactors = FALSE))
+          # Root level — the pane calls listObjects() with no args to expand
+          # the top level; return all accessible bases as schemas.
+          bases <- dbi_list_bases(con)
+          data.frame(
+            name = vapply(bases, `[[`, character(1), "name"),
+            type = rep("schema", length(bases)),
+            stringsAsFactors = FALSE
+          )
+        } else {
+          # Schema expanded — the pane calls listObjects(schema = "Name");
+          # return tables for the matching base.
+          bases <- dbi_list_bases(con)
+          base_info <- Find(function(b) b$name == schema_name, bases)
+          if (is.null(base_info)) {
+            return(data.frame(name = character(), type = character(),
+                              stringsAsFactors = FALSE))
+          }
+          tables <- list_tables_for_base(base_info$id)
+          data.frame(name = tables, type = rep("table", length(tables)),
+                     stringsAsFactors = FALSE)
         }
-        bases <- dbi_list_bases(con)
-        base_info <- Find(function(b) b$name == schema_name, bases)
-        if (is.null(base_info)) {
-          return(data.frame(name = character(), type = character(),
-                            stringsAsFactors = FALSE))
-        }
-        tables <- list_tables_for_base(base_info$id)
-        data.frame(name = tables, type = rep("table", length(tables)),
-                   stringsAsFactors = FALSE)
-      } else {
-        data.frame(name = character(), type = character(), stringsAsFactors = FALSE)
       }
     },
     listColumns = function(table, ...) {
@@ -273,6 +348,7 @@ methods::setMethod(
     base_id = NULL,
     include_views = FALSE,
     connect_code = NULL,
+    bases_filter = NULL,
     ...
   ) {
     token <- air_token(token)
@@ -282,7 +358,9 @@ methods::setMethod(
 
     state <- new.env(parent = emptyenv())
     state$valid <- TRUE
-    state$bases <- NULL
+    # Pre-seed the bases cache when a filtered list is supplied; dbi_list_bases()
+    # returns this directly without calling at_list_bases().
+    state$bases <- bases_filter
     state$include_views <- include_views
 
     con <- methods::new(

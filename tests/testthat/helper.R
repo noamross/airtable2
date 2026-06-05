@@ -21,6 +21,15 @@
 # locally with a temporary R_USER_DATA_DIR.
 options(airtable2.count_api = FALSE)
 
+# Make .demo_sleep a no-op for the whole test session so demo tests run without
+# 2-second pauses between steps.
+local({
+  ns <- getNamespace("airtable2")
+  unlockBinding(".demo_sleep", ns)
+  assign(".demo_sleep", function() invisible(NULL), envir = ns)
+  lockBinding(".demo_sleep", ns)
+})
+
 # --- Skip conditions ---
 
 # Master switch for any test that hits the Airtable API. Airtable free/team plans

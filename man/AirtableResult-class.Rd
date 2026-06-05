@@ -10,6 +10,8 @@
 \alias{dbGetRowCount,AirtableResult-method}
 \alias{dbGetStatement,AirtableResult-method}
 \alias{dbIsValid,AirtableResult-method}
+\alias{dbGetRowsAffected,AirtableResult-method}
+\alias{dbFetch,AirtableResult,missing-method}
 \title{Airtable DBI result}
 \usage{
 \S4method{dbSendQuery}{AirtableConnection,character}(conn, statement, ...)
@@ -25,6 +27,10 @@
 \S4method{dbGetStatement}{AirtableResult}(res, ...)
 
 \S4method{dbIsValid}{AirtableResult}(dbObj, ...)
+
+\S4method{dbGetRowsAffected}{AirtableResult}(res, ...)
+
+\S4method{dbFetch}{AirtableResult,missing}(res, n = -1, ...)
 }
 \arguments{
 \item{conn}{An \code{AirtableConnection} object.}

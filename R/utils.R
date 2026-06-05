@@ -75,6 +75,15 @@ base_url <- function() {
   pkg_env$base_url
 }
 
+#' Airtable attachment-upload host URL
+#'
+#' Attachment uploads are served from a different host
+#' (`content.airtable.com`) than the rest of the REST API.
+#' @noRd
+content_url <- function() {
+  pkg_env$content_url
+}
+
 #' Normalize an Airtable error body into `list(type, message)`
 #'
 #' Airtable's `error` field is sometimes an object `{"type","message"}` and

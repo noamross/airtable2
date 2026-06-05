@@ -4,13 +4,17 @@
 \alias{air_req}
 \title{Build an httr2 request to the Airtable API}
 \usage{
-air_req(endpoint, token = NULL)
+air_req(endpoint, token = NULL, host = c("api", "content"))
 }
 \arguments{
-\item{endpoint}{Path appended to \verb{https://api.airtable.com/v0}
+\item{endpoint}{Path appended to the host root
 (e.g., \code{"meta/bases"} or \code{"appXXX/TableName"}).}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
+
+\item{host}{Which Airtable host to target: \code{"api"} (the default REST API at
+\verb{https://api.airtable.com/v0}) or \code{"content"} (the attachment-upload host
+at \verb{https://content.airtable.com/v0}).}
 }
 \value{
 An \code{httr2_request} object ready for further modification.

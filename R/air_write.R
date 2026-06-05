@@ -55,7 +55,10 @@ air_write <- function(
   wf <- prepare_write_fields(base_id, table, data, add_fields, .token)
   computed   <- wf$computed
   att_fields <- wf$att_fields
-  exclude    <- wf$exclude
+  # With attachments = "meta", URL data is written directly to the API — keep
+  # att_fields in the payload. With "file"/"blob", attachment upload happens
+  # separately after record creation, so att_fields are excluded here.
+  exclude <- if (attachments == "meta") wf$computed else wf$exclude
 
   records <- tibble_to_records(
     data,
@@ -151,13 +154,29 @@ prepare_write_fields <- function(base_id, table, data, add_fields, .token,
         computed <- c(computed, unknown)
       } else {
         for (field_name in unknown) {
+          col <- data[[field_name]]
+          field_type <- if (is.numeric(col)) {
+            "number"
+          } else if (is.logical(col)) {
+            "checkbox"
+          } else if (inherits(col, "Date")) {
+            "date"
+          } else {
+            "singleLineText"
+          }
+          field_opts <- if (field_type == "number") {
+            list(precision = if (is.integer(col)) 0L else 8L)
+          } else if (field_type == "date") {
+            list(dateFormat = list(name = "iso"))
+          }
           cli_inform("Creating field {.field {field_name}} in {.val {table}}.")
           at_create_field(
             field_name,
-            base_id = base_id,
+            base_id  = base_id,
             table_id = tbl_schema$id,
-            type = "singleLineText",
-            token = .token
+            type     = field_type,
+            options  = field_opts,
+            token    = .token
           )
         }
         schema_cache_invalidate(base_id)

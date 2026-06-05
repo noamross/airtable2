@@ -11,15 +11,17 @@ air_meta_push(base_id, meta, .token = NULL)
 default set by \code{\link[=air_set_base]{air_set_base()}} or the \code{AIRTABLE_BASE_ID} environment
 variable.}
 
-\item{meta}{A tibble from \code{\link[=air_meta]{air_meta()}} with modifications to \code{field_name}
-or \code{description}.}
+\item{meta}{A tibble from \code{\link[=air_meta]{air_meta()}} with modifications to \code{table_name},
+\code{field_name}, or \code{description}.}
 
 \item{.token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }
 \value{
-Invisible \code{NULL}. Side effect: updates field names/descriptions.
+Invisible \code{NULL}. Side effect: updates table and field metadata.
 }
 \description{
 Compares a modified metadata tibble (from \code{\link[=air_meta]{air_meta()}}) against the current
-schema and applies name/description changes via PATCH.
+schema and applies name/description changes via PATCH. Changes to
+\code{table_name} rename the table; changes to \code{field_name} or \code{description}
+rename or re-describe the field.
 }

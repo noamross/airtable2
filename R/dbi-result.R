@@ -151,6 +151,27 @@ methods::setMethod(
   }
 )
 
+#' @rdname AirtableResult-class
+#' @export
+methods::setMethod(
+  "dbGetRowsAffected",
+  signature(res = "AirtableResult"),
+  function(res, ...) {
+    NA_integer_
+  }
+)
+
+#' @rdname AirtableResult-class
+#' @export
+methods::setMethod(
+  "dbFetch",
+  signature(res = "AirtableResult", n = "missing"),
+  function(res, n, ...) {
+    check_dbi_result(res)
+    DBI::dbFetch(res, n = -1L, ...)
+  }
+)
+
 #' @noRd
 dbi_parse_statement <- function(statement) {
   check_string(statement)

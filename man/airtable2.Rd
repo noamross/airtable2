@@ -21,6 +21,7 @@ airtable()
   base_id = NULL,
   include_views = FALSE,
   connect_code = NULL,
+  bases_filter = NULL,
   ...
 )
 

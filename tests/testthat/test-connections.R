@@ -464,3 +464,446 @@ test_that("listObjects invalidates schema cache and returns fresh data in base m
   result2 <- list_objects(type = "table")
   expect_setequal(result2$name, c("Projects", "Archive"))
 })
+
+
+# ============================================================================
+# Stage 9A — Connection Pane additional buttons
+# ============================================================================
+
+# --- connection_actions() includes New Base and Refresh actions --------------
+
+test_that("connection_actions() includes New Base action", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+  expect_false(is.null(actions[["New Base"]]))
+  expect_true(is.function(actions[["New Base"]]$callback))
+})
+
+test_that("connection_actions() includes Refresh action", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+  expect_false(is.null(actions[["Refresh"]]))
+  expect_true(is.function(actions[["Refresh"]]$callback))
+})
+
+test_that("connection_actions() includes New Base action in no-base mode", {
+  con <- fake_conn(base_id = "")
+  actions <- connection_actions(con)
+  expect_false(is.null(actions[["New Base"]]))
+  expect_true(is.function(actions[["New Base"]]$callback))
+})
+
+test_that("connection_actions() includes Refresh action in no-base mode", {
+  con <- fake_conn(base_id = "")
+  actions <- connection_actions(con)
+  expect_false(is.null(actions[["Refresh"]]))
+  expect_true(is.function(actions[["Refresh"]]$callback))
+})
+
+# --- New Base callback behaviour ----------------------------------------------
+
+test_that("New Base callback creates base when name provided via rstudioapi", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  create_calls <- list()
+  local_mocked_bindings(
+    rstudioapi_available = function() TRUE,
+    .package = "airtable2"
+  )
+  local_mocked_bindings(
+    showPrompt = function(title, message, default = "") "My New Base",
+    .package = "rstudioapi"
+  )
+  local_mocked_bindings(
+    at_create_base = function(name, tables = NULL, workspace_id = NULL, token = NULL) {
+      create_calls[[length(create_calls) + 1L]] <<- list(name = name)
+      list(id = "appNEWBASE", name = name)
+    },
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["New Base"]]$callback())
+  expect_length(create_calls, 1L)
+  expect_equal(create_calls[[1L]]$name, "My New Base")
+})
+
+test_that("New Base callback does nothing when rstudioapi dialog is cancelled", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  create_called <- FALSE
+  local_mocked_bindings(
+    rstudioapi_available = function() TRUE,
+    .package = "airtable2"
+  )
+  local_mocked_bindings(
+    showPrompt = function(title, message, default = "") NULL,
+    .package = "rstudioapi"
+  )
+  local_mocked_bindings(
+    at_create_base = function(name, tables = NULL, workspace_id = NULL, token = NULL) {
+      create_called <<- TRUE
+      list(id = "appX", name = name)
+    },
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["New Base"]]$callback())
+  expect_false(create_called)
+})
+
+test_that("New Base callback does nothing when empty name provided", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  create_called <- FALSE
+  local_mocked_bindings(
+    rstudioapi_available = function() TRUE,
+    .package = "airtable2"
+  )
+  local_mocked_bindings(
+    showPrompt = function(title, message, default = "") "   ",
+    .package = "rstudioapi"
+  )
+  local_mocked_bindings(
+    at_create_base = function(name, tables = NULL, workspace_id = NULL, token = NULL) {
+      create_called <<- TRUE
+      list(id = "appX", name = name)
+    },
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["New Base"]]$callback())
+  expect_false(create_called)
+})
+
+test_that("New Base callback warns when at_create_base errors", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  local_mocked_bindings(
+    rstudioapi_available = function() TRUE,
+    .package = "airtable2"
+  )
+  local_mocked_bindings(
+    showPrompt = function(title, message, default = "") "Bad Base",
+    .package = "rstudioapi"
+  )
+  local_mocked_bindings(
+    at_create_base = function(name, tables = NULL, workspace_id = NULL, token = NULL) {
+      stop("Permission denied")
+    },
+    .package = "airtable2"
+  )
+
+  expect_warning(
+    actions[["New Base"]]$callback(),
+    "Could not create base"
+  )
+})
+
+test_that("New Base callback uses readline when rstudioapi unavailable", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  create_calls <- list()
+  local_mocked_bindings(
+    rstudioapi_available = function() FALSE,
+    .package = "airtable2"
+  )
+  local_mocked_bindings(
+    readline = function(prompt = "") "My Readline Base",
+    .package = "base"
+  )
+  local_mocked_bindings(
+    at_create_base = function(name, tables = NULL, workspace_id = NULL, token = NULL) {
+      create_calls[[length(create_calls) + 1L]] <<- list(name = name)
+      list(id = "appNEW2", name = name)
+    },
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["New Base"]]$callback())
+  expect_length(create_calls, 1L)
+  expect_equal(create_calls[[1L]]$name, "My Readline Base")
+})
+
+# --- Refresh callback invalidates schema cache --------------------------------
+
+test_that("Refresh callback invalidates schema cache in base mode", {
+  con <- fake_conn(base_id = "appFAKE")
+  actions <- connection_actions(con)
+
+  invalidate_calls <- list()
+  local_mocked_bindings(
+    schema_cache_invalidate = function(base_id = NULL) {
+      invalidate_calls[[length(invalidate_calls) + 1L]] <<- list(base_id = base_id)
+    },
+    connection_observer_open = function(con, connect_code = "") invisible(NULL),
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["Refresh"]]$callback())
+  expect_gte(length(invalidate_calls), 1L)
+  # In base mode the call should pass the specific base_id
+  expect_equal(invalidate_calls[[1L]]$base_id, "appFAKE")
+})
+
+test_that("Refresh callback invalidates all caches in no-base mode", {
+  con <- fake_conn(base_id = "")
+  actions <- connection_actions(con)
+
+  invalidate_calls <- list()
+  local_mocked_bindings(
+    schema_cache_invalidate = function(base_id = NULL) {
+      invalidate_calls[[length(invalidate_calls) + 1L]] <<- list(base_id = base_id)
+    },
+    connection_observer_open = function(con, connect_code = "") invisible(NULL),
+    .package = "airtable2"
+  )
+
+  expect_no_error(actions[["Refresh"]]$callback())
+  expect_gte(length(invalidate_calls), 1L)
+  # In no-base mode the call should pass NULL (invalidate all)
+  expect_null(invalidate_calls[[1L]]$base_id)
+})
+
+# --- listObjectTypes table Browse action (base mode) -------------------------
+
+test_that("listObjectTypes includes table Browse action in base-mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema(),
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base")
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(base = "appFAKE")
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_object_types <- opened[[1L]]$args$listObjectTypes
+  expect_true(is.function(list_object_types))
+
+  types <- list_object_types()
+  expect_false(is.null(types$table))
+  expect_false(is.null(types$table$actions))
+  expect_false(is.null(types$table$actions$Browse))
+  expect_true(is.function(types$table$actions$Browse$callback))
+})
+
+test_that("table Browse action opens correct URL in base-mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema(),
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base")
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(base = "appFAKE")
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_object_types <- opened[[1L]]$args$listObjectTypes
+  types <- list_object_types()
+
+  urls_opened <- character()
+  local_mocked_bindings(
+    .package = "utils",
+    browseURL = function(url, ...) { urls_opened <<- c(urls_opened, url) }
+  )
+
+  types$table$actions$Browse$callback(table = "Projects")
+  expect_length(urls_opened, 1L)
+  expect_equal(urls_opened[[1L]], "https://airtable.com/appFAKE/Projects")
+})
+
+test_that("listObjectTypes includes table Browse action in no-base mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema()
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect()
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_object_types <- opened[[1L]]$args$listObjectTypes
+  expect_true(is.function(list_object_types))
+
+  types <- list_object_types()
+  # In no-base mode we expect schema > table hierarchy
+  expect_false(is.null(types$schema))
+  expect_false(is.null(types$schema$contains$table))
+  expect_false(is.null(types$schema$contains$table$actions))
+  expect_false(is.null(types$schema$contains$table$actions$Browse))
+  expect_true(is.function(types$schema$contains$table$actions$Browse$callback))
+})
+
+# ── listObjects in no-base mode ───────────────────────────────────────────────
+# The pane calls listObjects() with NO arguments at the root level to populate
+# the schema list, then calls listObjects(schema = "Name") to expand a schema.
+# The old code used type="table" as the default, so the no-arg call fell
+# through to the table branch and returned an empty data frame.
+
+test_that("listObjects() with no args returns bases as schemas in no-base mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token      = function(token = NULL) "fake_token",
+    at_get_schema  = function(base_id, token = NULL) fake_schema(),
+    dbi_list_bases = function(con) {
+      list(
+        list(id = "appAAA111", name = "My Base"),
+        list(id = "appBBB222", name = "Other Base")
+      )
+    },
+    .package = "airtable2"
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect()
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_objects <- opened[[1L]]$args$listObjects
+
+  # Root-level call: no arguments → must return schemas (bases)
+  result <- list_objects()
+  expect_s3_class(result, "data.frame")
+  expect_setequal(result$name, c("My Base", "Other Base"))
+  expect_true(all(result$type == "schema"))
+})
+
+test_that("listObjects(schema = name) returns tables for that base in no-base mode", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token      = function(token = NULL) "fake_token",
+    at_get_schema  = function(base_id, token = NULL) fake_schema(),
+    dbi_list_bases = function(con) {
+      list(list(id = "appAAA111", name = "My Base"))
+    },
+    .package = "airtable2"
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect()
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_objects <- opened[[1L]]$args$listObjects
+
+  # Schema-expansion call: listObjects(schema = "My Base") → tables
+  result <- list_objects(schema = "My Base")
+  expect_s3_class(result, "data.frame")
+  expect_setequal(result$name, c("Projects", "Tasks"))
+  expect_true(all(result$type == "table"))
+})
+
+# ── bases parameter — filtered multi-base connections ─────────────────────────
+# air_connect(bases = c(...)) restricts the pane to a named subset of bases.
+# The pane should see only those bases; tables expand correctly under each.
+
+test_that("air_connect(bases=) restricts listObjects to specified bases only", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token      = function(token = NULL) "fake_token",
+    at_get_schema  = function(base_id, token = NULL) fake_schema(),
+    at_list_bases  = function(token = NULL) {
+      tibble::tibble(
+        id   = c("appAAA111", "appBBB222", "appCCC333"),
+        name = c("My Base", "Other Base", "Hidden Base"),
+        permissionLevel = c("create", "edit", "read")
+      )
+    },
+    .package = "airtable2"
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(bases = c("appAAA111", "appBBB222"))
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_objects <- opened[[1L]]$args$listObjects
+
+  result <- list_objects()
+  expect_setequal(result$name, c("My Base", "Other Base"))
+  expect_false("Hidden Base" %in% result$name)
+})
+
+test_that("air_connect(bases=) resolves base names to IDs", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token      = function(token = NULL) "fake_token",
+    at_get_schema  = function(base_id, token = NULL) fake_schema(),
+    at_list_bases  = function(token = NULL) {
+      tibble::tibble(
+        id   = c("appAAA111", "appBBB222"),
+        name = c("My Base", "Other Base"),
+        permissionLevel = c("create", "edit")
+      )
+    },
+    .package = "airtable2"
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(bases = c("My Base"))
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  list_objects <- opened[[1L]]$args$listObjects
+
+  result <- list_objects()
+  expect_equal(result$name, "My Base")
+  expect_equal(result$type, "schema")
+})
+
+test_that("air_connect(base=, bases=) errors", {
+  local_mocked_bindings(
+    air_token = function(token = NULL) "fake_token",
+    .package = "airtable2"
+  )
+  expect_error(
+    air_connect(base = "appFAKE", bases = c("appAAA")),
+    "Specify"
+  )
+})
+
+test_that("air_pane(bases=) reconnect code includes bases", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+  local_mocked_bindings(
+    air_token      = function(token = NULL) "fake_token",
+    at_get_schema  = function(base_id, token = NULL) fake_schema(),
+    at_list_bases  = function(token = NULL) {
+      tibble::tibble(
+        id   = c("appAAA111", "appBBB222"),
+        name = c("My Base", "Other Base"),
+        permissionLevel = c("create", "edit")
+      )
+    },
+    .package = "airtable2"
+  )
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_pane(bases = c("appAAA111", "appBBB222"))
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  connect_code <- opened[[1L]]$args$connectCode
+  expect_match(connect_code, "air_pane")
+  expect_match(connect_code, "bases")
+  expect_match(connect_code, "appAAA111")
+  expect_match(connect_code, "appBBB222")
+})

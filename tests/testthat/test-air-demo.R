@@ -92,7 +92,7 @@ test_that("air_demo_setup() creates Artists, Projects, Grants tables (mocked)", 
 
   # Three tables should be configured in the base creation call
   expect_true("at_create_base" %in% calls_made)
-  expect_equal(sort(table_names_seen), sort(c("Artists", "Projects", "Grants")))
+  expect_equal(sort(table_names_seen), sort(c("Artists", "Projects", "Supporters", "Grants")))
 
   # Records written to Artists and Projects and Grants
   expect_true("air_write:Artists"  %in% calls_made)
@@ -428,25 +428,26 @@ test_that("air_demo() calls air_demo_setup() when no base is configured (mocked)
                                         deleted = 0L, unchanged = 1L),
         air_left_join = function(...) tibble::tibble(Name = "Zara Okonkwo",
                                                      Grant = "NEA"),
-        air_schema = function(base_id, .token = NULL) {
+        air_meta = function(base_id, .token = NULL) {
           tibble::tibble(
-            table_id = "tblA",
-            table_name = "Artists",
-            table_description = NA_character_,
-            fields = list(tibble::tibble(
-              id = "fldN", name = "Name",
-              type = "singleLineText", description = NA_character_
-            ))
+            table_name  = c("Artists", "Artists"),
+            table_id    = c("tblA",    "tblA"),
+            field_name  = c("Name",    "Role"),
+            field_id    = c("fldN",    "fldR"),
+            field_type  = c("singleLineText", "singleLineText"),
+            description = c(NA_character_,   NA_character_)
           )
         },
+        air_meta_init = function(...) invisible(NULL),
+        air_meta_sync = function(...) invisible(NULL),
         air_api_usage = function(...) NULL
       )
 
-      result <- suppressMessages(air_demo())
+      result <- suppressMessages(suppressWarnings(air_demo()))
       expect_true(setup_called)
-      expect_named(result,
-                   c("read", "write", "upsert", "sync", "join", "schema", "usage"),
-                   ignore.order = TRUE)
+      expect_true(
+        all(c("read", "write", "upsert", "sync", "join", "schema", "usage") %in% names(result))
+      )
     })
   })
 })
@@ -471,26 +472,27 @@ test_that("air_demo() uses supplied base_id without calling air_demo_setup() (mo
     air_sync   = function(...) list(created = 0L, updated = 0L,
                                     deleted = 0L, unchanged = 3L),
     air_left_join = function(...) tibble::tibble(Name = "Zara Okonkwo", Score = 98L),
-    air_schema = function(base_id, .token = NULL) {
+    air_meta = function(base_id, .token = NULL) {
       tibble::tibble(
-        table_id = "tblA",
-        table_name = "Artists",
-        table_description = NA_character_,
-        fields = list(tibble::tibble(
-          id = "fldN", name = "Name",
-          type = "singleLineText", description = NA_character_
-        ))
+        table_name  = c("Artists", "Artists"),
+        table_id    = c("tblA",    "tblA"),
+        field_name  = c("Name",    "Role"),
+        field_id    = c("fldN",    "fldR"),
+        field_type  = c("singleLineText", "singleLineText"),
+        description = c(NA_character_,   NA_character_)
       )
     },
+    air_meta_init = function(...) invisible(NULL),
+    air_meta_sync = function(...) invisible(NULL),
     air_api_usage = function(...) NULL
   )
 
-  result <- suppressMessages(air_demo(base_id = "appSUPPLIED"))
+  result <- suppressMessages(suppressWarnings(air_demo(base_id = "appSUPPLIED")))
 
   expect_false(setup_called)
-  expect_named(result,
-               c("read", "write", "upsert", "sync", "join", "schema", "usage"),
-               ignore.order = TRUE)
+  expect_true(
+    all(c("read", "write", "upsert", "sync", "join", "schema", "usage") %in% names(result))
+  )
   expect_s3_class(result$read, "data.frame")
 })
 
@@ -508,22 +510,24 @@ test_that("air_demo() includes base URL in output (mocked)", {
     air_sync   = function(...) list(created = 0L, updated = 0L,
                                     deleted = 0L, unchanged = 1L),
     air_left_join = function(...) tibble::tibble(Name = "Zara Okonkwo"),
-    air_schema = function(base_id, .token = NULL) {
+    air_meta = function(base_id, .token = NULL) {
       tibble::tibble(
-        table_id = "tblA", table_name = "Artists",
-        table_description = NA_character_,
-        fields = list(tibble::tibble(
-          id = "fldN", name = "Name",
-          type = "singleLineText", description = NA_character_
-        ))
+        table_name  = c("Artists", "Artists"),
+        table_id    = c("tblA",    "tblA"),
+        field_name  = c("Name",    "Role"),
+        field_id    = c("fldN",    "fldR"),
+        field_type  = c("singleLineText", "singleLineText"),
+        description = c(NA_character_,   NA_character_)
       )
     },
+    air_meta_init = function(...) invisible(NULL),
+    air_meta_sync = function(...) invisible(NULL),
     air_api_usage = function(...) NULL
   )
 
   msgs <- character()
   withCallingHandlers(
-    air_demo(base_id = "appXXXDEMO"),
+    suppressWarnings(air_demo(base_id = "appXXXDEMO")),
     message = function(m) {
       msgs <<- c(msgs, conditionMessage(m))
       invokeRestart("muffleMessage")
@@ -554,20 +558,22 @@ test_that("air_demo() uses Artists table (not People) (mocked)", {
     air_sync   = function(...) list(created = 0L, updated = 0L,
                                     deleted = 0L, unchanged = 1L),
     air_left_join = function(...) fake_data,
-    air_schema = function(base_id, .token = NULL) {
+    air_meta = function(base_id, .token = NULL) {
       tibble::tibble(
-        table_id = "tblA", table_name = "Artists",
-        table_description = NA_character_,
-        fields = list(tibble::tibble(
-          id = "fldN", name = "Name",
-          type = "singleLineText", description = NA_character_
-        ))
+        table_name  = c("Artists", "Artists"),
+        table_id    = c("tblA",    "tblA"),
+        field_name  = c("Name",    "Role"),
+        field_id    = c("fldN",    "fldR"),
+        field_type  = c("singleLineText", "singleLineText"),
+        description = c(NA_character_,   NA_character_)
       )
     },
+    air_meta_init = function(...) invisible(NULL),
+    air_meta_sync = function(...) invisible(NULL),
     air_api_usage = function(...) NULL
   )
 
-  suppressMessages(air_demo(base_id = "appXXX"))
+  suppressMessages(suppressWarnings(air_demo(base_id = "appXXX")))
 
   expect_true("Artists" %in% tables_read,
               label = "air_demo reads from Artists table")

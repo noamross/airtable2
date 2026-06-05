@@ -16,13 +16,13 @@ at_upload_attachment(
 \arguments{
 \item{base_id}{Base ID.}
 
-\item{table_id}{Table ID or name.}
+\item{table_id}{Table ID or name containing the record.}
 
 \item{record_id}{Record ID.}
 
 \item{field_id}{Field ID or name.}
 
-\item{file}{Path to the file to upload.}
+\item{file}{Path to the file to upload (max 5 MB).}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 }

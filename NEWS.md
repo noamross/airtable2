@@ -2,6 +2,18 @@
 
 Initial development release — complete rewrite of `airtabler` using modern R packages.
 
+## DBI improvements (Stage 8A)
+
+* Added `dbGetRowsAffected()` for `AirtableResult` — returns `NA_integer_`
+  (read-only results satisfy the DBI contract).
+* Added `dbFetch()` dispatch for missing `n` so `dbFetch(res)` works without
+  specifying `n`.
+* Extended DBI test coverage: `dbGetInfo`, `dbWriteTable` modes, `dbExistsTable`
+  FALSE case, `dbListFields` error path, `dbi_parse_statement` edge cases,
+  multi-base `dbListTables`, `dbSendQuery` formula forwarding.
+* Added `tests/testthat/test-dbitest.R` as DBItest conformance placeholder.
+* Added DBI vignette `vignettes/dbi.Rmd` (Stage 8C).
+
 ## Breaking changes
 
 * Normalized function signatures so the piped/main object comes first and the
@@ -19,6 +31,12 @@ Initial development release — complete rewrite of `airtabler` using modern R p
 
 ## Bug fixes
 
+* Attachment uploads now work. `at_upload_attachment()` (and the
+  `air_write_attachments()` / `air_sync_attachments()` / `air_demo()` paths that
+  call it) previously POSTed to `api.airtable.com` and always got a 404, because
+  Airtable serves the `uploadAttachment` endpoint from a separate host. Uploads
+  now go to `content.airtable.com`. `air_req()` gained a `host` argument to
+  select the host.
 * API errors are now informative: `air_perform()` surfaces Airtable's error
   `type` and `message` plus actionable hints (e.g. a wrong table name / missing
   permission, an unknown field name, or an invalid `filterByFormula`). This also
@@ -92,3 +110,7 @@ Initial development release — complete rewrite of `airtabler` using modern R p
 * `air_meta_init()` seeds a `_metadata` table in a base from a schema data
   frame or an existing schema object, creating the table and populating it in
   one call
+* Added `vignette("dbi", package = "airtable2")` — "Using airtable2 with DBI":
+  covers connecting via `air_connect()` / `DBI::dbConnect()`, exploring
+  connections, reading (full table and formula-filtered queries), writing
+  (append and overwrite/sync), multi-base mode, and DBI limitations

@@ -57,22 +57,16 @@ print.air_api_usage <- function(x, ...) {
   ws <- if (identical(x$workspace_id, "unknown")) {
     "unknown workspace"
   } else {
-    cli::style_hyperlink(
-      x$workspace_id,
-      paste0("https://airtable.com/", x$workspace_id)
-    )
+    x$workspace_id
   }
   cli::cli_text("Airtable API usage for {.val {ws}}")
   cli::cli_text("{n} API call{?s} since start of month ({x$since})")
   if (!is.null(x$last) && !is.na(x$last)) {
     cli::cli_text("Most recent call: {x$last}")
   }
-  cli::cli_text("Free/team plan ceiling: ~{limit} calls per workspace per month")
-  if (n >= limit) {
-    cli::cli_alert_danger("Monthly limit likely reached.")
-  } else if (n >= 0.8 * limit) {
-    cli::cli_alert_warning("Approaching the monthly limit.")
-  }
+  cli::cli_text(
+    "Free plan ceiling: ~{limit} calls per workspace per month. 100,000 for team plan."
+  )
   invisible(x)
 }
 

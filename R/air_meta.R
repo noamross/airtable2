@@ -45,52 +45,63 @@ air_meta <- function(base_id, .token = NULL) {
 #' Push metadata changes back to the base
 #'
 #' Compares a modified metadata tibble (from [air_meta()]) against the current
-#' schema and applies name/description changes via PATCH.
+#' schema and applies name/description changes via PATCH. Changes to
+#' `table_name` rename the table; changes to `field_name` or `description`
+#' rename or re-describe the field.
 #'
 #' @inheritParams air_read
-#' @param meta A tibble from [air_meta()] with modifications to `field_name`
-#'   or `description`.
-#' @return Invisible `NULL`. Side effect: updates field names/descriptions.
+#' @param meta A tibble from [air_meta()] with modifications to `table_name`,
+#'   `field_name`, or `description`.
+#' @return Invisible `NULL`. Side effect: updates table and field metadata.
 #' @export
 air_meta_push <- function(base_id, meta, .token = NULL) {
   check_string(base_id)
 
-  # Get current schema for comparison
   current <- air_meta(base_id, .token = .token)
-
   n_changes <- 0L
 
-  for (i in seq_len(nrow(meta))) {
-    field_id <- meta$field_id[i]
-    table_id <- meta$table_id[i]
-
-    # Find matching row in current
-    cur_row <- current[current$field_id == field_id, ]
-    if (nrow(cur_row) == 0L) {
-      next
-    }
-
-    new_name <- if (!identical(meta$field_name[i], cur_row$field_name[1])) {
-      meta$field_name[i]
-    }
-    new_desc <- if (!identical(meta$description[i], cur_row$description[1])) {
-      meta$description[i]
-    }
-
-    if (!is.null(new_name) || !is.null(new_desc)) {
-      at_update_field(
-        base_id = base_id,
-        table_id = table_id,
-        field_id = field_id,
-        name = new_name,
-        description = new_desc,
-        token = .token
+  # --- Rename tables ---------------------------------------------------------
+  meta_tables <- unique(meta[!is.na(meta$table_id), c("table_id", "table_name")])
+  for (j in seq_len(nrow(meta_tables))) {
+    tid       <- meta_tables$table_id[[j]]
+    new_tname <- meta_tables$table_name[[j]]
+    cur_rows  <- current[current$table_id == tid, ]
+    if (nrow(cur_rows) == 0L || is.na(new_tname)) next
+    if (!identical(new_tname, cur_rows$table_name[[1L]])) {
+      tryCatch(
+        at_update_table(base_id, table_id = tid, name = new_tname, token = .token),
+        error = function(e) cli_warn(
+          "Could not rename table {.val {cur_rows$table_name[[1L]]}}: {conditionMessage(e)}"
+        )
       )
       n_changes <- n_changes + 1L
     }
   }
 
-  cli_inform("Pushed {n_changes} field change{?s}.")
+  # --- Rename / redescribe fields --------------------------------------------
+  for (i in seq_len(nrow(meta))) {
+    field_id <- meta$field_id[i]
+    table_id <- meta$table_id[i]
+    cur_row  <- current[current$field_id == field_id, ]
+    if (nrow(cur_row) == 0L) next
+
+    new_name <- if (!identical(meta$field_name[i], cur_row$field_name[1L])) meta$field_name[i]
+    new_desc <- if (!identical(meta$description[i], cur_row$description[1L])) meta$description[i]
+
+    if (!is.null(new_name) || !is.null(new_desc)) {
+      at_update_field(
+        base_id     = base_id,
+        table_id    = table_id,
+        field_id    = field_id,
+        name        = new_name,
+        description = new_desc,
+        token       = .token
+      )
+      n_changes <- n_changes + 1L
+    }
+  }
+
+  cli_inform("Pushed {n_changes} change{?s}.")
   invisible(NULL)
 }
 
@@ -185,19 +196,38 @@ air_meta_init <- function(base_id, meta_table = "_metadata", .token = NULL) {
   check_string(base_id)
   check_string(meta_table)
 
-  meta <- air_meta(base_id, .token = .token)
+  # Create the table with all needed fields if it doesn't exist.
+  # Creating all fields upfront avoids a write-after-create race where
+  # Airtable hasn't propagated new fields before the first upsert hits them.
+  existing <- at_get_schema(base_id, token = .token)
+  table_exists <- any(vapply(existing, function(t) t$name == meta_table, logical(1)))
+  if (!table_exists) {
+    cli_inform("Creating {.val {meta_table}} table...")
+    tf <- function(nm) list(name = nm, type = "singleLineText")
+    at_create_table(
+      name    = meta_table,
+      fields  = list(
+        tf("meta_key"), tf("table_name"), tf("table_id"),
+        tf("field_name"), tf("field_id"), tf("field_type"), tf("description")
+      ),
+      base_id = base_id,
+      token   = .token
+    )
+  }
 
-  # Use table_name + field_name as the merge key (composite via concat)
+  # Exclude the metadata table itself to avoid circular self-description
+  meta <- air_meta(base_id, .token = .token)
+  meta <- meta[meta$table_name != meta_table, ]
   meta$meta_key <- paste(meta$table_name, meta$field_name, sep = "||")
 
   air_upsert(
-    data = meta,
-    base_id = base_id,
-    table = meta_table,
-    merge_on = "meta_key",
-    typecast = TRUE,
-    add_fields = "yes",
-    .token = .token
+    data       = meta,
+    base_id    = base_id,
+    table      = meta_table,
+    merge_on   = "meta_key",
+    typecast   = TRUE,
+    add_fields = if (table_exists) "yes" else "warn",
+    .token     = .token
   )
 }
 

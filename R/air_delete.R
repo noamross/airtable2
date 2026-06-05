@@ -15,6 +15,7 @@ air_delete <- function(record_ids, table, base_id = NULL, .token = NULL,
   check_string(table)
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
+  progress <- resolve_progress(progress)
 
   if (length(record_ids) == 0L) {
     cli_inform("No records to delete.")

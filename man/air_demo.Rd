@@ -23,24 +23,36 @@ air_demo(
 Invisibly returns a list of results from each step.
 }
 \description{
-Runs through the canonical airtable2 operations against a BollardsForArt
-demo base, printing results at each step. If no \code{base_id} is provided and
-none is set as the session default, calls \code{\link[=air_demo_setup]{air_demo_setup()}} first.
+Runs through canonical airtable2 operations against a BollardsForArt demo
+base, pausing at each step so you can watch changes appear in the browser.
+If no \code{base_id} is provided and none is set as the session default, calls
+\code{\link[=air_demo_setup]{air_demo_setup()}} first.
 }
 \details{
-The BollardsForArt walkthrough covers:
+Open the Airtable base in a browser alongside the console. The walkthrough
+pauses with \verb{<Enter>} prompts whenever you need to switch to a different
+table, and sleeps two seconds between steps so changes can appear.
+
+Steps covered:
 \enumerate{
-\item Read all records from the Artists table
-\item Write a new artist record
-\item Upsert (update or insert by Name)
-\item Sync (diff-based create/update/delete)
-\item Left-join local data with the Airtable table
-\item View the base schema (including field descriptions)
+\item Read all Artists with a progress bar
+\item Write one new artist; read back showing \code{airtable_created_time}
+\item Bulk-upsert 30 artists with a progress bar
+\item Sync back to the original 15 with a progress bar (watch deletions)
+\item Upsert a new \verb{Engagement Score} column into Artists from R
+\item Upload an image attachment to a Project record
+\item Link artists to projects via \code{multipleRecordLinks}
+\item Left-join Airtable columns into a local R tibble
+\item View the base schema
+\item Seed a \verb{_metadata} table with \code{\link[=air_meta_init]{air_meta_init()}}, edit table/column names
+as rows in Airtable, then apply with \code{\link[=air_meta_sync]{air_meta_sync()}}
+\item Connect via the DBI interface: \code{\link[DBI:dbConnect]{DBI::dbConnect()}}, \code{\link[DBI:dbListTables]{DBI::dbListTables()}},
+\code{\link[DBI:dbReadTable]{DBI::dbReadTable()}}, \code{\link[DBI:dbWriteTable]{DBI::dbWriteTable()}}
 \item View API usage
 }
 
-All operations are idempotent: upsert and sync operate by key (\code{Name}) so
-running the demo multiple times will not accumulate duplicate records.
+All operations keyed on \code{Name} are idempotent; re-running will not
+accumulate duplicate records.
 }
 \examples{
 \dontrun{

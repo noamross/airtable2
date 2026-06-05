@@ -6,6 +6,7 @@
 \usage{
 air_connect(
   base = NULL,
+  bases = NULL,
   .token = NULL,
   include_views = FALSE,
   .connect_code = NULL
@@ -14,6 +15,10 @@ air_connect(
 \arguments{
 \item{base}{Character. A Base ID (starts with \code{app}) or a Base Name. If
 \code{NULL}, connects to all accessible bases.}
+
+\item{bases}{Character vector of Base IDs or names. When supplied, the
+connection pane shows only those bases (as schemas). Cannot be combined
+with \code{base}.}
 
 \item{.token}{Character. Airtable Personal Access Token (resolved via
 \code{\link[=air_token]{air_token()}} if \code{NULL}).}
@@ -32,7 +37,8 @@ An \link[=AirtableConnection-class]{AirtableConnection} object.
 A convenience wrapper around \code{\link[DBI:dbConnect]{DBI::dbConnect()}} using the \code{\link[=airtable2]{airtable2()}}
 driver. When \code{base} is specified, the connection shows that base's tables
 directly. When \code{base} is omitted, all accessible bases are shown as schemas
-in the connection pane.
+in the connection pane. Use \code{bases} to restrict the pane to a specific
+subset of bases.
 }
 \examples{
 \dontrun{
@@ -41,5 +47,8 @@ con <- air_connect(base = "Project Tracker")
 
 # Connect to all accessible bases
 con <- air_connect()
+
+# Show only selected bases in the pane
+con <- air_connect(bases = c("appXXXXXX", "appYYYYYY"))
 }
 }

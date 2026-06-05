@@ -35,15 +35,20 @@ air_token <- function(token = NULL) {
 #'
 #' Constructs a base request with auth, user-agent, retry policy, and throttle.
 #'
-#' @param endpoint Path appended to `https://api.airtable.com/v0`
+#' @param endpoint Path appended to the host root
 #'   (e.g., `"meta/bases"` or `"appXXX/TableName"`).
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
+#' @param host Which Airtable host to target: `"api"` (the default REST API at
+#'   `https://api.airtable.com/v0`) or `"content"` (the attachment-upload host
+#'   at `https://content.airtable.com/v0`).
 #' @return An `httr2_request` object ready for further modification.
 #' @export
-air_req <- function(endpoint, token = NULL) {
+air_req <- function(endpoint, token = NULL, host = c("api", "content")) {
+  host <- match.arg(host)
   token <- air_token(token)
+  root <- if (host == "content") content_url() else base_url()
 
-  httr2::request(base_url()) |>
+  httr2::request(root) |>
     httr2::req_url_path_append(endpoint) |>
     httr2::req_auth_bearer_token(token) |>
     httr2::req_user_agent(paste0(
@@ -111,7 +116,8 @@ resolve_progress <- function(progress) {
   if (!is.null(progress)) return(isTRUE(progress))
   opt <- getOption("airtable2.progress.bar", NULL)
   if (!is.null(opt)) return(isTRUE(opt))
-  env <- Sys.getenv("AIRTABLE2_PROGRESS_BAR", unset = "false")
+  env <- Sys.getenv("AIRTABLE2_PROGRESS_BAR", unset = "")
+  if (!nzchar(env)) return(FALSE)
   !tolower(trimws(env)) %in% c("false", "0", "no", "off")
 }
 
@@ -145,13 +151,12 @@ air_paginate <- function(
   remaining <- max_records
   total_fetched <- 0L
 
-  # Set up progress bar if requested
   pb <- NULL
   if (progress && !is.null(page_size) && max_records == Inf) {
     pb <- cli::cli_progress_bar(
+      name  = "Fetching records",
       total = NA,
-      clear = FALSE,
-      display = "Fetching records..."
+      clear = FALSE
     )
   }
 
@@ -178,11 +183,11 @@ air_paginate <- function(
     total_fetched <- total_fetched + length(records)
     remaining <- remaining - length(records)
 
-    # Update progress bar
     if (!is.null(pb)) {
-      pb$set(
-        total_fetched,
-        message = paste("Fetched", total_fetched, "records")
+      cli::cli_progress_update(
+        id     = pb,
+        set    = total_fetched,
+        status = paste0(total_fetched, " records")
       )
     }
 
@@ -190,13 +195,8 @@ air_paginate <- function(
     if (is.null(offset) || remaining <= 0) break
   }
 
-  # Clear progress bar
   if (!is.null(pb)) {
-    pb$set(
-      total_fetched,
-      done = TRUE,
-      message = paste("Fetched", total_fetched, "records")
-    )
+    cli::cli_progress_done(id = pb)
   }
 
   collected

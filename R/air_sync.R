@@ -62,6 +62,7 @@ air_sync <- function(
   check_bool(delete_missing)
   check_bool(typecast)
   attachments <- match.arg(attachments)
+  progress <- resolve_progress(progress)
 
   if (!key %in% names(data)) {
     cli_abort("Key column {.field {key}} not found in {.arg data}.")
@@ -89,6 +90,7 @@ air_sync <- function(
   }
 
   # 1. Read existing records (without type coercion for consistent hashing)
+  if (progress) cli_inform("Reading {.field {table}}...")
   existing <- air_read(table, base_id, coerce = FALSE, .token = .token, progress = progress)
 
   # 2. Compute keys and hashes
@@ -116,6 +118,13 @@ air_sync <- function(
   n_unchanged <- length(shared_new_idx) - length(to_update_idx)
 
   to_delete_keys <- setdiff(existing_keys, new_keys)
+
+  if (progress) {
+    cli_inform(paste0(
+      "Diff: {length(to_create_idx)} to create, {length(to_update_idx)} to update, ",
+      "{length(to_delete_keys)} to delete, {n_unchanged} unchanged."
+    ))
+  }
 
   # 5. Perform operations
   n_created <- 0L
@@ -176,7 +185,7 @@ air_sync <- function(
   if (delete_missing && length(to_delete_keys) > 0L) {
     delete_ids <- existing$airtable_id[existing_keys %in% to_delete_keys]
     if (length(delete_ids) > 0L) {
-      at_delete_records(base_id, table, delete_ids, token = .token)
+      at_delete_records(base_id, table, delete_ids, token = .token, progress = progress)
       n_deleted <- length(delete_ids)
     }
   }

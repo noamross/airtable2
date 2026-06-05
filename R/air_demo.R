@@ -19,6 +19,8 @@
 #'   (15+ rows with diverse international artists)
 #' - **Projects** table: text, number, date, single-select, attachments,
 #'   linked records to Artists (15+ rows with imaginative installation names)
+#' - **Supporters** table: text, email, date — starts empty; [air_demo()] step 3
+#'   bulk-writes 120 records to demonstrate the progress bar over 12 batches
 #' - **Grants** table: text, number, date, single-select, linked records to
 #'   Projects (15+ rows of funding sources and applications)
 #'
@@ -136,6 +138,15 @@ air_demo_setup <- function(
     list(name = "Files",        type = "multipleAttachments")
   )
 
+  # --- Build Supporters table config (created with the base) ---------------
+  supporters_fields <- list(
+    list(name = "Name",   type = "singleLineText"),
+    list(name = "Email",  type = "email"),
+    list(name = "Joined", type = "date",
+         options = list(dateFormat = list(name = "iso"))),
+    list(name = "City",   type = "singleLineText")
+  )
+
   # --- Build Grants table config (created with the base) --------------------
   grants_fields <- list(
     list(name = "Grant Name",   type = "singleLineText"),
@@ -165,13 +176,29 @@ air_demo_setup <- function(
     name = name,
     workspace_id = workspace_id,
     tables = list(
-      list(name = "Artists",  fields = artists_fields),
-      list(name = "Projects", fields = projects_fields),
-      list(name = "Grants",   fields = grants_fields)
+      list(name = "Artists",    fields = artists_fields),
+      list(name = "Projects",   fields = projects_fields),
+      list(name = "Supporters", fields = supporters_fields),
+      list(name = "Grants",     fields = grants_fields)
     ),
     token = .token
   )
   base_id <- new_base$id
+
+  # --- Invite user to open base in browser -----------------------------------
+  base_url <- paste0("https://airtable.com/", base_id)
+  cli::cli_inform(
+    c(
+      "i" = "Base created: {.url {base_url}}",
+      "i" = paste0(
+        "Open that URL in your browser and arrange the browser and this ",
+        "console side by side to watch the setup proceed."
+      )
+    )
+  )
+  if (interactive()) {
+    readline(prompt = "  Press <Enter> to continue setup... ")
+  }
 
   # --- Identify created tables -----------------------------------------------
   created_tables <- new_base$tables %||% list()
@@ -190,10 +217,7 @@ air_demo_setup <- function(
         table_id = projects_tbl$id,
         type     = "multipleRecordLinks",
         base_id  = base_id,
-        options  = list(
-          linkedTableId = artists_tbl$id,
-          isReversed    = FALSE
-        ),
+        options  = list(linkedTableId = artists_tbl$id),
         token = .token
       ),
       error = function(e) {
@@ -215,10 +239,7 @@ air_demo_setup <- function(
         table_id = grants_tbl$id,
         type     = "multipleRecordLinks",
         base_id  = base_id,
-        options  = list(
-          linkedTableId = projects_tbl$id,
-          isReversed    = FALSE
-        ),
+        options  = list(linkedTableId = projects_tbl$id),
         token = .token
       ),
       error = function(e) {
@@ -478,6 +499,7 @@ air_demo_setup <- function(
       "v" = "Demo base created: {.val {name}} ({.val {base_id}})",
       "*" = "Artists: {nrow(artists_data)} records",
       "*" = "Projects: {nrow(projects_data)} records (with image attachments)",
+      "*" = "Supporters: (empty — filled by {.fn air_demo} step 3)",
       "*" = "Grants: {nrow(grants_data)} records",
       "i" = "Set as default with {.run air_set_base(\"{base_id}\")}",
       "i" = "Open in browser: {.url {base_url}}",
@@ -495,9 +517,10 @@ air_demo_setup <- function(
 
 #' Run an interactive airtable2 demo walkthrough
 #'
-#' Runs through the canonical airtable2 operations against a BollardsForArt
-#' demo base, printing results at each step. If no `base_id` is provided and
-#' none is set as the session default, calls [air_demo_setup()] first.
+#' Runs through canonical airtable2 operations against a BollardsForArt demo
+#' base, pausing at each step so you can watch changes appear in the browser.
+#' If no `base_id` is provided and none is set as the session default, calls
+#' [air_demo_setup()] first.
 #'
 #' @param base_id Base ID to use. If `NULL`, checks the session default
 #'   ([air_set_base()]) and `AIRTABLE_BASE_ID` env var; calls
@@ -506,17 +529,30 @@ air_demo_setup <- function(
 #' @param .token API token (see [air_set_token()]).
 #'
 #' @details
-#' The BollardsForArt walkthrough covers:
-#' 1. Read all records from the Artists table
-#' 2. Write a new artist record
-#' 3. Upsert (update or insert by Name)
-#' 4. Sync (diff-based create/update/delete)
-#' 5. Left-join local data with the Airtable table
-#' 6. View the base schema (including field descriptions)
-#' 7. View API usage
+#' Open the Airtable base in a browser alongside the console. The walkthrough
+#' pauses with `<Enter>` prompts whenever you need to switch to a different
+#' table, and sleeps two seconds between steps so changes can appear.
 #'
-#' All operations are idempotent: upsert and sync operate by key (`Name`) so
-#' running the demo multiple times will not accumulate duplicate records.
+#' Steps covered:
+#' 1. Read all Artists with a progress bar
+#' 2. Write one new artist; read back showing `airtable_created_time`
+#' 3. Write 120 community supporters in 12 batches — progress bar is clearly
+#'    visible; read back over 2 pages to demonstrate read pagination
+#' 4. Bulk-upsert 30 artists with a progress bar
+#' 5. Sync back to the original 15 with a progress bar (watch deletions)
+#' 6. Upsert a new `Engagement Score` column into Artists from R
+#' 7. Upload an image attachment to a Project record
+#' 8. Link artists to projects via `multipleRecordLinks`
+#' 9. Left-join Airtable columns into a local R tibble
+#' 10. View the base schema
+#' 11. Seed a `_metadata` table with [air_meta_init()], edit table/column names
+#'     as rows in Airtable, then apply with [air_meta_sync()]
+#' 12. Connect via the DBI interface: [DBI::dbConnect()], [DBI::dbListTables()],
+#'     [DBI::dbReadTable()], [DBI::dbWriteTable()]
+#' 13. View API usage
+#'
+#' All operations keyed on `Name` are idempotent; re-running will not
+#' accumulate duplicate records.
 #'
 #' @return Invisibly returns a list of results from each step.
 #' @export
@@ -537,137 +573,511 @@ air_demo <- function(
 ) {
   # --- Resolve base_id -------------------------------------------------------
   if (is.null(base_id)) {
-    base_id <- tryCatch(
-      resolve_base_id(NULL),
-      error = function(e) NULL
-    )
+    base_id <- tryCatch(resolve_base_id(NULL), error = function(e) NULL)
   }
 
+  setup_called <- FALSE
   if (is.null(base_id) || !nzchar(base_id)) {
-    cli::cli_inform(
-      c(
-        "i" = "No base set. Creating a BollardsForArt demo base via {.fn air_demo_setup}.",
-        "i" = "This requires {.envvar AIRTABLE_WORKSPACE_ID}."
-      )
-    )
+    cli::cli_inform(c(
+      "i" = "No base set. Creating a BollardsForArt demo base via {.fn air_demo_setup}.",
+      "i" = "This requires {.envvar AIRTABLE_WORKSPACE_ID}."
+    ))
     base_id <- air_demo_setup(workspace_id = workspace_id, .token = .token)
+    setup_called <- TRUE
   }
+
+  # --- Invite user to open the base in the browser --------------------------
+  base_url <- paste0("https://airtable.com/", base_id)
+  if (!setup_called) {
+    cli::cli_inform(c(
+      "i" = "Demo base: {.url {base_url}}",
+      "i" = paste0(
+        "Open that URL in your browser and arrange the browser and this ",
+        "console side by side so you can watch changes happen in real time."
+      ),
+      "i" = "Navigate to the {.strong Artists} table to start."
+    ))
+  } else {
+    cli::cli_inform("Navigate to the {.strong Artists} table to start.")
+  }
+  .demo_wait("  Press <Enter> to begin the demo... ")
 
   results <- list()
 
-  # ---- Step 1: Read ----------------------------------------------------------
-  cli::cli_h1("Step 1: Read all records from Artists")
-  artists <- air_read("Artists", base_id, .token = .token)
-  cli::cli_inform("Read {nrow(artists)} artist record{?s}.")
-  print(artists)
+  # ---- Step 1: Read with progress bar --------------------------------------
+  cli::cli_h1("Step 1: Read all Artists (with progress bar)")
+  .demo_code('air_read("Artists", base_id, progress = TRUE)')
+  .demo_sleep()
+  artists <- air_read("Artists", base_id, progress = TRUE, .token = .token)
+  .demo_print(artists, c("Name", "Role", "Active", "Member Since"))
   results$read <- artists
 
-  # ---- Step 2: Write a new record -------------------------------------------
-  cli::cli_h1("Step 2: Write a new artist record")
-  new_artist <- tibble::tibble(
-    Name           = "Demo Artist",
-    Age            = 30L,
-    Active         = TRUE,
-    Role           = "Community Arts Agitator",
-    Disciplines    = list(c("Community", "Street Art")),
-    `Member Since` = Sys.Date(),
-    Email          = "demo@bollardsforart.org"
-  )
-  cli::cli_inform("Writing: {.val {new_artist$Name}}")
-  new_ids <- air_write(new_artist, "Artists", base_id,
-                       typecast = TRUE, add_fields = "warn", .token = .token)
-  results$write <- new_ids
-
-  # ---- Step 3: Upsert -------------------------------------------------------
-  cli::cli_h1("Step 3: Upsert (update or insert by Name)")
-  upsert_data <- tibble::tibble(
-    Name        = c("Demo Artist", "New Collaborator"),
-    Age         = c(31L, 26L),
-    Active      = c(TRUE, TRUE),
-    Role        = c("Community Arts Agitator", "Guerilla Muralist"),
-    Disciplines = list(c("Community", "Street Art"), "Mural"),
-    `Member Since` = list(Sys.Date(), Sys.Date()),
-    Email       = c("demo@bollardsforart.org", "new@bollardsforart.org")
-  )
+  # ---- Step 2: Write one new artist ----------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 2: Write one new artist")
   cli::cli_inform(
-    "Upserting {nrow(upsert_data)} records (merge on {.field Name})..."
+    "Watch {.strong Artists} — {.val Demo Artist} will appear with today's created time."
   )
-  upsert_result <- air_upsert(
-    upsert_data, "Artists",
+  .demo_code('air_write(new_artist, "Artists", base_id, typecast = TRUE)')
+  .demo_wait()
+  air_write(
+    tibble::tibble(
+      Name          = "Demo Artist",
+      Role          = "Community Arts Agitator",
+      Active        = TRUE,
+      `Member Since` = Sys.Date()
+    ),
+    "Artists", base_id, typecast = TRUE, .token = .token
+  )
+  .demo_sleep()
+  after_write <- air_read("Artists", base_id, .token = .token)
+  .demo_print(after_write, c("Name", "Role", "airtable_created_time"))
+  results$write <- after_write
+
+  # ---- Step 3: Write 120 supporters (progress bar over many batches) ------
+  .demo_sleep()
+  cli::cli_h1("Step 3: Write 120 community supporters (with progress bar)")
+  cli::cli_inform(c(
+    "i" = "Switch to the {.strong Supporters} table.",
+    "i" = paste0(
+      "Watch the table and the console — 120 records will be written ",
+      "in 12 batches of 10, making the progress bar clearly visible."
+    )
+  ))
+  .demo_code('air_write(.demo_supporters(), "Supporters", base_id, progress = TRUE)')
+  .demo_wait("  Press <Enter> (switching to Supporters table)... ")
+  supporter_ids <- tryCatch(
+    air_write(
+      .demo_supporters(), "Supporters", base_id,
+      typecast = TRUE, progress = TRUE, .token = .token
+    ),
+    error = function(e) {
+      cli::cli_warn("Could not write supporters: {conditionMessage(e)}")
+      character()
+    }
+  )
+  if (length(supporter_ids) > 0L) {
+    .demo_sleep()
+    cli::cli_inform(
+      "Reading back all 120 supporters across 2 pages of 100 (watch the progress bar)..."
+    )
+    .demo_code('air_read("Supporters", base_id, progress = TRUE)')
+    supporters <- air_read("Supporters", base_id, progress = TRUE, .token = .token)
+    .demo_print(supporters, c("Name", "City", "Joined"))
+    results$supporters <- supporters
+  }
+
+  # ---- Step 4: Bulk upsert 30 artists with progress bar -------------------
+  .demo_sleep()
+  cli::cli_h1("Step 4: Bulk-upsert 30 artists (with progress bar)")
+  cli::cli_inform(
+    "Watch {.strong Artists} — 15 rows update, ~15 new rows appear."
+  )
+  .demo_code('air_upsert(artists_30, "Artists", merge_on = "Name", progress = TRUE)')
+  .demo_wait()
+  results$upsert <- air_upsert(
+    .demo_artists(), "Artists",
     merge_on = "Name", base_id = base_id,
-    typecast = TRUE, add_fields = "warn", .token = .token
+    typecast = TRUE, progress = TRUE, .token = .token
   )
-  results$upsert <- upsert_result
+  .demo_sleep()
+  after_upsert <- air_read("Artists", base_id, .token = .token)
+  .demo_print(after_upsert, c("Name", "Role", "airtable_created_time"))
 
-  # ---- Step 4: Sync ---------------------------------------------------------
-  cli::cli_h1("Step 4: Sync (diff-based)")
-  # Remove demo records to show sync deletes them.
-  current <- air_read("Artists", base_id, .token = .token)
-  sync_data <- current[
-    !current$Name %in% c("Demo Artist", "New Collaborator"),
-    setdiff(names(current), c("airtable_id", "airtable_created_time")),
-    drop = FALSE
-  ]
+  # ---- Step 5: Sync back to original 15 with progress bar -----------------
+  .demo_sleep()
+  cli::cli_h1("Step 5: Sync back to original 15 (with progress bar)")
   cli::cli_inform(
-    "Syncing {nrow(sync_data)} records (will delete demo rows added above)..."
+    "Watch {.strong Artists} — the extra rows will be deleted."
   )
-  sync_result <- air_sync(
-    sync_data, "Artists",
+  .demo_code('air_sync(original_artists, "Artists", key = "Name", progress = TRUE)')
+  .demo_wait()
+  orig <- artists[setdiff(names(artists), c("airtable_id", "airtable_created_time"))]
+  results$sync <- air_sync(
+    orig, "Artists",
     key = "Name", base_id = base_id,
-    typecast = TRUE, add_fields = "warn", .token = .token
+    typecast = TRUE, progress = TRUE, .token = .token
   )
-  results$sync <- sync_result
 
-  # ---- Step 5: Join ---------------------------------------------------------
-  cli::cli_h1("Step 5: Left-join local data with Artists table")
-  local_scores <- tibble::tibble(
-    Name  = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park"),
-    Score = c(98L, 85L, 92L)
-  )
+  # ---- Step 6: Upsert a new column from R ----------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 6: Push a new column from R into Airtable")
   cli::cli_inform(
-    "Joining local scores with Artists table on {.field Name}..."
+    "Watch {.strong Artists} — an {.field Engagement Score} column will appear."
   )
-  joined <- air_left_join(local_scores, "Artists", base_id,
-                          by = "Name", .token = .token)
-  show_cols <- intersect(c("Name", "Score", "Role", "Active"), names(joined))
-  print(joined[show_cols])
+  .demo_code('air_upsert(scores, "Artists", merge_on = "Name", add_fields = "yes")')
+  .demo_wait()
+  air_upsert(
+    .demo_scores(), "Artists",
+    merge_on = "Name", base_id = base_id,
+    add_fields = "yes", typecast = TRUE, .token = .token
+  )
+  .demo_sleep()
+  after_score <- air_read("Artists", base_id, .token = .token)
+  .demo_print(after_score, c("Name", "Engagement Score", "airtable_created_time"))
+
+  # ---- Step 7: Attachments — read existing, then add one via URL -----------
+  .demo_sleep()
+  cli::cli_h1("Step 7: Attachments")
+  cli::cli_inform(c(
+    "i" = "Switch to the {.strong Projects} table.",
+    "i" = paste0(
+      "Watch the {.field Files} column — a second image will be added ",
+      "to the first project via {.fn air_upsert}."
+    )
+  ))
+  .demo_wait("  Press <Enter> (switching to Projects table)... ")
+  .demo_code('projects <- air_read("Projects", base_id)')
+  projects <- air_read("Projects", base_id, .token = .token)
+  .demo_print(projects, c("Project Name", "Files", "airtable_created_time"))
+
+  if (nrow(projects) > 0L) {
+    first_proj  <- projects$`Project Name`[[1L]]
+    new_img_url <- "https://picsum.photos/seed/demo-attach2/640/480"
+    .demo_code(
+      'air_upsert(\n  tibble(Project Name = first_proj, Files = list(list(url = new_img_url))),\n  "Projects", merge_on = "Project Name"\n)'
+    )
+    cli::cli_inform(
+      "Adding second image to {.val {first_proj}} via URL attachment..."
+    )
+    tryCatch(
+      air_upsert(
+        tibble::tibble(
+          `Project Name` = first_proj,
+          Files          = list(list(list(url = new_img_url)))
+        ),
+        "Projects", base_id,
+        merge_on = "Project Name", typecast = TRUE, .token = .token
+      ),
+      error = function(e) cli::cli_warn("Could not add attachment: {conditionMessage(e)}")
+    )
+    .demo_sleep()
+    after_att <- air_read("Projects", base_id, .token = .token)
+    if (!is.null(first_proj) && "Project Name" %in% names(after_att)) {
+      row1 <- after_att[after_att$`Project Name` == first_proj, ]
+      n_att <- length(row1$Files[[1L]])
+      cli::cli_inform(
+        "{.val {first_proj}} now has {n_att} attachment{?s} — check the {.field Files} column in the browser."
+      )
+    }
+  }
+  results$projects <- projects
+
+  # ---- Step 8: Link artists to projects ------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 8: Link artists to projects")
+  cli::cli_inform(
+    "Watch {.strong Projects} — {.field Lead Artist} cells will populate."
+  )
+  .demo_code('air_upsert(link_data, "Projects", merge_on = "Project Name")')
+  .demo_wait()
+  artists_now <- air_read("Artists", base_id, .token = .token)
+  n_link <- min(5L, nrow(artists_now), nrow(projects))
+  link_data <- tibble::tibble(
+    `Project Name` = projects$`Project Name`[seq_len(n_link)],
+    `Lead Artist`  = lapply(
+      artists_now$airtable_id[seq_len(n_link)],
+      function(id) new_air_links(list(id))
+    )
+  )
+  results$links <- air_upsert(
+    link_data, "Projects",
+    merge_on = "Project Name", base_id = base_id,
+    typecast = TRUE, .token = .token
+  )
+  .demo_sleep()
+  linked <- air_read("Projects", base_id, .token = .token)
+  .demo_print(linked, c("Project Name", "Lead Artist", "airtable_created_time"))
+
+  # ---- Step 9: Left-join Airtable data into a local R tibble --------------
+  .demo_sleep()
+  cli::cli_h1("Step 9: Left-join local data with Artists")
+  cli::cli_inform(
+    "Joining local workshop hours with Artists — Role and Active pulled from Airtable."
+  )
+  .demo_code('air_left_join(local_hours, "Artists", base_id, by = "Name")')
+  local_hours <- tibble::tibble(
+    Name            = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park",
+                        "Fatima El-Rashid", "Carlos Mendes", "Ingrid Holmås"),
+    `Workshop Hours` = c(12L, 8L, 15L, 10L, 6L, 14L)
+  )
+  joined <- air_left_join(local_hours, "Artists", base_id, by = "Name", .token = .token)
+  .demo_print(joined, c("Name", "Workshop Hours", "Role", "Active"))
   results$join <- joined
 
-  # ---- Step 6: Schema -------------------------------------------------------
-  cli::cli_h1("Step 6: View base schema (with field descriptions)")
-  schema <- air_schema(base_id, .token = .token)
-  cli::cli_inform("Tables: {.val {schema$table_name}}")
-  print(schema)
+  # ---- Step 10: Schema -------------------------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 10: Field metadata")
+  .demo_code("air_meta(base_id)")
+  schema <- air_meta(base_id, .token = .token)
+  .demo_print(schema, c("table_name", "field_name", "field_type"))
   results$schema <- schema
 
-  # ---- Step 7: API usage ----------------------------------------------------
-  cli::cli_h1("Step 7: API usage")
+  # ---- Step 11: air_meta_init + air_meta_sync ---------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 11: Seed and sync field metadata")
+  cli::cli_inform(c(
+    "i" = paste0(
+      "Watch the base navigation — a new {.strong _metadata} table is about ",
+      "to appear, seeded from the live schema."
+    )
+  ))
+  .demo_code("air_meta_init(base_id)")
+  .demo_wait("  Press <Enter> to create and seed _metadata... ")
+  air_meta_init(base_id, .token = .token)
+
+  cli::cli_inform(c(
+    "i" = "Switch to the {.strong _metadata} table — every field in the base",
+    "i" = "is now a row you can edit directly in Airtable.",
+    "i" = paste0(
+      "We will rename the {.strong Grants} table to ",
+      "{.strong Grants & Funding} and rename the {.field Age} column to ",
+      "{.field Age (years)} by editing rows here, then calling {.fn air_meta_sync}."
+    )
+  ))
+  .demo_wait("  Press <Enter> once you are viewing _metadata... ")
+
+  # Read _metadata back so we can upsert the edits into it
+  meta_now  <- air_read("_metadata", base_id, .token = .token)
+  .demo_print(meta_now, c("table_name", "field_name", "field_type", "description"))
+
+  meta_edit <- meta_now
+  grants_rows <- !is.na(meta_edit$table_name) & meta_edit$table_name == "Grants"
+  age_row     <- !is.na(meta_edit$field_name) &
+                 meta_edit$table_name == "Artists" & meta_edit$field_name == "Age"
+  if (any(grants_rows)) {
+    meta_edit$table_name[grants_rows] <- "Grants & Funding"
+  }
+  if (any(age_row)) {
+    meta_edit$field_name[age_row]  <- "Age (years)"
+    meta_edit$description[age_row] <- "Age of the artist in whole years."
+  }
+
+  edit_rows <- if (length(grants_rows) && length(age_row)) grants_rows | age_row else logical(0)
+  cli::cli_inform(
+    "Watch {.strong _metadata} — {sum(edit_rows)} rows updating..."
+  )
+  .demo_wait()
+  if (any(edit_rows)) {
+    air_upsert(
+      meta_edit[edit_rows, ], "_metadata", base_id,
+      merge_on = "meta_key", add_fields = "warn", typecast = TRUE, .token = .token
+    )
+  }
+
+  .demo_sleep()
+  cli::cli_inform(c(
+    "i" = "Applying schema changes with {.fn air_meta_sync}...",
+    "i" = paste0(
+      "Watch the base navigation — {.strong Grants} will become ",
+      "{.strong Grants & Funding}."
+    )
+  ))
+  .demo_code("air_meta_sync(base_id)")
+  .demo_wait()
+  air_meta_sync(base_id, .token = .token)
+  cli::cli_inform(
+    "Done — {.strong Grants} is now {.strong Grants & Funding} and {.field Age (years)} is the new column name in Artists."
+  )
+  results$meta_sync <- meta_edit
+
+  # ---- Step 12: DBI interface -----------------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 12: DBI interface")
+  cli::cli_inform(c(
+    "i" = "Switch back to the {.strong Artists} table.",
+    "i" = paste0(
+      "airtable2 implements the DBI interface — {.fn dbConnect}, ",
+      "{.fn dbListTables}, {.fn dbReadTable}, and {.fn dbWriteTable} all work."
+    )
+  ))
+  .demo_wait("  Press <Enter> (switching back to Artists)... ")
+
+  .demo_code("con <- DBI::dbConnect(airtable2::airtable2(), base_id = base_id)")
+  con <- tryCatch(
+    DBI::dbConnect(airtable2(), base_id = base_id, .token = .token),
+    error = function(e) {
+      cli::cli_warn("Could not open DBI connection: {conditionMessage(e)}")
+      NULL
+    }
+  )
+
+  if (!is.null(con)) {
+    .demo_code("DBI::dbListTables(con)")
+    tbls <- tryCatch(DBI::dbListTables(con),
+                     error = function(e) { cli::cli_warn("dbListTables: {conditionMessage(e)}"); character() })
+    cli::cli_inform("Tables: {.val {tbls}}")
+
+    .demo_code('DBI::dbListFields(con, "Artists")')
+    flds <- tryCatch(DBI::dbListFields(con, "Artists"),
+                     error = function(e) { cli::cli_warn("dbListFields: {conditionMessage(e)}"); character() })
+    cli::cli_inform("Artists fields: {.val {flds}}")
+
+    .demo_code('DBI::dbReadTable(con, "Artists")')
+    .demo_sleep()
+    artists_dbi <- tryCatch(DBI::dbReadTable(con, "Artists"), error = function(e) NULL)
+    if (!is.null(artists_dbi)) {
+      .demo_print(artists_dbi, c("Name", "Role", "Active", "Engagement Score"))
+    }
+
+    .demo_code('DBI::dbWriteTable(con, "Artists", new_row, append = TRUE)')
+    cli::cli_inform("Watch {.strong Artists} — a DBI-written row will appear.")
+    .demo_wait()
+    new_dbi_row <- tibble::tibble(
+      Name = "DBI Artist", Role = "Street Typographer", Active = TRUE,
+      `Member Since` = Sys.Date()
+    )
+    tryCatch(
+      DBI::dbWriteTable(con, "Artists", new_dbi_row, append = TRUE),
+      error = function(e) cli::cli_warn("dbWriteTable: {conditionMessage(e)}")
+    )
+
+    .demo_code("DBI::dbDisconnect(con)")
+    DBI::dbDisconnect(con)
+    results$dbi_con <- TRUE
+  }
+
+  # ---- Step 13: API usage ---------------------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 13: API usage")
+  .demo_code("air_api_usage()")
   usage <- tryCatch(air_api_usage(), error = function(e) NULL)
   if (!is.null(usage)) {
     print(usage)
   } else {
-    cli::cli_inform(
-      "API usage counter not available (counter disabled or workspace unknown)."
-    )
+    cli::cli_inform("API usage not available (counter disabled or workspace unknown).")
   }
   results["usage"] <- list(usage)
 
   # ---- Done -----------------------------------------------------------------
-  base_url <- paste0("https://airtable.com/", base_id)
   cli::cli_rule("Demo complete")
-  cli::cli_inform(
-    c(
-      "v" = "Base ID: {.val {base_id}}",
-      "i" = "Open in browser: {.url {base_url}}",
-      "i" = "Clean up: {.url https://airtable.com} (delete base manually)"
+  cli::cli_inform(c(
+    "v" = "Base ID: {.val {base_id}}",
+    "i" = "Open in browser: {.url {base_url}}",
+    "i" = "Clean up: {.url https://airtable.com} (delete base manually)"
+  ))
+
+  in_ide <- Sys.getenv("RSTUDIO") == "1" || Sys.getenv("POSITRON") == "1"
+  if (in_ide) {
+    cli::cli_inform("Opening base in the Connections pane via {.fn air_pane}.")
+    tryCatch(
+      air_pane(base = base_id, .token = .token),
+      error = function(e) {
+        cli::cli_warn("Could not open connection pane: {conditionMessage(e)}")
+      }
     )
-  )
+  }
 
   invisible(results)
 }
 
 
 # --- Internal helpers ---------------------------------------------------------
+
+#' Pause for Enter in interactive sessions
+#' @noRd
+.demo_wait <- function(prompt = "  Press <Enter> to continue... ") {
+  if (interactive()) readline(prompt = prompt)
+  invisible(NULL)
+}
+
+#' Two-second pause between demo steps
+#' @noRd
+.demo_sleep <- function() Sys.sleep(2)
+
+#' Print a narrow slice of a data frame (up to 4 columns)
+#' @noRd
+.demo_print <- function(df, cols) {
+  print(df[intersect(cols, names(df))])
+}
+
+#' Echo an R expression as a code block before it runs
+#' @noRd
+.demo_code <- function(code) {
+  cli::cli_code(code)
+}
+
+#' Generate 120 BollardsForArt supporter records procedurally (4 columns)
+#'
+#' LCM(20 firsts, 26 lasts) = 260 > 120, so all 120 Name values are unique.
+#' @noRd
+.demo_supporters <- function() {
+  firsts <- c(
+    "Ada", "Ben", "Cara", "Dan", "Eli", "Flo", "Gil", "Hana", "Ira", "Joy",
+    "Kai", "Lena", "Max", "Nia", "Omar", "Paz", "Quinn", "Ren", "Sage", "Tae"
+  )
+  lasts <- c(
+    "Adeyemi", "Berg", "Chen", "Dubois", "Evans", "Ferreira", "Gao", "Hansen",
+    "Ibrahim", "Johansson", "Kim", "Lopez", "Musa", "Nguyen", "Olsen",
+    "Petersen", "Qian", "Russo", "Silva", "Torres", "Ueda", "Vasquez",
+    "Wang", "Xavier", "Yamamoto", "Zaitsev"
+  )
+  cities <- c(
+    "Detroit", "Oakland", "Philadelphia", "New Orleans", "Baltimore",
+    "Cleveland", "Memphis", "Atlanta", "Louisville", "St. Louis"
+  )
+  n <- 120L
+  idx <- seq_len(n)
+  tibble::tibble(
+    Name   = paste(
+      firsts[(idx - 1L) %% length(firsts) + 1L],
+      lasts[(idx - 1L)  %% length(lasts) + 1L]
+    ),
+    Email  = paste0(
+      tolower(firsts[(idx - 1L) %% length(firsts) + 1L]),
+      idx, "@community.bollardsforart.org"
+    ),
+    Joined = as.Date("2020-01-01") + (idx - 1L) * 11L,
+    City   = cities[(idx - 1L) %% length(cities) + 1L]
+  )
+}
+
+#' Generate 30 BollardsForArt artist records procedurally (4 columns)
+#' @noRd
+.demo_artists <- function() {
+  first <- c(
+    "Zara",    "Dmitri",  "Sun-Li",  "Fatima",  "Carlos",
+    "Ingrid",  "Kofi",    "Priya",   "Tomasz",  "Amara",
+    "Hiroshi", "Beatriz", "Rashida", "Lukaš",   "Miriam",
+    "Xavier",  "Aisha",   "Piotr",   "Yuki",    "Leila",
+    "Nadia",   "Elan",    "Rosa",    "Obi",     "Cleo",
+    "Sven",    "Tamar",   "Felix",   "Yara",    "Joaquin"
+  )
+  last <- c(
+    "Okonkwo",   "Volkov",      "Park",        "El-Rashid",  "Mendes",
+    "Holmås",    "Asante",      "Nair",        "Wierzbicki", "Diallo",
+    "Nakamura",  "Santos",      "Osei",        "Novaček",    "Khoury",
+    "Fontaine",  "Bakr",        "Kowalski",    "Tanaka",     "Ahmadi",
+    "Petrov",    "Reyes",       "Abramowitz",  "Okafor",     "Marchetti",
+    "Lindqvist", "Cohen",       "Müller",      "Hassan",     "Lima"
+  )
+  roles <- c(
+    "Guerilla Muralist",          "Kinetic Sculptor",
+    "Sound Installation Designer","Community Arts Agitator",
+    "Concrete Poet",              "Site-Specific Weaver",
+    "Light & Shadow Artist",      "Street Typographer"
+  )
+  n <- length(first)
+  tibble::tibble(
+    Name          = paste(first, last),
+    Role          = roles[(seq_len(n) - 1L) %% length(roles) + 1L],
+    Active        = rep(c(TRUE, TRUE, FALSE), length.out = n),
+    `Member Since` = as.Date("2015-01-01") + (seq_len(n) - 1L) * 87L
+  )
+}
+
+#' Local engagement scores for 8 artists (used for upsert + join demos)
+#' @noRd
+.demo_scores <- function() {
+  tibble::tibble(
+    Name               = c(
+      "Zara Okonkwo",    "Dmitri Volkov",  "Sun-Li Park",
+      "Fatima El-Rashid","Carlos Mendes",  "Ingrid Holmås",
+      "Kofi Asante",     "Priya Nair"
+    ),
+    `Engagement Score` = c(98L, 85L, 92L, 88L, 74L, 95L, 81L, 90L)
+  )
+}
 
 #' Download an image URL to a temp file and upload as an Airtable attachment
 #'
@@ -683,8 +1093,8 @@ air_demo <- function(
 #' @noRd
 .demo_upload_image <- function(base_id, table_id, project_ids, image_url,
                                 .token = NULL) {
+  if (length(project_ids) == 0L) return(FALSE)
   tryCatch({
-    if (length(project_ids) == 0L) return(invisible(NULL))
     tmp_img <- tempfile(fileext = ".jpg")
     on.exit(unlink(tmp_img), add = TRUE)
     httr2::request(image_url) |> httr2::req_perform(path = tmp_img)
@@ -696,8 +1106,9 @@ air_demo <- function(
       file      = tmp_img,
       token     = .token
     )
+    TRUE
   }, error = function(e) {
     cli::cli_warn("Could not upload sample attachment: {conditionMessage(e)}")
+    FALSE
   })
-  invisible(NULL)
 }

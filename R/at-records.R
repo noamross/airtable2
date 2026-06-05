@@ -150,9 +150,9 @@ at_create_records <- function(base_id, table_id, records,
   pb <- NULL
   if (progress && length(batches) > 1) {
     pb <- cli::cli_progress_bar(
+      name  = paste("Creating", length(records), "records"),
       total = length(batches),
-      clear = FALSE,
-      display = paste("Creating", length(records), "records in batches...")
+      clear = FALSE
     )
   }
 
@@ -170,17 +170,17 @@ at_create_records <- function(base_id, table_id, records,
 
     resp <- air_perform(req)
     results <- c(results, resp$records)
-    
-    # Update progress bar
+
     if (!is.null(pb)) {
-      pb$set(batch_num, message = paste("Batch", batch_num, "of", length(batches)))
+      cli::cli_progress_update(
+        id     = pb,
+        set    = batch_num,
+        status = paste0("batch ", batch_num, "/", length(batches))
+      )
     }
   }
 
-  # Clear progress bar
-  if (!is.null(pb)) {
-    pb$set(length(batches), done = TRUE, message = "Creation complete")
-  }
+  if (!is.null(pb)) cli::cli_progress_done(id = pb)
 
   results
 }
@@ -238,9 +238,9 @@ at_update_records <- function(base_id, table_id, records,
   pb <- NULL
   if (progress && length(batches) > 1) {
     pb <- cli::cli_progress_bar(
+      name  = paste("Upserting", length(records), "records"),
       total = length(batches),
-      clear = FALSE,
-      display = paste("Upserting", length(records), "records in batches...")
+      clear = FALSE
     )
   }
 
@@ -267,17 +267,17 @@ at_update_records <- function(base_id, table_id, records,
     if (!is.null(resp$updatedRecords)) {
       all_updated <- c(all_updated, unlist(resp$updatedRecords))
     }
-    
-    # Update progress bar
+
     if (!is.null(pb)) {
-      pb$set(batch_num, message = paste("Batch", batch_num, "of", length(batches)))
+      cli::cli_progress_update(
+        id     = pb,
+        set    = batch_num,
+        status = paste0("batch ", batch_num, "/", length(batches))
+      )
     }
   }
 
-  # Clear progress bar
-  if (!is.null(pb)) {
-    pb$set(length(batches), done = TRUE, message = "Upsert complete")
-  }
+  if (!is.null(pb)) cli::cli_progress_done(id = pb)
 
   compact(list(
     records = all_records,
@@ -336,13 +336,12 @@ at_delete_records <- function(base_id, table_id, record_ids, token = NULL,
     
     # Update progress bar
     if (!is.null(pb)) {
-      cli::cli_progress_update(pb, pos = i)
+      cli::cli_progress_update(id = pb, set = i)
     }
   }
 
-  # Clear progress bar
   if (!is.null(pb)) {
-    cli::cli_progress_done(pb)
+    cli::cli_progress_done(id = pb)
   }
 
   results

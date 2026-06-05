@@ -669,7 +669,7 @@ tibble_to_records <- function(
 #' auto-expanded to the JSON shape the API requires, inferred from the table
 #' schema. Conservative: only transforms plain length-1 character scalars;
 #' lists, objects, and already-classed `air_*` values are returned untouched
-#' (left for [unclass_air()] / normal serialization).
+#' (left for `unclass_air()` / normal serialization).
 #'
 #' @param val A single cell value.
 #' @param field_type Airtable field type string (or `NULL`).

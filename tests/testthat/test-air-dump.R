@@ -716,7 +716,10 @@ test_that("air_restore restore_linked_fields = FALSE skips field and record reli
     )
   )
 
-  air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = FALSE)
+  expect_warning(
+    air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = FALSE),
+    "cannot be restored"
+  )
 
   # at_create_field never called with link type
   expect_false(any(vapply(field_calls, function(n) identical(n, "Ref"), logical(1))))
@@ -864,7 +867,10 @@ test_that("air_restore builds ID map and re-links records (integration)", {
     )
   )
 
-  air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = TRUE)
+  expect_warning(
+    air_restore(dump, workspace_id = "wspWSP", restore_linked_fields = TRUE),
+    "cannot be restored"
+  )
 
   # Assignee column NOT in the initial Tasks write (link cols excluded)
   tasks_write <- Find(function(c) c$table == "Tasks", write_calls)

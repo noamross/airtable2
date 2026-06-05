@@ -22,3 +22,4 @@
 ^\.claude$
 ^NOTES.md$
 ^pkgdown$
+^CODE_OF_CONDUCT\.md$

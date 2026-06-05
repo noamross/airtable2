@@ -142,6 +142,7 @@ air_meta_push <- function(base_id, meta, .token = NULL) {
 #'   `"_metadata"`, meaning the `_metadata` table inside `base_id`.  Can also
 #'   be a `data.frame`, a path to a `.csv` file, or a path to a `.json` file
 #'   (see *Source precedence* above).
+#' @param ... Ignored; forces `.token` to be named.
 #' @return Invisible `NULL`. Side-effect: PATCHes changed fields in the base.
 #' @examples
 #' \dontrun{

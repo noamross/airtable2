@@ -1,6 +1,6 @@
 test_that("setup_vignette_hooks() installs obfuscate_ids output hook", {
   # Source the hooks file to get setup_vignette_hooks()
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
 
   # Call setup function
   setup_vignette_hooks()
@@ -12,7 +12,7 @@ test_that("setup_vignette_hooks() installs obfuscate_ids output hook", {
 })
 
 test_that("obfuscate_ids hook replaces app IDs", {
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
   setup_vignette_hooks()
 
   hook_fn <- knitr::knit_hooks$get("output")
@@ -23,7 +23,7 @@ test_that("obfuscate_ids hook replaces app IDs", {
 })
 
 test_that("obfuscate_ids hook replaces wsp, tbl, rec, viw prefixes", {
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
   setup_vignette_hooks()
 
   hook_fn <- knitr::knit_hooks$get("output")
@@ -48,7 +48,7 @@ test_that("obfuscate_ids hook replaces wsp, tbl, rec, viw prefixes", {
 })
 
 test_that("obfuscate_ids hook does NOT replace short strings (< 5 trailing chars)", {
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
   setup_vignette_hooks()
 
   hook_fn <- knitr::knit_hooks$get("output")
@@ -66,7 +66,7 @@ test_that("obfuscate_ids hook does NOT replace short strings (< 5 trailing chars
 })
 
 test_that("obfuscate_ids hook passes through unchanged when option is FALSE", {
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
   setup_vignette_hooks()
 
   hook_fn <- knitr::knit_hooks$get("output")
@@ -78,7 +78,7 @@ test_that("obfuscate_ids hook passes through unchanged when option is FALSE", {
 })
 
 test_that("setup_vignette_hooks() sets obfuscate_ids default chunk option to TRUE", {
-  source(test_path("../../tools/knitr-hooks.R"))
+  source(system.file("tools/knitr-hooks.R", package = "airtable2", mustWork = TRUE))
   setup_vignette_hooks()
 
   expect_true(knitr::opts_chunk$get("obfuscate_ids"))

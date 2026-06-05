@@ -12,7 +12,9 @@ test_that("air_write excludes attachment fields from payload", {
         expect_false("Photos" %in% names(rec$fields))
       }
       list(list(id = "rec1"), list(id = "rec2"))
-    }
+    },
+    upload_attachments_from_tibble = function(...) invisible(NULL),
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -23,7 +25,7 @@ test_that("air_write excludes attachment fields from payload", {
     )
   )
 
-  ids <- air_write(data, "tbl1", "app1")
+  ids <- air_write(data, "tbl1", "app1", attachments = "file")
   expect_equal(ids, c("rec1", "rec2"))
 })
 
@@ -122,7 +124,9 @@ test_that("air_upsert excludes attachment fields from payload", {
         createdRecords = "rec1",
         updatedRecords = character()
       )
-    }
+    },
+    upload_attachments_from_tibble = function(...) invisible(NULL),
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -130,7 +134,7 @@ test_that("air_upsert excludes attachment fields from payload", {
     Photos = list(list(list(filename = "pic.jpg")))
   )
 
-  result <- air_upsert(data, "tbl1", "app1", merge_on = "Name")
+  result <- air_upsert(data, "tbl1", "app1", merge_on = "Name", attachments = "file")
   expect_equal(result$created, "rec1")
 })
 

@@ -37,6 +37,8 @@ Steps covered:
 \enumerate{
 \item Read all Artists with a progress bar
 \item Write one new artist; read back showing \code{airtable_created_time}
+\item Write 120 community supporters in 12 batches  --  progress bar is clearly
+visible; read back over 2 pages to demonstrate read pagination
 \item Bulk-upsert 30 artists with a progress bar
 \item Sync back to the original 15 with a progress bar (watch deletions)
 \item Upsert a new \verb{Engagement Score} column into Artists from R

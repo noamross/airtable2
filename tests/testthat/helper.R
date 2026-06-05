@@ -19,6 +19,7 @@
 # Absolute path to httptest2 mock fixtures, captured here when CWD is the
 # testthat directory (before tests change the working directory).
 .fixture_path <- normalizePath("fixtures", mustWork = FALSE)
+message("DEBUG fixture path: ", .fixture_path, " (exists: ", dir.exists(.fixture_path), ")")
 
 # Disable the on-disk API counter during tests so fixture-replay tests never
 # touch the user's real counter directory. Counter-specific tests re-enable it

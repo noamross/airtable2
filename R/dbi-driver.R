@@ -316,10 +316,9 @@ connection_observer_open <- function(con, connect_code) {
         con@base_id
       }
       result <- tryCatch(
-        air_read(table, base_id_to_use, .token = con@token),
+        air_simplify(air_read(table, base_id_to_use, .token = con@token)),
         error = function(e) NULL
       )
-      if (!is.null(result)) result <- air_simplify(result)
       result
     }
   )

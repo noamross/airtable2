@@ -95,9 +95,18 @@
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"noamross/airtable2"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
+<h2 id="demo">Demo<a class="anchor" aria-label="anchor" href="#demo"></a>
+</h2>
+<p><code><a href="reference/air_demo.html">air_demo()</a></code> gives you a quick interactive tour of features once you have credentials set up. It requires a token and a Workspace ID where it will set up a demonstration Airtable.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/air_set_token.html">air_set_token</a></span><span class="op">(</span><span class="st">"your_personal_access_token"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/air_demo.html">air_demo</a></span><span class="op">(</span>workspace_id <span class="op">=</span> <span class="st">"wspXXXXXXXXXXXXXX"</span><span class="op">)</span> </span></code></pre></div>
+<p>See the <a href="https://noamross.github.io/airtable2/articles/airtable2.html">Getting Started vignette</a> for details on setting up credentials.</p>
+</div>
+<div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/noamross/airtable2" class="external-link">airtable2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Set credentials (or use AIRTABLE_API_KEY / AIRTABLE_BASE_ID env vars)</span></span>
@@ -122,7 +131,7 @@
 <div class="section level2">
 <h2 id="dbi-interface">DBI interface<a class="anchor" aria-label="anchor" href="#dbi-interface"></a>
 </h2>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu"><a href="reference/airtable2.html">airtable2</a></span><span class="op">(</span><span class="op">)</span>, base_id <span class="op">=</span> <span class="st">"appXXXXXXXXXXXXXX"</span><span class="op">)</span></span>
 <span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbListTables.html" class="external-link">dbListTables</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span>
 <span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbReadTable.html" class="external-link">dbReadTable</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"My Table"</span><span class="op">)</span></span>
@@ -132,7 +141,7 @@
 <h2 id="special-types">Special types<a class="anchor" aria-label="anchor" href="#special-types"></a>
 </h2>
 <p>Airtable complex field types are returned as S3 list-columns and display compactly in tibbles:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/air_read.html">air_read</a></span><span class="op">(</span><span class="st">"My Table"</span><span class="op">)</span></span>
 <span><span class="co"># multiselect fields  -&gt; &lt;air_multiselect&gt;  (e.g. sel[])</span></span>
 <span><span class="co"># linked records      -&gt; &lt;air_links&gt;         (e.g. lnk[])</span></span>
@@ -148,7 +157,7 @@
 <div class="section level2">
 <h2 id="backup-and-restore">Backup and restore<a class="anchor" aria-label="anchor" href="#backup-and-restore"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full backup with attachments</span></span>
 <span><span class="fu"><a href="reference/air_dump.html">air_dump</a></span><span class="op">(</span><span class="st">"appXXXXXXXXXXXXXX"</span>, dir <span class="op">=</span> <span class="st">"backup/"</span><span class="op">)</span></span>
 <span></span>

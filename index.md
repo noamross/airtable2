@@ -35,6 +35,23 @@ install.packages("airtable2", repos = c("https://noamross.r-universe.dev", "http
 remotes::install_github("noamross/airtable2")
 ```
 
+## Demo
+
+[`air_demo()`](https://noamross.github.io/airtable2/reference/air_demo.md)
+gives you a quick interactive tour of features once you have credentials
+set up. It requires a token and a Workspace ID where it will set up a
+demonstration Airtable.
+
+``` r
+
+air_set_token("your_personal_access_token")
+air_demo(workspace_id = "wspXXXXXXXXXXXXXX") 
+```
+
+See the [Getting Started
+vignette](https://noamross.github.io/airtable2/articles/airtable2.html)
+for details on setting up credentials.
+
 ## Quick start
 
 ``` r

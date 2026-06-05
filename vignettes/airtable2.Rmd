@@ -40,11 +40,11 @@ It provides:
 Install from GitHub using pak or remotes:
 
 
-``` r
-# Recommended
-pak::pak("noamross/airtable2")
+```r
+# From R-universe (recommended)
+install.packages("airtable2", repos = c("https://noamross.r-universe.dev", "https://cloud.r-project.org"))
 
-# Alternative
+# From GitHub (or use pak::pkg_install() or renv::install())
 remotes::install_github("noamross/airtable2")
 ```
 
@@ -55,7 +55,7 @@ remotes::install_github("noamross/airtable2")
 ### Create a Personal Access Token
 
 airtable2 uses Airtable **Personal Access Tokens (PATs)**. OAuth is not
-supported; you create tokens yourself at
+supported by `airtable2`; you create tokens yourself at
 <https://airtable.com/create/tokens>.
 
 When creating a token, grant at minimum the following scopes depending on what

@@ -907,3 +907,84 @@ test_that("air_pane(bases=) reconnect code includes bases", {
   expect_match(connect_code, "appAAA111")
   expect_match(connect_code, "appBBB222")
 })
+
+# ── previewObject callback ─────────────────────────────────────────────────────
+
+test_that("previewObject callback calls air_read then air_simplify", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+
+  # A minimal raw data frame as air_read would return it (with a list-column)
+  raw_result <- tibble::tibble(
+    id    = c("recAAA", "recBBB"),
+    Name  = c("Alice", "Bob"),
+    Tags  = structure(list(c("x", "y"), "z"), class = c("air_multiselect", "list"))
+  )
+  simplified_result <- tibble::tibble(
+    id   = c("recAAA", "recBBB"),
+    Name = c("Alice", "Bob"),
+    Tags = c("x; y", "z")
+  )
+
+  air_read_calls    <- list()
+  air_simplify_calls <- list()
+
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema(),
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base"),
+    air_read      = function(table, base_id, .token = NULL, ...) {
+      air_read_calls[[length(air_read_calls) + 1L]] <<- list(table = table, base_id = base_id)
+      raw_result
+    },
+    air_simplify  = function(data, schema = NULL) {
+      air_simplify_calls[[length(air_simplify_calls) + 1L]] <<- list(data = data)
+      simplified_result
+    },
+    .package = "airtable2"
+  )
+
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(base = "appFAKE")
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened        <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  preview_fn    <- opened[[1L]]$args$previewObject
+  expect_true(is.function(preview_fn))
+
+  result <- preview_fn(rowLimit = 10, table = "Projects")
+
+  # air_read was called with the correct table and base_id
+  expect_length(air_read_calls, 1L)
+  expect_equal(air_read_calls[[1L]]$table,   "Projects")
+  expect_equal(air_read_calls[[1L]]$base_id, "appFAKE")
+
+  # air_simplify was called on the raw result
+  expect_length(air_simplify_calls, 1L)
+
+  # The returned value is the simplified data frame
+  expect_identical(result, simplified_result)
+})
+
+test_that("previewObject returns NULL when air_read errors", {
+  schema_cache_invalidate()
+  obs <- new_mock_observer()
+
+  local_mocked_bindings(
+    air_token     = function(token = NULL) "fake_token",
+    at_get_schema = function(base_id, token = NULL) fake_schema(),
+    at_get_base   = function(base_id, token = NULL) list(name = "My Base"),
+    air_read      = function(table, base_id, .token = NULL, ...) stop("Network error"),
+    .package      = "airtable2"
+  )
+
+  con <- withr::with_options(list(connectionObserver = obs), {
+    air_connect(base = "appFAKE")
+  })
+  on.exit(DBI::dbDisconnect(con), add = TRUE)
+
+  opened     <- Filter(function(x) x$type == "connectionOpened", obs$calls)
+  preview_fn <- opened[[1L]]$args$previewObject
+  expect_null(preview_fn(rowLimit = 10, table = "Projects"))
+})

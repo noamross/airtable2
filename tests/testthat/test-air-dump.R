@@ -589,9 +589,140 @@ test_that("restore_linked_fields creates a remapped multipleRecordLinks field", 
   expect_equal(link_call$table_id, "tblTASKS_NEW")
   # linkedTableId remapped to the NEW People table id
   expect_equal(link_call$options$linkedTableId, "tblPEOPLE_NEW")
-  # inverseLinkFieldId and viewIdForRecordSelection dropped
-  expect_null(link_call$options$inverseLinkFieldId)
-  expect_null(link_call$options$viewIdForRecordSelection)
+  # Only linkedTableId is sent; all other options are read-only / auto-set.
+  expect_equal(names(link_call$options), "linkedTableId")
+})
+
+test_that("restore_linked_fields skips auto-created reverse link (name == linked table)", {
+  # Schema with a symmetric pair: Tasks.Assignee -> People, People.Tasks -> Tasks.
+  # "Tasks" is the auto-created reverse link (field name == linked table name).
+  # Only "Assignee" should be created; "Tasks" should be skipped.
+  symmetric_schema <- list(
+    list(
+      id = "tblTASKS_OLD",
+      name = "Tasks",
+      fields = list(
+        list(id = "fldTITLE_OLD", name = "Title", type = "singleLineText"),
+        list(
+          id = "fldLINK_OLD",
+          name = "Assignee",
+          type = "multipleRecordLinks",
+          options = list(
+            linkedTableId = "tblPEOPLE_OLD",
+            isReversed = FALSE,
+            prefersSingleRecordLink = FALSE,
+            inverseLinkFieldId = "fldINV_OLD"
+          )
+        )
+      ),
+      views = list()
+    ),
+    list(
+      id = "tblPEOPLE_OLD",
+      name = "People",
+      fields = list(
+        list(id = "fldPNAME_OLD", name = "Person Name", type = "singleLineText"),
+        list(
+          id = "fldINV_OLD",
+          name = "Tasks",  # matches the linked table name -> auto-created reverse
+          type = "multipleRecordLinks",
+          options = list(
+            linkedTableId = "tblTASKS_OLD",
+            isReversed = FALSE,
+            prefersSingleRecordLink = FALSE,
+            inverseLinkFieldId = "fldLINK_OLD"
+          )
+        )
+      ),
+      views = list()
+    )
+  )
+
+  new_schema_no_link <- list(
+    list(
+      id = "tblTASKS_NEW", name = "Tasks",
+      fields = list(list(id = "fldTITLE_NEW", name = "Title", type = "singleLineText")),
+      views = list()
+    ),
+    list(
+      id = "tblPEOPLE_NEW", name = "People",
+      fields = list(list(id = "fldPNAME_NEW", name = "Person Name", type = "singleLineText")),
+      views = list()
+    )
+  )
+
+  link_calls <- list()
+  local_mocked_bindings(
+    at_get_schema = function(base_id, token = NULL) new_schema_no_link,
+    at_create_field = function(name, table_id, type, base_id = NULL,
+                               description = NULL, options = NULL, token = NULL) {
+      link_calls[[length(link_calls) + 1L]] <<- list(name = name, type = type, options = options)
+      list(id = paste0("fldCREATED_", name))
+    }
+  )
+
+  table_id_map <- build_table_id_map(symmetric_schema, new_schema_no_link)
+  restore_linked_fields(symmetric_schema, "appNEW", table_id_map, .token = NULL)
+
+  ml_calls <- Filter(function(c) c$type == "multipleRecordLinks", link_calls)
+  # Exactly one link field created: "Assignee" (not the reverse "Tasks")
+  expect_length(ml_calls, 1L)
+  expect_equal(ml_calls[[1]]$name, "Assignee")
+  expect_equal(ml_calls[[1]]$options$linkedTableId, "tblPEOPLE_NEW")
+})
+
+test_that("restore_linked_fields skips isReversed=TRUE fields (old Airtable API)", {
+  # Some older dumps may have isReversed=TRUE; these should still be skipped.
+  schema_with_reversed <- list(
+    list(
+      id = "tblA_OLD", name = "TableA",
+      fields = list(
+        list(id = "fldFWD", name = "ForwardLink",
+             type = "multipleRecordLinks",
+             options = list(linkedTableId = "tblB_OLD", isReversed = FALSE)),
+        list(id = "fldREV", name = "ReverseLink",
+             type = "multipleRecordLinks",
+             options = list(linkedTableId = "tblB_OLD", isReversed = TRUE))
+      ),
+      views = list()
+    ),
+    list(
+      id = "tblB_OLD", name = "TableB",
+      fields = list(list(id = "fldBN", name = "Name", type = "singleLineText")),
+      views = list()
+    )
+  )
+
+  new_schema <- list(
+    list(
+      id = "tblA_NEW", name = "TableA",
+      fields = list(list(id = "fldAN", name = "Name", type = "singleLineText")),
+      views = list()
+    ),
+    list(
+      id = "tblB_NEW", name = "TableB",
+      fields = list(list(id = "fldBN2", name = "Name", type = "singleLineText")),
+      views = list()
+    )
+  )
+
+  link_calls <- list()
+  local_mocked_bindings(
+    at_get_schema = function(base_id, token = NULL) new_schema,
+    at_create_field = function(name, table_id, type, base_id = NULL,
+                               description = NULL, options = NULL, token = NULL) {
+      link_calls[[length(link_calls) + 1L]] <<- list(name = name, type = type)
+      list(id = paste0("fldCREATED_", name))
+    }
+  )
+
+  table_id_map <- build_table_id_map(schema_with_reversed, new_schema)
+  restore_linked_fields(schema_with_reversed, "appNEW", table_id_map, .token = NULL)
+
+  ml_calls <- Filter(function(c) c$type == "multipleRecordLinks", link_calls)
+  # Only the forward link created; reverse (isReversed=TRUE) skipped
+  expect_length(ml_calls, 1L)
+  expect_equal(ml_calls[[1]]$name, "ForwardLink")
 })
 
 test_that("restore_linked_fields recreates dependent rollup with remapped recordLinkFieldId", {

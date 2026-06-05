@@ -1,5 +1,5 @@
 test_that("at_whoami returns user info", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- at_whoami(token = "fake_token")
     expect_equal(result$id, "usrTEST123")
     expect_equal(result$email, "test@example.com")
@@ -7,7 +7,7 @@ test_that("at_whoami returns user info", {
 })
 
 test_that("at_list_bases returns tibble of bases", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- at_list_bases(token = "fake_token")
     expect_s3_class(result, "tbl_df")
     expect_equal(nrow(result), 1L)
@@ -17,7 +17,7 @@ test_that("at_list_bases returns tibble of bases", {
 })
 
 test_that("at_get_schema returns table metadata", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- at_get_schema("appTEST123", token = "fake_token")
     expect_length(result, 1L)
     expect_equal(result[[1]]$name, "Contacts")
@@ -27,7 +27,7 @@ test_that("at_get_schema returns table metadata", {
 })
 
 test_that("air_read returns typed tibble", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- air_read("Contacts", "appTEST123", .token = "fake_token")
     expect_s3_class(result, "tbl_df")
     expect_equal(nrow(result), 2L)
@@ -49,7 +49,7 @@ test_that("air_read returns typed tibble", {
 })
 
 test_that("air_schema returns structured schema tibble", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- air_schema("appTEST123", .token = "fake_token")
     expect_s3_class(result, "tbl_df")
     expect_equal(nrow(result), 1L)
@@ -60,7 +60,7 @@ test_that("air_schema returns structured schema tibble", {
 })
 
 test_that("air_meta returns flat field metadata", {
-  httptest2::with_mock_dir(test_path("fixtures"), {
+  httptest2::with_mock_dir(.fixture_path, {
     result <- air_meta("appTEST123", .token = "fake_token")
     expect_s3_class(result, "tbl_df")
     expect_equal(nrow(result), 5L)

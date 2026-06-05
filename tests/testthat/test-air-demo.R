@@ -582,6 +582,52 @@ test_that("air_demo() uses Artists table (not People) (mocked)", {
                label = "air_demo does not read from old People table")
 })
 
+# ── air_demo_setup() does not pause interactively when called standalone ──────
+
+test_that("air_demo_setup() emits no interactive pause message when called standalone", {
+  fake_base <- list(
+    id = "appPAUSE",
+    name = "bollardsforart_demo",
+    tables = list(
+      list(id = "tblA", name = "Artists"),
+      list(id = "tblP", name = "Projects"),
+      list(id = "tblG", name = "Grants")
+    )
+  )
+
+  local_mocked_bindings(
+    at_create_base     = function(...) fake_base,
+    at_create_field    = function(...) list(id = "fldX", name = "x", type = "t"),
+    at_get_schema      = function(...) .fake_schema(),
+    at_update_field    = function(...) list(id = "fldX"),
+    .demo_upload_image = function(...) invisible(NULL),
+    air_write = function(data, table, base_id = NULL, ...) {
+      invisible(paste0("rec", seq_len(nrow(data))))
+    }
+  )
+
+  msgs <- character()
+  withCallingHandlers(
+    air_demo_setup(workspace_id = "wspX"),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  )
+
+  # Should NOT emit the "arrange side by side / Press Enter" browser prompt
+  has_pause_prompt <- any(
+    grepl("side.by.side|arrange.*browser|Press.*Enter|watch.*setup", msgs,
+          ignore.case = TRUE)
+  )
+  expect_false(has_pause_prompt,
+    label = "air_demo_setup emits no interactive browser/pause prompt")
+
+  # Should still show the created base URL
+  has_url <- any(grepl("airtable\\.com", msgs, ignore.case = TRUE))
+  expect_true(has_url, label = "air_demo_setup still reports the base URL")
+})
+
 # ── Live tests ────────────────────────────────────────────────────────────────
 
 test_that("air_demo_setup() creates a real BollardsForArt demo base (live)", {

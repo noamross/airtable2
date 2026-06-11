@@ -113,6 +113,71 @@ fields_df[fields_df$type %in% computed_types, c("name", "type")]
 
 ---
 
+## Building table specifications with `air_infer_fields()` and `air_infer_table()`
+
+When creating new tables or bases programmatically, you need to supply Airtable
+field specification lists. Rather than building them by hand, you can infer them
+from an existing R data frame.
+
+`air_infer_fields()` maps R column types to Airtable field types:
+
+| R type | Airtable type |
+|---|---|
+| `character` | `singleLineText` |
+| `integer` | `number` (precision 0) |
+| `double` | `number` (precision 8) |
+| `logical` | `checkbox` |
+| `Date` | `date` (ISO format) |
+| `factor` | `singleSelect` (choices from `levels()`) |
+
+
+``` r
+df <- data.frame(
+  Name      = "Alice",
+  Score     = 98L,
+  Passed    = TRUE,
+  Category  = factor("A", levels = c("A", "B", "C")),
+  Completed = as.Date("2026-01-15")
+)
+
+fields <- air_infer_fields(df)
+# [[1]] $name = "Name",      $type = "singleLineText"
+# [[2]] $name = "Score",     $type = "number", $options = list(precision = 0)
+# [[3]] $name = "Passed",    $type = "checkbox"
+# [[4]] $name = "Category",  $type = "singleSelect", $options = list(choices = ...)
+# [[5]] $name = "Completed", $type = "date", $options = list(dateFormat = list(name = "iso"))
+```
+
+`air_infer_table()` wraps this into a complete table spec:
+
+
+``` r
+tbl_spec <- air_infer_table(df, "Exam Results", description = "Mid-year exam data")
+at_create_table(tbl_spec$name, fields = tbl_spec$fields, base_id = "appXXXXXX")
+```
+
+For the common case of writing a data frame to a table that may not exist yet,
+`air_write()` wraps this automatically with `create_table = TRUE`:
+
+
+``` r
+air_write(df, "Exam Results", "appXXXXXX", create_table = TRUE)
+```
+
+You can also pass multiple table specs to `at_create_base()` to provision an
+entire new base from a list of data frames:
+
+
+``` r
+tables <- list(
+  air_infer_table(artists_df, "Artists"),
+  air_infer_table(projects_df, "Projects")
+)
+at_create_base("My New Base", tables = tables, workspace_id = "wspXXXXXX")
+```
+
+---
+
 ## Self-documenting bases with `air_meta()`
 
 Where `air_schema()` returns a nested tibble organised by table, `air_meta()`

@@ -266,10 +266,8 @@ active_artists <- air_read(
 
 ### Step 4 — Write records
 
-`air_write()` creates new records. Columns not present in the table generate
-an error by default; set `add_fields = "yes"` to create them automatically as
-`singleLineText` fields, or `add_fields = "warn"` to silently drop unknown
-columns.
+`air_write()` creates new records. Computed field columns are silently dropped
+before writing.
 
 
 ``` r
@@ -282,15 +280,47 @@ new_artists <- data.frame(
 
 ids <- air_write(new_artists, "Artists", demo_base_id)
 # Created 2 records.
+```
 
-# Add a field that doesn't exist yet
-new_artists$Notes <- "Added via API"
+**Adding new fields on the fly** — columns not present in the table generate an
+error by default. Set `add_fields = "yes"` to create them automatically with
+inferred Airtable types (`numeric` → `number`, `logical` → `checkbox`,
+`Date` → `date`, everything else → `singleLineText`). Use `add_fields = "warn"`
+to silently drop unknown columns instead.
+
+
+``` r
+new_artists$Notes   <- "Added via API"
+new_artists$Founded <- as.Date("2020-01-01")
 ids <- air_write(new_artists, "Artists", demo_base_id, add_fields = "yes")
-# Creating field "Notes" in "Artists".
+# Creating 2 fields in Artists: Notes, Founded
 # Created 2 records.
 ```
 
-Computed fields in your data frame are silently dropped before writing.
+**Creating a table on the fly** — set `create_table = TRUE` and `air_write()`
+will create the table if it does not already exist, inferring all field types
+from the data frame:
+
+
+``` r
+results <- data.frame(Name = "Alice", Score = 98L, Passed = TRUE)
+air_write(results, "Exam Results", demo_base_id, create_table = TRUE)
+# Created table "Exam Results".
+# Created 1 record.
+```
+
+**Complex columns** — list-columns containing nested lists or data frames
+cannot be stored directly in Airtable. By default `air_write()` (and
+`air_upsert()`, `air_sync()`) will abort with an informative error. Set
+`complex_fields = "warn"` to drop those columns, or `complex_fields = "json"`
+to serialise each value as a JSON text string:
+
+
+``` r
+df$metadata <- list(list(key = "a", val = 1), list(key = "b", val = 2))
+air_write(df, "Records", demo_base_id, complex_fields = "json", add_fields = "yes")
+# Created 2 records. (metadata stored as JSON text in a multilineText field)
+```
 
 ### Step 5 — Upsert and sync
 
@@ -342,6 +372,21 @@ enriched <- air_left_join(scores, "Artists", demo_base_id, by = "Name")
 ```
 
 `air_inner_join()` and `air_full_join()` are also available.
+
+`air_left_join_upload()` is the write-side complement: it joins a local data
+frame to matched Airtable records and upserts only new or changed field values.
+It accepts the same `typecast`, `complex_fields`, and `progress` arguments as
+`air_upsert()`:
+
+
+``` r
+air_left_join_upload(
+  scores, "Artists", demo_base_id,
+  by = "Name",
+  add_fields = "yes",
+  complex_fields = "warn"
+)
+```
 
 ### Step 7 — Attachments
 

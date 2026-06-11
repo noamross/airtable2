@@ -629,6 +629,7 @@ air_demo <- function(
 
   # ---- Step 3: Write 120 supporters (progress bar over many batches) ------
   .demo_sleep()
+  withr::local_options(cli.progress_show_after = 0)
   cli::cli_h1("Step 3: Write 120 community supporters (with progress bar)")
   cli::cli_inform(c(
     "i" = "Switch to the {.strong Supporters} table.",
@@ -833,10 +834,7 @@ air_demo <- function(
   n_link <- min(5L, nrow(artists_now), nrow(projects))
   link_data <- tibble::tibble(
     `Project Name` = projects$`Project Name`[seq_len(n_link)],
-    `Lead Artist`  = lapply(
-      artists_now$airtable_id[seq_len(n_link)],
-      function(id) new_air_links(list(id))
-    )
+    `Lead Artist`  = new_air_links(as.list(artists_now$airtable_id[seq_len(n_link)]))
   )
   results$links <- air_upsert(
     link_data, "Projects",

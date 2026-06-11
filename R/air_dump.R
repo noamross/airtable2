@@ -144,7 +144,6 @@ air_dump <- function(
 #' @param base_name Name for the new base. If `NULL`, uses a generated name.
 #' @param workspace_id Workspace ID to create the base in.
 #' @inheritParams air_read
-#' @return The new base ID (invisibly).
 #' @param restore_linked_fields If `TRUE` (the default), after all records are
 #'   created, linked-record fields (`multipleRecordLinks`) and their dependent
 #'   computed fields (`rollup`, `lookup`, `count`) are recreated with remapped
@@ -163,6 +162,7 @@ air_dump <- function(
 #' 2. **Cell values**: the link columns in the dump contain old record IDs.
 #'    These are remapped to the new record IDs (matched by insertion order) and
 #'    written back via `air_upsert()`.
+#' @return The new base ID (invisibly).
 #' @examples
 #' \dontrun{
 #' # Restore from a directory dump

@@ -71,6 +71,13 @@ air_full_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NUL
 #' @param add_fields What to do when an upload column does not exist in the
 #'   table: `"yes"` (default) creates it, `"warn"` warns and drops it,
 #'   `"error"` errors. Passed through to [air_upsert()].
+#' @param typecast If `TRUE` (default), Airtable will attempt to coerce values
+#'   to match field types. Passed through to [air_upsert()].
+#' @param complex_fields What to do with complex (nested list or data-frame)
+#'   columns: `"error"` (default) aborts, `"warn"` drops them, `"json"`
+#'   serialises them as JSON text. Passed through to [air_upsert()].
+#' @param progress Logical or `NULL`. If `TRUE`, shows a progress bar.
+#'   Passed through to [air_upsert()].
 #' @param .token Optional API token.
 #' @return Invisibly, a tibble of the records that were updated: their
 #'   `airtable_id`, the key, and the changed field values.
@@ -88,7 +95,10 @@ air_full_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NUL
 #' @export
 air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
                             fields = NULL,
-                            add_fields = c("yes", "warn", "error"),
+                            add_fields = "yes",
+                            typecast = TRUE,
+                            complex_fields = c("error", "warn", "json"),
+                            progress = NULL,
                             .token = NULL) {
   if (!is.data.frame(x)) {
     cli_abort("{.arg x} must be a data frame.", call = rlang::caller_env())
@@ -96,7 +106,8 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
-  add_fields <- match.arg(add_fields)
+  add_fields <- match.arg(add_fields, c("error", "warn", "yes"))
+  complex_fields <- match.arg(complex_fields)
 
   meta_cols <- c("airtable_id", "airtable_created_time")
 
@@ -246,6 +257,9 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
     merge_on = by_remote,
     base_id = base_id,
     add_fields = add_fields,
+    typecast = typecast,
+    complex_fields = complex_fields,
+    progress = progress,
     .token = .token
   )
 

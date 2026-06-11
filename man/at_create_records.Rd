@@ -22,7 +22,8 @@ at_create_records(
 \code{fields} element (a named list of field values).}
 
 \item{typecast}{If \code{TRUE}, Airtable will attempt to cast values to the
-correct type.}
+correct type. Defaults to \code{FALSE} here (low-level, strict); the
+high-level \code{\link[=air_write]{air_write()}} and \code{\link[=air_upsert]{air_upsert()}} default to \code{TRUE}.}
 
 \item{token}{Personal access token (resolved via \code{\link[=air_token]{air_token()}} if \code{NULL}).}
 

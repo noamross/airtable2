@@ -16,7 +16,10 @@
 #' @param add_fields What to do when `data` contains columns not in the table:
 #'   - `"error"` (default): error if unknown columns exist.
 #'   - `"warn"`: warn and drop unknown columns.
-#'   - `"yes"`: create missing fields before writing (as `singleLineText`).
+#'   - `"yes"`: create missing fields before writing. Field types are inferred
+#'     from the column class: `numeric` → `number`, `logical` → `checkbox`,
+#'     `Date` → `date`, complex/JSON columns → `multilineText`, all others →
+#'     `singleLineText`.
 #' @param complex_fields What to do when `data` contains list-columns with
 #'   complex (nested list or data-frame) values that Airtable cannot store
 #'   directly:
@@ -25,6 +28,9 @@
 #'   - `"json"`: serialise each complex value to a JSON text string and write
 #'     it to a `singleLineText` field (creating the field first when
 #'     `add_fields = "yes"`).
+#' @param create_table If `TRUE`, creates the table in the base if it does not
+#'   already exist. Field types are inferred from the data using the same rules
+#'   as `add_fields = "yes"`. Defaults to `FALSE`.
 #' @return A character vector of the created record IDs (invisibly).
 #' @examples
 #' \dontrun{

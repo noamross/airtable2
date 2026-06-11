@@ -38,7 +38,10 @@ variable.}
 \itemize{
 \item \code{"error"} (default): error if unknown columns exist.
 \item \code{"warn"}: warn and drop unknown columns.
-\item \code{"yes"}: create missing fields before upserting (as \code{singleLineText}).
+\item \code{"yes"}: create missing fields before upserting. Field types are inferred
+from the column class: \code{numeric} → \code{number}, \code{logical} → \code{checkbox},
+\code{Date} → \code{date}, complex/JSON columns → \code{multilineText}, all others →
+\code{singleLineText}.
 }}
 
 \item{complex_fields}{What to do when \code{data} contains list-columns with

@@ -24,7 +24,10 @@
 #' @param add_fields What to do when `data` contains columns not in the table:
 #'   - `"error"` (default): error if unknown columns exist.
 #'   - `"warn"`: warn and drop unknown columns.
-#'   - `"yes"`: create missing fields before upserting (as `singleLineText`).
+#'   - `"yes"`: create missing fields before upserting. Field types are inferred
+#'     from the column class: `numeric` → `number`, `logical` → `checkbox`,
+#'     `Date` → `date`, complex/JSON columns → `multilineText`, all others →
+#'     `singleLineText`.
 #' @inheritParams air_write
 #' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
 #'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`

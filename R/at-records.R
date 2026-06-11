@@ -124,7 +124,8 @@ at_get_record <- function(base_id, table_id, record_id, token = NULL) {
 #' @param records A list of record objects. Each should be a list with a
 #'   `fields` element (a named list of field values).
 #' @param typecast If `TRUE`, Airtable will attempt to cast values to the
-#'   correct type.
+#'   correct type. Defaults to `FALSE` here (low-level, strict); the
+#'   high-level [air_write()] and [air_upsert()] default to `TRUE`.
 #' @return A list of created record objects (with assigned IDs).
 #' @examples
 #' \dontrun{
@@ -196,6 +197,8 @@ at_create_records <- function(base_id, table_id, records,
 #'   `fields` elements. For upsert, `id` can be omitted.
 #' @param method Either `"PATCH"` (partial update) or `"PUT"` (destructive).
 #' @param typecast If `TRUE`, Airtable will attempt to cast values.
+#'   Defaults to `FALSE` here (low-level, strict); [air_upsert()] defaults
+#'   to `TRUE`.
 #' @param upsert_fields Character vector (1-3 fields) to merge on for upsert.
 #'   If `NULL`, performs a standard update.
 #' @return A list with `records`, and (for upserts) `createdRecords` and

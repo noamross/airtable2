@@ -25,7 +25,9 @@ at_update_records(
 
 \item{method}{Either \code{"PATCH"} (partial update) or \code{"PUT"} (destructive).}
 
-\item{typecast}{If \code{TRUE}, Airtable will attempt to cast values.}
+\item{typecast}{If \code{TRUE}, Airtable will attempt to cast values.
+Defaults to \code{FALSE} here (low-level, strict); \code{\link[=air_upsert]{air_upsert()}} defaults
+to \code{TRUE}.}
 
 \item{upsert_fields}{Character vector (1-3 fields) to merge on for upsert.
 If \code{NULL}, performs a standard update.}

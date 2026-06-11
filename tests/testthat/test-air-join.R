@@ -327,3 +327,66 @@ test_that("air_left_join_upload validates inputs", {
     class = "rlang_error"
   )
 })
+
+test_that("air_left_join_upload default add_fields is 'yes'", {
+  x <- tibble::tibble(Name = c("Alice"), Score = c(90L))
+  captured_add <- NULL
+  local_mocked_bindings(
+    air_read = function(table, base_id = NULL, ...) upl_remote(),
+    air_upsert = function(data, table, merge_on, add_fields, ...) {
+      captured_add <<- add_fields
+      invisible(list(created = character(), updated = data$airtable_id))
+    }
+  )
+
+  air_left_join_upload(x, "Contacts", "appXXX", by = "Name")
+  expect_equal(captured_add, "yes")
+})
+
+test_that("air_left_join_upload passes typecast through to air_upsert", {
+  x <- tibble::tibble(Name = c("Alice"), Score = c(90L))
+  captured_typecast <- NULL
+  local_mocked_bindings(
+    air_read = function(table, base_id = NULL, ...) upl_remote(),
+    air_upsert = function(data, table, merge_on, typecast, ...) {
+      captured_typecast <<- typecast
+      invisible(list(created = character(), updated = data$airtable_id))
+    }
+  )
+
+  air_left_join_upload(x, "Contacts", "appXXX", by = "Name", typecast = FALSE)
+  expect_false(captured_typecast)
+
+  air_left_join_upload(x, "Contacts", "appXXX", by = "Name")
+  expect_true(captured_typecast)
+})
+
+test_that("air_left_join_upload passes complex_fields through to air_upsert", {
+  x <- tibble::tibble(Name = c("Alice"), Score = c(90L))
+  captured_cf <- NULL
+  local_mocked_bindings(
+    air_read = function(table, base_id = NULL, ...) upl_remote(),
+    air_upsert = function(data, table, merge_on, complex_fields, ...) {
+      captured_cf <<- complex_fields
+      invisible(list(created = character(), updated = data$airtable_id))
+    }
+  )
+
+  air_left_join_upload(x, "Contacts", "appXXX", by = "Name", complex_fields = "json")
+  expect_equal(captured_cf, "json")
+})
+
+test_that("air_left_join_upload passes progress through to air_upsert", {
+  x <- tibble::tibble(Name = c("Alice"), Score = c(90L))
+  captured_progress <- "not_called"
+  local_mocked_bindings(
+    air_read = function(table, base_id = NULL, ...) upl_remote(),
+    air_upsert = function(data, table, merge_on, progress, ...) {
+      captured_progress <<- progress
+      invisible(list(created = character(), updated = data$airtable_id))
+    }
+  )
+
+  air_left_join_upload(x, "Contacts", "appXXX", by = "Name", progress = FALSE)
+  expect_false(captured_progress)
+})

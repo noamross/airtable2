@@ -36,7 +36,10 @@ to match field types.}
 \itemize{
 \item \code{"error"} (default): error if unknown columns exist.
 \item \code{"warn"}: warn and drop unknown columns.
-\item \code{"yes"}: create missing fields before writing (as \code{singleLineText}).
+\item \code{"yes"}: create missing fields before writing. Field types are inferred
+from the column class: \code{numeric} → \code{number}, \code{logical} → \code{checkbox},
+\code{Date} → \code{date}, complex/JSON columns → \code{multilineText}, all others →
+\code{singleLineText}.
 }}
 
 \item{complex_fields}{What to do when \code{data} contains list-columns with
@@ -49,6 +52,10 @@ directly:
 it to a \code{singleLineText} field (creating the field first when
 \code{add_fields = "yes"}).
 }}
+
+\item{create_table}{If \code{TRUE}, creates the table in the base if it does not
+already exist. Field types are inferred from the data using the same rules
+as \code{add_fields = "yes"}. Defaults to \code{FALSE}.}
 
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
 only metadata (filename, url, size, type); \code{"file"} downloads to

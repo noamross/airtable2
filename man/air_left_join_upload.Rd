@@ -10,7 +10,10 @@ air_left_join_upload(
   base_id = NULL,
   by = NULL,
   fields = NULL,
-  add_fields = c("yes", "warn", "error"),
+  add_fields = "yes",
+  typecast = TRUE,
+  complex_fields = c("error", "warn", "json"),
+  progress = NULL,
   .token = NULL
 )
 }
@@ -35,6 +38,16 @@ meta columns (\code{airtable_id}, \code{airtable_created_time}).}
 \item{add_fields}{What to do when an upload column does not exist in the
 table: \code{"yes"} (default) creates it, \code{"warn"} warns and drops it,
 \code{"error"} errors. Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
+
+\item{typecast}{If \code{TRUE} (default), Airtable will attempt to coerce values
+to match field types. Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
+
+\item{complex_fields}{What to do with complex (nested list or data-frame)
+columns: \code{"error"} (default) aborts, \code{"warn"} drops them, \code{"json"}
+serialises them as JSON text. Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
+
+\item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a progress bar.
+Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
 
 \item{.token}{Optional API token.}
 }

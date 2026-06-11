@@ -1,3 +1,47 @@
+# airtable2 0.1.0.9000
+
+## Breaking changes
+
+* `air_write()`, `air_upsert()`, and `air_sync()` now error by default when
+  `data` contains **complex list-columns** (nested lists or data frames that
+  Airtable cannot store directly). Previously these columns were silently
+  problematic. Set `complex_fields = "warn"` to drop them or `complex_fields =
+  "json"` to serialise them as JSON text.
+
+* `add_fields = "yes"` in `air_write()`, `air_upsert()`, and `air_sync()` now
+  **infers field types** from column class instead of always creating
+  `singleLineText`. Mapping: `numeric` → `number`, `logical` → `checkbox`,
+  `Date` → `date`, complex/JSON columns → `multilineText`, everything else →
+  `singleLineText`. This changes which Airtable field type is created when a
+  new column is first written.
+
+## New features
+
+* `air_write()` gains a `create_table` argument. When `TRUE`, the table is
+  created in the base if it does not already exist; field types are inferred
+  from the data using the same rules as `add_fields = "yes"`.
+
+* `air_infer_fields(data)` maps R column types to Airtable field specification
+  lists suitable for `at_create_table()` / `at_create_base()`. Factors become
+  `singleSelect` fields with choices from `levels()`.
+
+* `air_infer_table(data, name)` wraps `air_infer_fields()` to produce a
+  complete table specification in one call.
+
+* `air_left_join_upload()` gains `typecast`, `complex_fields`, and `progress`
+  arguments, bringing its API in line with `air_upsert()`.
+
+* When `add_fields = "yes"` creates multiple new fields, a progress bar is
+  shown instead of one message per field.
+
+## Bug fixes
+
+* `air_restore()` now correctly handles tables containing multiselect,
+  linked-record, attachment, or other list-type columns. Previously `air_write()`
+  would abort with a "complex columns" error because `air_dump()` stores those
+  columns as plain lists (without the `air_*` class); they are now re-wrapped
+  before writing.
+
 # airtable2 0.0.0.9000
 
 Initial development release — complete rewrite of `airtabler` using modern R packages.

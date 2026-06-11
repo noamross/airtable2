@@ -48,8 +48,11 @@ air_req <- function(endpoint, token = NULL, host = c("api", "content")) {
   token <- air_token(token)
   root <- if (host == "content") content_url() else base_url()
 
+  segments <- strsplit(endpoint, "/", fixed = TRUE)[[1L]]
+  encoded  <- vapply(segments, utils::URLencode, character(1L), reserved = TRUE)
+
   httr2::request(root) |>
-    httr2::req_url_path_append(endpoint) |>
+    httr2::req_url_path_append(encoded) |>
     httr2::req_auth_bearer_token(token) |>
     httr2::req_user_agent(paste0(
       "airtable2/",
@@ -110,15 +113,26 @@ air_perform <- function(req, call = rlang::caller_env()) {
 
 #' Resolve the progress bar flag for paginate/batch operations.
 #' NULL → check option airtable2.progress.bar / env AIRTABLE2_PROGRESS_BAR
-#' (default FALSE so tests are silent by default).
+#' (default TRUE). Also sets cli.progress_show_after = 5 in the caller's
+#' frame when progress is TRUE and the user has not configured it, so bars
+#' only appear for operations that take more than 5 seconds.
 #' @noRd
-resolve_progress <- function(progress) {
-  if (!is.null(progress)) return(isTRUE(progress))
-  opt <- getOption("airtable2.progress.bar", NULL)
-  if (!is.null(opt)) return(isTRUE(opt))
-  env <- Sys.getenv("AIRTABLE2_PROGRESS_BAR", unset = "")
-  if (!nzchar(env)) return(FALSE)
-  !tolower(trimws(env)) %in% c("false", "0", "no", "off")
+resolve_progress <- function(progress, .envir = rlang::caller_env()) {
+  result <- if (!is.null(progress)) {
+    isTRUE(progress)
+  } else {
+    opt <- getOption("airtable2.progress.bar", NULL)
+    if (!is.null(opt)) {
+      isTRUE(opt)
+    } else {
+      env <- Sys.getenv("AIRTABLE2_PROGRESS_BAR", unset = "")
+      if (!nzchar(env)) TRUE else !tolower(trimws(env)) %in% c("false", "0", "no", "off")
+    }
+  }
+  if (result && is.null(getOption("cli.progress_show_after"))) {
+    withr::local_options(cli.progress_show_after = 5, .local_envir = .envir)
+  }
+  result
 }
 
 #' Paginate through all pages of a list endpoint
@@ -134,7 +148,7 @@ resolve_progress <- function(progress) {
 #'   body. Defaults to `function(body) body$records`.
 #' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar.
 #'   If `NULL` (default), uses option `airtable2.progress.bar` or env var
-#'   `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
+#'   `AIRTABLE2_PROGRESS_BAR` (both default to `TRUE`).
 #' @return A list of all collected items.
 #' @noRd
 air_paginate <- function(

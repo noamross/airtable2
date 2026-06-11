@@ -19,7 +19,7 @@
 #' @param token Personal access token (resolved via [air_token()] if `NULL`).
 #' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
 #'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`
-#'   or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
+#'   or env var `AIRTABLE2_PROGRESS_BAR` (both default to `TRUE`).
 #' @return A list of record objects (each with `id`, `createdTime`, `fields`).
 #' @examples
 #' \dontrun{

@@ -25,6 +25,7 @@
 #'   - `"error"` (default): error if unknown columns exist.
 #'   - `"warn"`: warn and drop unknown columns.
 #'   - `"yes"`: create missing fields before upserting (as `singleLineText`).
+#' @inheritParams air_write
 #' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
 #'   batch operations. If `NULL` (default), uses option `airtable2.progress.bar`
 #'   or env var `AIRTABLE2_PROGRESS_BAR`.
@@ -45,6 +46,7 @@ air_upsert <- function(
   base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -54,16 +56,22 @@ air_upsert <- function(
   check_string(base_id)
   check_string(table)
   check_bool(typecast)
-  add_fields <- match.arg(add_fields)
-  attachments <- match.arg(attachments)
-  progress <- resolve_progress(progress)
+  add_fields     <- match.arg(add_fields)
+  complex_fields <- match.arg(complex_fields)
+  attachments    <- match.arg(attachments)
+  progress       <- resolve_progress(progress)
 
   # Prepare write fields: identify computed/attachment fields, validate unknowns.
   # Uses the session schema cache (same as air_write).
-  wf <- prepare_write_fields(base_id, table, data, add_fields, .token)
+  wf <- prepare_write_fields(base_id, table, data, add_fields, complex_fields, .token,
+                             progress = progress)
   computed   <- wf$computed
   att_fields <- wf$att_fields
   exclude    <- if (attachments == "meta") wf$computed else wf$exclude
+
+  if (length(wf$json_cols) > 0L) {
+    data <- serialize_json_cols(data, wf$json_cols, wf$field_types)
+  }
 
   # Use airtable_id for direct matching when available, merge_on otherwise.
   records <- tibble_to_records(

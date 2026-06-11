@@ -28,6 +28,7 @@
 #' @param typecast If `TRUE` (default), Airtable will attempt to coerce values.
 #' @param add_fields What to do when `data` contains columns not in the table.
 #'   Passed to [air_upsert()]. Default is `"error"`.
+#' @inheritParams air_write
 #' @param progress Logical or `NULL`. If `TRUE`, shows a cli progress bar for
 #'   read and upsert operations. If `NULL` (default), uses option
 #'   `airtable2.progress.bar` or env var `AIRTABLE2_PROGRESS_BAR`.
@@ -50,6 +51,7 @@ air_sync <- function(
   delete_missing = TRUE,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -154,6 +156,7 @@ air_sync <- function(
       base_id = base_id,
       typecast = typecast,
       add_fields = add_fields,
+      complex_fields = complex_fields,
       # Pass "meta" here; we handle attachment upload ourselves below
       attachments = "meta",
       progress = progress,

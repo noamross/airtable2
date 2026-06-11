@@ -484,3 +484,243 @@ test_that("air_delete calls at_delete_records", {
   )
   expect_equal(deleted, c("rec1", "rec2"))
 })
+
+# ── detect_complex_cols() ─────────────────────────────────────────────────────
+
+test_that("detect_complex_cols finds list-columns whose elements are lists", {
+  data <- tibble::tibble(
+    name   = "Alice",
+    nested = list(list(a = 1, b = 2))
+  )
+  expect_equal(detect_complex_cols(data, c("name", "nested")), "nested")
+})
+
+test_that("detect_complex_cols finds data-frame elements", {
+  data <- tibble::tibble(
+    df_col = list(data.frame(x = 1:3, y = letters[1:3]))
+  )
+  expect_equal(detect_complex_cols(data, "df_col"), "df_col")
+})
+
+test_that("detect_complex_cols ignores non-list columns", {
+  data <- tibble::tibble(name = "Alice", age = 30L, flag = TRUE)
+  expect_equal(detect_complex_cols(data, c("name", "age", "flag")), character())
+})
+
+test_that("detect_complex_cols ignores list-columns of plain character vectors", {
+  # These are valid multiselect payloads — not complex
+  data <- tibble::tibble(tags = list(c("a", "b"), c("c")))
+  expect_equal(detect_complex_cols(data, "tags"), character())
+})
+
+test_that("detect_complex_cols ignores NULL elements (all-NULL list col)", {
+  data <- tibble::tibble(col = list(NULL, NULL))
+  expect_equal(detect_complex_cols(data, "col"), character())
+})
+
+test_that("detect_complex_cols ignores air_*-classed columns", {
+  air_classes <- c("air_links", "air_multiselect", "air_attachments",
+                   "air_collaborator", "air_barcode")
+  for (cls in air_classes) {
+    col <- structure(list(list(a = 1)), class = c(cls, "list"))
+    data <- tibble::tibble(x = col)
+    expect_equal(
+      detect_complex_cols(data, "x"),
+      character(),
+      label = paste("should ignore class", cls)
+    )
+  }
+})
+
+# ── serialize_json_cols() ─────────────────────────────────────────────────────
+
+test_that("serialize_json_cols converts list elements to JSON strings", {
+  data <- tibble::tibble(info = list(list(a = 1L, b = "x")))
+  result <- serialize_json_cols(data, "info")
+  expect_type(result$info, "character")
+  expect_equal(jsonlite::fromJSON(result$info[[1]])$b, "x")
+})
+
+test_that("serialize_json_cols maps NULL and NA elements to NA_character_", {
+  data <- tibble::tibble(info = list(list(a = 1), NULL, NA))
+  result <- serialize_json_cols(data, "info")
+  expect_false(is.na(result$info[[1]]))
+  expect_true(is.na(result$info[[2]]))
+  expect_true(is.na(result$info[[3]]))
+})
+
+test_that("serialize_json_cols warns and NAs oversized values for singleLineText", {
+  big <- paste(rep("x", 100001L), collapse = "")   # JSON will be > 100k chars
+  data <- tibble::tibble(col = list(list(v = big), list(v = "small")))
+  expect_warning(
+    result <- serialize_json_cols(data, "col", c(col = "singleLineText")),
+    "100,000-character"
+  )
+  expect_true(is.na(result$col[[1]]))
+  expect_false(is.na(result$col[[2]]))
+})
+
+test_that("serialize_json_cols warning names the affected rows", {
+  big <- paste(rep("x", 100001L), collapse = "")
+  data <- tibble::tibble(col = list(list(v = big), list(v = "ok")))
+  expect_warning(
+    serialize_json_cols(data, "col", c(col = "singleLineText")),
+    "row"
+  )
+})
+
+test_that("serialize_json_cols does not truncate for multilineText fields", {
+  big <- paste(rep("x", 100001L), collapse = "")
+  data <- tibble::tibble(col = list(list(v = big)))
+  expect_no_warning(
+    result <- serialize_json_cols(data, "col", c(col = "multilineText"))
+  )
+  expect_false(is.na(result$col[[1]]))
+})
+
+test_that("serialize_json_cols does not truncate when field_types is NULL", {
+  big <- paste(rep("x", 100001L), collapse = "")
+  data <- tibble::tibble(col = list(list(v = big)))
+  expect_no_warning(
+    result <- serialize_json_cols(data, "col", field_types = NULL)
+  )
+  expect_false(is.na(result$col[[1]]))
+})
+
+# ── complex_fields parameter in air_write() ───────────────────────────────────
+
+test_that("air_write errors on complex columns by default", {
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character()
+  )
+  data <- tibble::tibble(name = "Alice", info = list(list(a = 1)))
+  expect_error(
+    air_write(data, "Table1", "appX"),
+    "complex"
+  )
+})
+
+test_that("air_write complex_fields='warn' drops complex columns with a warning", {
+  captured <- NULL
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(base_id, table_id, records, ...) {
+      captured <<- records
+      list(list(id = "rec1"))
+    }
+  )
+  data <- tibble::tibble(name = "Alice", info = list(list(a = 1)))
+  expect_warning(
+    suppressMessages(
+      air_write(data, "Table1", "appX", complex_fields = "warn")
+    ),
+    "complex column"
+  )
+  expect_false("info" %in% names(captured[[1L]]$fields))
+  expect_true("name" %in% names(captured[[1L]]$fields))
+})
+
+test_that("air_write complex_fields='json' serialises complex columns to JSON strings", {
+  captured <- NULL
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(base_id, table_id, records, ...) {
+      captured <<- records
+      list(list(id = "rec1"))
+    }
+  )
+  data <- tibble::tibble(
+    name = "Alice",
+    info = list(list(a = 1L, b = "hello"))
+  )
+  suppressMessages(
+    air_write(data, "Table1", "appX", complex_fields = "json")
+  )
+  json_val <- captured[[1L]]$fields$info
+  expect_type(json_val, "character")
+  parsed <- jsonlite::fromJSON(json_val)
+  expect_equal(parsed$a, 1L)
+  expect_equal(parsed$b, "hello")
+})
+
+test_that("air_write complex_fields='json' NA rows produce NULL field (dropped)", {
+  captured <- NULL
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(base_id, table_id, records, ...) {
+      captured <<- records
+      lapply(seq_along(records), function(i) list(id = paste0("rec", i)))
+    }
+  )
+  data <- tibble::tibble(
+    name = c("Alice", "Bob"),
+    info = list(list(a = 1), NULL)
+  )
+  suppressMessages(
+    air_write(data, "Table1", "appX", complex_fields = "json")
+  )
+  expect_type(captured[[1L]]$fields$info, "character")
+  expect_null(captured[[2L]]$fields$info)   # NA serialised → dropped by compact
+})
+
+# ── add_fields='yes' field-type inference ─────────────────────────────────────
+
+test_that("add_fields='yes' creates checkbox fields with required icon/color options", {
+  created <- list()
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_get_schema = function(...) {
+      list(list(
+        id = "tbl1", name = "Table1",
+        fields = list(list(name = "Name", type = "singleLineText"))
+      ))
+    },
+    schema_cache_invalidate = function(...) invisible(NULL),
+    at_create_field = function(name, base_id, table_id, type,
+                               options = NULL, token = NULL) {
+      created[[name]] <<- list(type = type, options = options)
+      list(id = paste0("fld", name), name = name, type = type)
+    },
+    at_create_records = function(...) list(list(id = "rec1"))
+  )
+
+  data <- tibble::tibble(Name = "Alice", Active = TRUE)
+  suppressMessages(air_write(data, "Table1", "appX", add_fields = "yes"))
+
+  expect_equal(created$Active$type, "checkbox")
+  expect_equal(created$Active$options$icon, "check")
+  expect_equal(created$Active$options$color, "greenBright")
+})
+
+test_that("add_fields='yes' creates multilineText for complex_fields='json' columns", {
+  created <- list()
+  local_mocked_bindings(
+    get_computed_fields   = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_get_schema = function(...) {
+      list(list(
+        id = "tbl1", name = "Table1",
+        fields = list(list(name = "Name", type = "singleLineText"))
+      ))
+    },
+    schema_cache_invalidate = function(...) invisible(NULL),
+    at_create_field = function(name, base_id, table_id, type,
+                               options = NULL, token = NULL) {
+      created[[name]] <<- list(type = type, options = options)
+      list(id = paste0("fld", name), name = name, type = type)
+    },
+    at_create_records = function(...) list(list(id = "rec1"))
+  )
+
+  data <- tibble::tibble(Name = "Alice", events = list(list(x = 1)))
+  suppressMessages(
+    air_write(data, "Table1", "appX", add_fields = "yes", complex_fields = "json")
+  )
+
+  expect_equal(created$events$type, "multilineText")
+})

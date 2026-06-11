@@ -33,6 +33,25 @@ test_that("air_req builds proper request", {
   expect_true(grepl("api.airtable.com/v0/appABC123/TableName", req$url))
 })
 
+test_that("air_req percent-encodes spaces in table names", {
+  withr::local_envvar(AIRTABLE_API_KEY = "pat_test_req")
+  req <- air_req("appABC123/NIH Delays")
+  expect_false(grepl(" ", req$url, fixed = TRUE))
+  expect_true(grepl("NIH%20Delays", req$url, fixed = TRUE))
+})
+
+test_that("air_req encodes each path segment independently", {
+  withr::local_envvar(AIRTABLE_API_KEY = "pat_test_req")
+  req <- air_req("appABC123/My Table/recXXX")
+  expect_true(grepl("appABC123/My%20Table/recXXX", req$url, fixed = TRUE))
+})
+
+test_that("air_req leaves safe alphanumeric paths unchanged", {
+  withr::local_envvar(AIRTABLE_API_KEY = "pat_test_req")
+  req <- air_req("meta/bases/appABC123/tables")
+  expect_true(grepl("meta/bases/appABC123/tables", req$url, fixed = TRUE))
+})
+
 # --- parse_airtable_error() ----------------------------------------------
 
 test_that("parse_airtable_error handles error-as-object", {

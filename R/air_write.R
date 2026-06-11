@@ -279,7 +279,7 @@ serialize_json_cols <- function(data, json_cols, field_types = NULL) {
   singleline_limit <- 100000L
   for (nm in json_cols) {
     is_singleline <- !is.null(field_types) &&
-      isTRUE(field_types[[nm]] == "singleLineText")
+      isTRUE(field_types[nm] == "singleLineText")
 
     serialized <- vapply(data[[nm]], function(x) {
       if (is.null(x) || (is.atomic(x) && length(x) == 1L && is.na(x))) {

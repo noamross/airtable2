@@ -287,6 +287,15 @@ air_restore <- function(
         }
       }
 
+      # Rewrap list-type columns using the dump schema so that air_write's
+      # detect_complex_cols does not flag valid multiselect/etc. columns.
+      # air_dump uses coerce=FALSE, so these columns are plain lists without
+      # the air_multiselect / air_attachments / etc. class.
+      tbl_orig_schema <- Find(function(t) t$name == tbl_name, schema)
+      if (!is.null(tbl_orig_schema)) {
+        data <- rewrap_dump_columns(data, tbl_orig_schema$fields)
+      }
+
       # Resolve per-table attachment dir
       tbl_att_dir <- NULL
       if (attachments == "file" && !is.null(attachment_dir)) {
@@ -893,4 +902,35 @@ restore_linked_records <- function(
 
   cli_inform("Re-linked records in {n_tables} table{?s}.")
   invisible(NULL)
+}
+
+#' Rewrap list-type columns in a dump data frame using air_* classes
+#'
+#' air_dump uses coerce=FALSE, so multipleSelects etc. come back as plain
+#' lists (no air_multiselect class). air_write's detect_complex_cols would
+#' then flag them as unwritable. This function re-applies wrap_list_column
+#' so the classes are present before writing.
+#'
+#' @param data Data frame from the dump.
+#' @param fields Field list from the dump schema for this table.
+#' @return data with list-column types re-wrapped in their air_* classes.
+#' @noRd
+rewrap_dump_columns <- function(data, fields) {
+  type_lookup <- stats::setNames(
+    vapply(fields, function(f) f$type %||% "", character(1L)),
+    vapply(fields, function(f) f$name %||% "", character(1L))
+  )
+  list_types <- list_column_types()
+  for (col_name in names(data)) {
+    col <- data[[col_name]]
+    ftype <- type_lookup[[col_name]]
+    if (!is.null(ftype) && !is.na(ftype) && ftype %in% list_types &&
+        is.list(col) && !inherits(col, c(
+          "air_multiselect", "air_links", "air_attachments",
+          "air_collaborator", "air_collaborators", "air_barcode"
+        ))) {
+      data[[col_name]] <- wrap_list_column(col, ftype)
+    }
+  }
+  data
 }

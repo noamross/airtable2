@@ -108,7 +108,15 @@ at_get_collaborators <- function(base_id, token = NULL) {
 #' new_base$id
 #' }
 #' @export
-at_create_base <- function(name, tables, workspace_id = NULL, token = NULL) {
+at_create_base <- function(
+  name,
+  tables = list(list(
+    name = "Table 1",
+    fields = list(list(name = "id", type = "singleLineText"))
+  )),
+  workspace_id = NULL,
+  token = NULL
+) {
   check_string(name)
   workspace_id <- workspace_id %||% default_workspace_id()
   check_string(workspace_id)

@@ -13,6 +13,7 @@ air_sync(
   delete_missing = TRUE,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -44,6 +45,17 @@ in \code{data} will be deleted.}
 
 \item{add_fields}{What to do when \code{data} contains columns not in the table.
 Passed to \code{\link[=air_upsert]{air_upsert()}}. Default is \code{"error"}.}
+
+\item{complex_fields}{What to do when \code{data} contains list-columns with
+complex (nested list or data-frame) values that Airtable cannot store
+directly:
+\itemize{
+\item \code{"error"} (default): abort with an informative message.
+\item \code{"warn"}: warn and drop those columns.
+\item \code{"json"}: serialise each complex value to a JSON text string and write
+it to a \code{singleLineText} field (creating the field first when
+\code{add_fields = "yes"}).
+}}
 
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps
 only metadata (filename, url, size, type); \code{"file"} downloads to

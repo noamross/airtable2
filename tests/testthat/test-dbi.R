@@ -215,18 +215,33 @@ test_that("dbWriteTable without append or overwrite errors", {
   expect_error(DBI::dbWriteTable(con, "Contacts", df), "append")
 })
 
-test_that("dbWriteTable on non-existent table errors", {
+test_that("dbWriteTable creates table and writes when table does not exist", {
   skip_if_not_installed("DBI")
   schema_cache_invalidate()
+  create_called <- FALSE
+  write_called  <- FALSE
 
   local_mocked_bindings(
-    at_get_schema = function(base_id, token = NULL) mock_contacts_schema()
+    at_get_schema = function(base_id, token = NULL) mock_contacts_schema(),
+    at_create_table = function(name, fields, base_id = NULL, ...) {
+      create_called <<- TRUE
+      list(id = "tblNew", name = name)
+    },
+    schema_cache_invalidate = function(...) invisible(NULL),
+    air_write = function(data, table, base_id, ...) {
+      write_called <<- TRUE
+      invisible(character())
+    }
   )
 
   con <- DBI::dbConnect(airtable2(), token = "tok", base_id = "appTEST")
   on.exit(DBI::dbDisconnect(con), add = TRUE)
   df <- data.frame(Name = "Charlie")
-  expect_error(DBI::dbWriteTable(con, "NoSuchTable", df, append = TRUE), "not supported")
+  result <- DBI::dbWriteTable(con, "NoSuchTable", df)
+
+  expect_true(result)
+  expect_true(create_called)
+  expect_true(write_called)
 })
 
 test_that("dbExistsTable returns FALSE for unknown table", {

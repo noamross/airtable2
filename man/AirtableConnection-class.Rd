@@ -53,11 +53,10 @@ Stores Airtable credentials and connection state for DBI methods. Use
 \item{Reading tables}{\code{\link[DBI:dbReadTable]{dbReadTable()}} works on any accessible table. You
 can also pass \code{"TableName WHERE <formula>"} as the name to filter records
 using Airtable's formula syntax.}
-\item{Writing tables}{\code{\link[DBI:dbWriteTable]{dbWriteTable()}} works on \strong{existing} tables only.
-With \code{append = TRUE} it creates new records; with \code{overwrite = TRUE} it
-syncs (upsert + delete-missing) using the first column as the key.}
-\item{No table creation via DBI}{Use \code{\link[=at_create_table]{at_create_table()}} to create tables.
-\code{\link[DBI:dbWriteTable]{dbWriteTable()}} errors if the table does not already exist.}
+\item{Writing tables}{\code{\link[DBI:dbWriteTable]{dbWriteTable()}} creates the table if it does not
+exist (inferring field types from the data frame). When the table already
+exists, \code{append = TRUE} creates new records; \code{overwrite = TRUE} syncs
+(upsert + delete-missing) using the first column as the key.}
 \item{No table removal}{Airtable's API cannot delete tables. Use the
 Airtable web UI instead. \code{\link[DBI:dbRemoveTable]{dbRemoveTable()}} will error with a clear
 message.}

@@ -10,11 +10,10 @@
 #'   \item{Reading tables}{[dbReadTable()] works on any accessible table. You
 #'     can also pass `"TableName WHERE <formula>"` as the name to filter records
 #'     using Airtable's formula syntax.}
-#'   \item{Writing tables}{[dbWriteTable()] works on **existing** tables only.
-#'     With `append = TRUE` it creates new records; with `overwrite = TRUE` it
-#'     syncs (upsert + delete-missing) using the first column as the key.}
-#'   \item{No table creation via DBI}{Use [at_create_table()] to create tables.
-#'     [dbWriteTable()] errors if the table does not already exist.}
+#'   \item{Writing tables}{[dbWriteTable()] creates the table if it does not
+#'     exist (inferring field types from the data frame). When the table already
+#'     exists, `append = TRUE` creates new records; `overwrite = TRUE` syncs
+#'     (upsert + delete-missing) using the first column as the key.}
 #'   \item{No table removal}{Airtable's API cannot delete tables. Use the
 #'     Airtable web UI instead. [dbRemoveTable()] will error with a clear
 #'     message.}
@@ -169,10 +168,19 @@ methods::setMethod(
     check_bool(append)
 
     resolved <- dbi_resolve_table(conn, name)
+
     if (!resolved$exists) {
-      cli_abort(
-        "Creating tables through {.fn DBI::dbWriteTable} is not supported."
-      )
+      if (!nzchar(resolved$base_id)) {
+        cli_abort("Cannot create table: base not found for {.val {name}}.")
+      }
+      fields <- air_infer_fields(value)
+      at_create_table(resolved$table_name, fields = fields,
+                      base_id = resolved$base_id, token = conn@token)
+      schema_cache_invalidate(resolved$base_id)
+      air_write(value, resolved$table_name, resolved$base_id,
+                .token = conn@token, ...)
+      schema_cache_invalidate(resolved$base_id)
+      return(TRUE)
     }
 
     if (isTRUE(overwrite)) {
@@ -313,7 +321,8 @@ dbi_resolve_name <- function(conn, table_name, schema = NULL) {
       exists = !is.null(table),
       base_id = conn@base_id,
       base_name = "",
-      table = table
+      table = table,
+      table_name = table_name
     ))
   }
 
@@ -336,7 +345,8 @@ dbi_resolve_name <- function(conn, table_name, schema = NULL) {
     dbi_list_bases(conn)
   )
   if (is.null(base)) {
-    return(list(exists = FALSE, base_id = "", base_name = schema, table = NULL))
+    return(list(exists = FALSE, base_id = "", base_name = schema, table = NULL,
+                table_name = table_name))
   }
 
   table <- get_table_schema(base$id, table_name, token = conn@token)
@@ -344,6 +354,7 @@ dbi_resolve_name <- function(conn, table_name, schema = NULL) {
     exists = !is.null(table),
     base_id = base$id,
     base_name = base$name,
-    table = table
+    table = table,
+    table_name = table_name
   )
 }

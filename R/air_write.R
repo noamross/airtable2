@@ -48,6 +48,7 @@ air_write <- function(
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
   complex_fields = c("error", "warn", "json"),
+  create_table = FALSE,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -57,9 +58,22 @@ air_write <- function(
   check_string(base_id)
   check_string(table)
   check_bool(typecast)
+  check_bool(create_table)
   add_fields     <- match.arg(add_fields)
   complex_fields <- match.arg(complex_fields)
   attachments    <- match.arg(attachments)
+
+  if (create_table) {
+    tbl_schema <- tryCatch(
+      get_table_schema(base_id, table, token = .token),
+      error = function(e) NULL
+    )
+    if (is.null(tbl_schema)) {
+      fields <- air_infer_fields(data)
+      at_create_table(table, fields = fields, base_id = base_id, token = .token)
+      schema_cache_invalidate(base_id)
+    }
+  }
 
   # Prepare write fields: identify computed/attachment fields, validate unknowns.
   wf <- prepare_write_fields(base_id, table, data, add_fields, complex_fields, .token,

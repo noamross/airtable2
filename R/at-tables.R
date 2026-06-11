@@ -28,7 +28,7 @@
 #' @export
 at_create_table <- function(
   name,
-  fields,
+  fields = list(list(name = "id", type = "singleLineText")),
   base_id = NULL,
   description = NULL,
   token = NULL

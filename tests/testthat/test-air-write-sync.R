@@ -724,3 +724,71 @@ test_that("add_fields='yes' creates multilineText for complex_fields='json' colu
 
   expect_equal(created$events$type, "multilineText")
 })
+
+# ── create_table = TRUE ───────────────────────────────────────────────────────
+
+test_that("air_write with create_table = TRUE creates table when missing then writes", {
+  create_called <- FALSE
+
+  local_mocked_bindings(
+    get_table_schema = function(...) NULL,
+    at_create_table = function(name, fields, base_id = NULL, ...) {
+      create_called <<- TRUE
+      list(id = "tblNew", name = name)
+    },
+    schema_cache_invalidate = function(...) invisible(NULL),
+    get_computed_fields = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(base_id, table_id, records, ...) {
+      lapply(seq_along(records), function(i) list(id = paste0("rec", i)))
+    }
+  )
+
+  data <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, 25L))
+  expect_message(
+    ids <- air_write(data, "NewTable", "appX", create_table = TRUE),
+    "Created 2 record"
+  )
+  expect_true(create_called)
+  expect_equal(ids, c("rec1", "rec2"))
+})
+
+test_that("air_write with create_table = TRUE skips creation when table exists", {
+  create_called <- FALSE
+
+  local_mocked_bindings(
+    get_table_schema = function(...) {
+      list(id = "tblEx", name = "Existing", fields = list(
+        list(name = "Name", type = "singleLineText"),
+        list(name = "Age",  type = "number")
+      ))
+    },
+    at_create_table = function(...) { create_called <<- TRUE },
+    get_computed_fields = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(...) list(list(id = "rec1"))
+  )
+
+  data <- tibble::tibble(Name = "Alice", Age = 30L)
+  expect_message(
+    air_write(data, "Existing", "appX", create_table = TRUE),
+    "Created 1 record"
+  )
+  expect_false(create_called)
+})
+
+test_that("air_write does not create table when create_table = FALSE (default)", {
+  create_called <- FALSE
+
+  local_mocked_bindings(
+    get_table_schema = function(...) NULL,
+    at_create_table = function(...) { create_called <<- TRUE },
+    get_computed_fields = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_create_records = function(...) list(list(id = "rec1"))
+  )
+
+  data <- tibble::tibble(Name = "Alice")
+  expect_message(air_write(data, "AnyTable", "appX"), "Created 1 record")
+  expect_false(create_called)
+})

@@ -10,6 +10,8 @@ air_write(
   base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
+  create_table = FALSE,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -35,6 +37,17 @@ to match field types.}
 \item \code{"error"} (default): error if unknown columns exist.
 \item \code{"warn"}: warn and drop unknown columns.
 \item \code{"yes"}: create missing fields before writing (as \code{singleLineText}).
+}}
+
+\item{complex_fields}{What to do when \code{data} contains list-columns with
+complex (nested list or data-frame) values that Airtable cannot store
+directly:
+\itemize{
+\item \code{"error"} (default): abort with an informative message.
+\item \code{"warn"}: warn and drop those columns.
+\item \code{"json"}: serialise each complex value to a JSON text string and write
+it to a \code{singleLineText} field (creating the field first when
+\code{add_fields = "yes"}).
 }}
 
 \item{attachments}{How to handle attachment fields: \code{"meta"} (default) keeps

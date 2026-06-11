@@ -51,7 +51,7 @@ at_list_records(
 
 \item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a cli progress bar for
 batch operations. If \code{NULL} (default), uses option \code{airtable2.progress.bar}
-or env var \code{AIRTABLE2_PROGRESS_BAR} (both default to \code{FALSE}).}
+or env var \code{AIRTABLE2_PROGRESS_BAR} (both default to \code{TRUE}).}
 }
 \value{
 A list of record objects (each with \code{id}, \code{createdTime}, \code{fields}).

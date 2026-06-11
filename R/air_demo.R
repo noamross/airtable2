@@ -530,15 +530,19 @@ air_demo_setup <- function(
 #' 4. Bulk-upsert 30 artists with a progress bar
 #' 5. Sync back to the original 15 with a progress bar (watch deletions)
 #' 6. Upsert a new `Engagement Score` column into Artists from R
-#' 7. Upload an image attachment to a Project record
-#' 8. Link artists to projects via `multipleRecordLinks`
-#' 9. Left-join Airtable columns into a local R tibble
-#' 10. View the base schema
-#' 11. Seed a `_metadata` table with [air_meta_init()], edit table/column names
+#' 7. Create a new table from a local data frame with inferred field types
+#'    (`create_table = TRUE`); then write a complex list-column as JSON text
+#'    (`complex_fields = "json"`)
+#' 8. Upload an image attachment to a Project record
+#' 9. Link artists to projects via `multipleRecordLinks`
+#' 10. Left-join Airtable columns into a local R tibble
+#' 11. Push local scores back to Airtable with [air_left_join_upload()]
+#' 12. View the base schema
+#' 13. Seed a `_metadata` table with [air_meta_init()], edit table/column names
 #'     as rows in Airtable, then apply with [air_meta_sync()]
-#' 12. Connect via the DBI interface: [DBI::dbConnect()], [DBI::dbListTables()],
+#' 14. Connect via the DBI interface: [DBI::dbConnect()], [DBI::dbListTables()],
 #'     [DBI::dbReadTable()], [DBI::dbWriteTable()]
-#' 13. View API usage
+#' 15. View API usage
 #'
 #' All operations keyed on `Name` are idempotent; re-running will not
 #' accumulate duplicate records.
@@ -705,9 +709,74 @@ air_demo <- function(
   after_score <- air_read("Artists", base_id, .token = .token)
   .demo_print(after_score, c("Name", "Engagement Score", "airtable_created_time"))
 
-  # ---- Step 7: Attachments  --  read existing, then add one via URL -----------
+  # ---- Step 7: Create a table from R data + complex columns -------------------
   .demo_sleep()
-  cli::cli_h1("Step 7: Attachments")
+  cli::cli_h1("Step 7: Create a table from R data")
+  cli::cli_inform(c(
+    "i" = paste0(
+      "Watch the base navigation — a new {.strong Workshop Events} table ",
+      "will appear with field types inferred from the data frame."
+    ),
+    "i" = paste0(
+      "Then a complex list-column ({.field Details}) is written as JSON text ",
+      "using {.code complex_fields = \"json\"}."
+    )
+  ))
+  events <- tibble::tibble(
+    Event    = c("Mural Jam", "Sound Walk", "Pop-up Gallery"),
+    Date     = as.Date(c("2026-07-04", "2026-07-18", "2026-08-01")),
+    Capacity = c(30L, 20L, 50L),
+    Free     = c(TRUE, TRUE, FALSE)
+  )
+  .demo_code(
+    'air_write(events, "Workshop Events", base_id, create_table = TRUE)'
+  )
+  .demo_wait("  Press <Enter> to create Workshop Events table... ")
+  tryCatch(
+    air_write(events, "Workshop Events", base_id,
+              create_table = TRUE, .token = .token),
+    error = function(e) cli::cli_warn("Could not create table: {conditionMessage(e)}")
+  )
+  cli::cli_inform(c(
+    "i" = "Field types were inferred: Date → date, integer → number, logical → checkbox.",
+    "i" = paste0(
+      "{.fn air_infer_fields} drives this. You can also call it directly to ",
+      "preview or customise the spec before passing to {.fn at_create_table}."
+    )
+  ))
+  .demo_code(
+    'air_infer_fields(events)\n# [[1]] name = "Event",    type = "singleLineText"\n# [[2]] name = "Date",     type = "date"\n# [[3]] name = "Capacity", type = "number"\n# [[4]] name = "Free",     type = "checkbox"'
+  )
+
+  .demo_sleep()
+  cli::cli_inform(c(
+    "i" = paste0(
+      "Now adding a nested-list column {.field Details} and writing it as ",
+      "JSON text with {.code complex_fields = \"json\"}."
+    )
+  ))
+  events$Details <- list(
+    list(theme = "urban",    outdoor = TRUE),
+    list(theme = "acoustic", outdoor = TRUE),
+    list(theme = "visual",   outdoor = FALSE)
+  )
+  .demo_code(
+    'air_write(events, "Workshop Events", base_id,\n  add_fields = "yes", complex_fields = "json")'
+  )
+  .demo_wait()
+  tryCatch(
+    air_write(events, "Workshop Events", base_id,
+              add_fields = "yes", complex_fields = "json", .token = .token),
+    error = function(e) cli::cli_warn("Could not write complex column: {conditionMessage(e)}")
+  )
+  cli::cli_inform(
+    "Check the {.field Details} column in Workshop Events — each cell holds a JSON string."
+  )
+  results$create_table <- events
+
+  # ---- Step 8: Attachments  --  read existing, then add one via URL -----------
+  .demo_sleep()
+  cli::cli_h1("Step 8: Attachments")
   cli::cli_inform(c(
     "i" = "Switch to the {.strong Projects} table.",
     "i" = paste0(
@@ -752,9 +821,9 @@ air_demo <- function(
   }
   results$projects <- projects
 
-  # ---- Step 8: Link artists to projects ------------------------------------
+  # ---- Step 9: Link artists to projects ------------------------------------
   .demo_sleep()
-  cli::cli_h1("Step 8: Link artists to projects")
+  cli::cli_h1("Step 9: Link artists to projects")
   cli::cli_inform(
     "Watch {.strong Projects} \u2014 {.field Lead Artist} cells will populate."
   )
@@ -778,9 +847,9 @@ air_demo <- function(
   linked <- air_read("Projects", base_id, .token = .token)
   .demo_print(linked, c("Project Name", "Lead Artist", "airtable_created_time"))
 
-  # ---- Step 9: Left-join Airtable data into a local R tibble --------------
+  # ---- Step 10: Left-join Airtable data into a local R tibble --------------
   .demo_sleep()
-  cli::cli_h1("Step 9: Left-join local data with Artists")
+  cli::cli_h1("Step 10: Left-join local data with Artists")
   cli::cli_inform(
     "Joining local workshop hours with Artists \u2014 Role and Active pulled from Airtable."
   )
@@ -794,17 +863,50 @@ air_demo <- function(
   .demo_print(joined, c("Name", "Workshop Hours", "Role", "Active"))
   results$join <- joined
 
-  # ---- Step 10: Schema -------------------------------------------------------
+  # ---- Step 11: air_left_join_upload ------------------------------------------
   .demo_sleep()
-  cli::cli_h1("Step 10: Field metadata")
+  cli::cli_h1("Step 11: Push local data back with air_left_join_upload()")
+  cli::cli_inform(c(
+    "i" = paste0(
+      "{.fn air_left_join_upload} is the write complement to {.fn air_left_join}: ",
+      "it matches a local data frame to Airtable records by key and upserts ",
+      "only new or changed field values."
+    ),
+    "i" = paste0(
+      "Watch {.strong Artists} — a {.field Workshop Hours} column will appear, ",
+      "populated only for the 6 matched artists."
+    )
+  ))
+  .demo_code(
+    'air_left_join_upload(local_hours, "Artists", base_id, by = "Name", add_fields = "yes")'
+  )
+  .demo_wait()
+  tryCatch(
+    air_left_join_upload(
+      local_hours, "Artists",
+      base_id = base_id,
+      by      = "Name",
+      add_fields = "yes",
+      .token  = .token
+    ),
+    error = function(e) cli::cli_warn("Could not run left_join_upload: {conditionMessage(e)}")
+  )
+  .demo_sleep()
+  after_lju <- air_read("Artists", base_id, .token = .token)
+  .demo_print(after_lju, c("Name", "Workshop Hours", "Engagement Score"))
+  results$left_join_upload <- after_lju
+
+  # ---- Step 12: Schema -------------------------------------------------------
+  .demo_sleep()
+  cli::cli_h1("Step 12: Field metadata")
   .demo_code("air_meta(base_id)")
   schema <- air_meta(base_id, .token = .token)
   .demo_print(schema, c("table_name", "field_name", "field_type"))
   results$schema <- schema
 
-  # ---- Step 11: air_meta_init + air_meta_sync ---------------------------------
+  # ---- Step 13: air_meta_init + air_meta_sync ---------------------------------
   .demo_sleep()
-  cli::cli_h1("Step 11: Seed and sync field metadata")
+  cli::cli_h1("Step 13: Seed and sync field metadata")
   cli::cli_inform(c(
     "i" = paste0(
       "Watch the base navigation \u2014 a new {.strong _metadata} table is about ",
@@ -870,9 +972,9 @@ air_demo <- function(
   )
   results$meta_sync <- meta_edit
 
-  # ---- Step 12: DBI interface -----------------------------------------------
+  # ---- Step 14: DBI interface -----------------------------------------------
   .demo_sleep()
-  cli::cli_h1("Step 12: DBI interface")
+  cli::cli_h1("Step 14: DBI interface")
   cli::cli_inform(c(
     "i" = "Switch back to the {.strong Artists} table.",
     "i" = paste0(
@@ -926,9 +1028,9 @@ air_demo <- function(
     results$dbi_con <- TRUE
   }
 
-  # ---- Step 13: API usage ---------------------------------------------------
+  # ---- Step 15: API usage ---------------------------------------------------
   .demo_sleep()
-  cli::cli_h1("Step 13: API usage")
+  cli::cli_h1("Step 15: API usage")
   .demo_code("air_api_usage()")
   usage <- tryCatch(air_api_usage(), error = function(e) NULL)
   if (!is.null(usage)) {

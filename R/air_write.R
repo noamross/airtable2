@@ -282,13 +282,15 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
 detect_complex_cols <- function(data, data_fields) {
   air_classes <- c(
     "air_multiselect", "air_links", "air_attachments",
-    "air_collaborator", "air_barcode"
+    "air_collaborator", "air_collaborators", "air_barcode"
   )
   Filter(function(nm) {
     col <- data[[nm]]
     is.list(col) &&
       !inherits(col, air_classes) &&
-      any(vapply(col, function(x) !is.null(x) && is.list(x), logical(1L)))
+      any(vapply(col, function(x) {
+        !is.null(x) && is.list(x) && !inherits(x, air_classes)
+      }, logical(1L)))
   }, data_fields)
 }
 

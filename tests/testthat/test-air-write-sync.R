@@ -520,16 +520,66 @@ test_that("detect_complex_cols ignores NULL elements (all-NULL list col)", {
 
 test_that("detect_complex_cols ignores air_*-classed columns", {
   air_classes <- c("air_links", "air_multiselect", "air_attachments",
-                   "air_collaborator", "air_barcode")
+                   "air_collaborator", "air_collaborators", "air_barcode")
   for (cls in air_classes) {
     col <- structure(list(list(a = 1)), class = c(cls, "list"))
     data <- tibble::tibble(x = col)
     expect_equal(
       detect_complex_cols(data, "x"),
       character(),
-      label = paste("should ignore class", cls)
+      label = paste("should ignore column-level class", cls)
     )
   }
+})
+
+test_that("detect_complex_cols ignores plain list-columns whose elements have air_* classes", {
+  # This is the case produced by lapply(..., new_air_links) — each *element*
+  # is an air_* object even though the column itself has no air_* class.
+  all_classes <- c("air_links", "air_multiselect", "air_attachments",
+                   "air_collaborator", "air_collaborators", "air_barcode")
+  for (cls in all_classes) {
+    elem <- structure(list(id = "recXXX"), class = c(cls, "list"))
+    # plain list column — no class at the column level
+    data <- tibble::tibble(x = list(elem, elem))
+    expect_equal(
+      detect_complex_cols(data, "x"),
+      character(),
+      label = paste("should ignore element-level class", cls)
+    )
+  }
+})
+
+test_that("air_upsert does not error when a linked-records column uses new_air_links per-element", {
+  # Regression: air_demo constructs Lead Artist as lapply(..., new_air_links)
+  # which produces a plain list with air_links elements — should not be
+  # flagged as complex.
+  captured <- NULL
+  local_mocked_bindings(
+    get_computed_fields = function(...) character(),
+    at_get_schema = function(...) {
+      list(list(
+        id = "tbl1", name = "Projects",
+        fields = list(
+          list(name = "Project Name", type = "singleLineText"),
+          list(name = "Lead Artist",  type = "multipleRecordLinks")
+        )
+      ))
+    },
+    at_update_records = function(base_id, table_id, records, ...) {
+      captured <<- records
+      list(records = records, createdRecords = character(), updatedRecords = "rec1")
+    }
+  )
+
+  link_data <- tibble::tibble(
+    `Project Name` = "Alpha",
+    `Lead Artist`  = list(new_air_links(list("recArtist1")))
+  )
+  expect_no_error(
+    suppressMessages(
+      air_upsert(link_data, "Projects", "Project Name", "appX")
+    )
+  )
 })
 
 # ── serialize_json_cols() ─────────────────────────────────────────────────────

@@ -1,3 +1,9 @@
+# airtable2 0.1.1.900
+
+* `air_sync()` now normalizes both local and remote tables to match before
+   hashing and diffing to reduce false-positive differences when comparing
+   tables.
+
 # airtable2 0.1.0.9000
 
 ## Breaking changes

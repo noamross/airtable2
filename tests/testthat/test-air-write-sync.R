@@ -110,13 +110,7 @@ test_that("air_upsert warns on unknown columns with add_fields='warn'", {
 
   data <- tibble::tibble(Name = "Alice", Fake = "nope")
   expect_warning(
-    result <- air_upsert(
-      data,
-      "Table1",
-      "Name",
-      "appX",
-      add_fields = "warn"
-    ),
+    result <- air_upsert(data, "Table1", "Name", "appX", add_fields = "warn"),
     "unknown column"
   )
   expect_length(result$created, 1L)
@@ -132,10 +126,14 @@ test_that("air_sync detects creates, updates, deletes, unchanged", {
   )
 
   local_mocked_bindings(
-    get_table_schema = function(...) list(fields = list(
-      list(name = "Name", type = "singleLineText"),
-      list(name = "Age",  type = "number")
-    )),
+    get_table_schema = function(...) {
+      list(
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age", type = "number")
+        )
+      )
+    },
     air_read = function(...) existing,
     air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
       list(created = "recD", updated = "recB")
@@ -176,10 +174,14 @@ test_that("air_sync with delete_missing=FALSE preserves extras", {
   )
 
   local_mocked_bindings(
-    get_table_schema = function(...) list(fields = list(
-      list(name = "Name", type = "singleLineText"),
-      list(name = "Age",  type = "number")
-    )),
+    get_table_schema = function(...) {
+      list(
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age", type = "number")
+        )
+      )
+    },
     air_read = function(...) existing
   )
 
@@ -211,10 +213,14 @@ test_that("air_sync is idempotent (no changes needed)", {
   )
 
   local_mocked_bindings(
-    get_table_schema = function(...) list(fields = list(
-      list(name = "Name", type = "singleLineText"),
-      list(name = "Age",  type = "number")
-    )),
+    get_table_schema = function(...) {
+      list(
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age", type = "number")
+        )
+      )
+    },
     air_read = function(...) existing
   )
 
@@ -250,10 +256,7 @@ test_that("air_write(data, table, base_id) works with data-first signature", {
   )
   data <- tibble::tibble(Name = "Alice")
   # positional base_id
-  expect_message(
-    ids <- air_write(data, "Table", "appXXX"),
-    "Created 1 record"
-  )
+  expect_message(ids <- air_write(data, "Table", "appXXX"), "Created 1 record")
   expect_equal(ids, "rec1")
   # named base_id
   expect_message(
@@ -268,12 +271,17 @@ test_that("air_upsert(data, table, merge_on, base_id) works with data-first sign
     get_computed_fields = function(...) character(),
     at_get_schema = function(...) {
       list(list(
-        id = "tbl1", name = "Table",
+        id = "tbl1",
+        name = "Table",
         fields = list(list(name = "Name", type = "singleLineText"))
       ))
     },
     at_update_records = function(...) {
-      list(records = list(), createdRecords = "rec1", updatedRecords = character())
+      list(
+        records = list(),
+        createdRecords = "rec1",
+        updatedRecords = character()
+      )
     }
   )
   data <- tibble::tibble(Name = "Alice")
@@ -299,10 +307,14 @@ test_that("air_sync(data, table, key, base_id) works with data-first signature",
     Age = integer()
   )
   local_mocked_bindings(
-    get_table_schema = function(...) list(fields = list(
-      list(name = "Name", type = "singleLineText"),
-      list(name = "Age",  type = "number")
-    )),
+    get_table_schema = function(...) {
+      list(
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age", type = "number")
+        )
+      )
+    },
     air_read = function(...) existing,
     air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
       list(created = "rec1", updated = character())
@@ -326,7 +338,7 @@ test_that("air_sync(data, table, key, base_id) works with data-first signature",
 
 test_that("at_create_table(name, fields, base_id) works with name-first signature", {
   local_mocked_bindings(
-    air_token   = function(token = NULL) "fake_token",
+    air_token = function(token = NULL) "fake_token",
     air_perform = function(req) list(id = "tblNEW", name = "MyTable")
   )
   result <- at_create_table(
@@ -360,11 +372,7 @@ test_that("air_write expands flat multiselect/links strings using schema", {
     }
   )
 
-  data <- tibble::tibble(
-    Name = "Alice",
-    Tags = "A; B",
-    Refs = "recX; recY"
-  )
+  data <- tibble::tibble(Name = "Alice", Tags = "A; B", Refs = "recX; recY")
   expect_message(air_write(data, "Table1", "appX"), "Created 1 record")
 
   expect_equal(captured[[1]]$fields$Tags, c("A", "B"))
@@ -413,9 +421,7 @@ test_that("air_write leaves already-classed air_multiselect untouched", {
     get_table_schema = function(...) {
       list(
         id = "tbl1",
-        fields = list(
-          list(name = "Tags", type = "multipleSelects")
-        )
+        fields = list(list(name = "Tags", type = "multipleSelects"))
       )
     },
     at_create_records = function(base_id, table_id, records, ...) {
@@ -447,15 +453,16 @@ test_that("air_upsert expands flat multiselect strings using schema", {
     },
     at_update_records = function(base_id, table_id, records, ...) {
       captured <<- records
-      list(records = records, createdRecords = "rec1", updatedRecords = character())
+      list(
+        records = records,
+        createdRecords = "rec1",
+        updatedRecords = character()
+      )
     }
   )
 
   data <- tibble::tibble(Name = "Alice", Tags = "A; B")
-  expect_message(
-    air_upsert(data, "Table1", "Name", "appX"),
-    "Upsert complete"
-  )
+  expect_message(air_upsert(data, "Table1", "Name", "appX"), "Upsert complete")
   expect_equal(captured[[1]]$fields$Tags, c("A", "B"))
 })
 
@@ -496,17 +503,12 @@ test_that("air_delete calls at_delete_records", {
 # ── detect_complex_cols() ─────────────────────────────────────────────────────
 
 test_that("detect_complex_cols finds list-columns whose elements are lists", {
-  data <- tibble::tibble(
-    name   = "Alice",
-    nested = list(list(a = 1, b = 2))
-  )
+  data <- tibble::tibble(name = "Alice", nested = list(list(a = 1, b = 2)))
   expect_equal(detect_complex_cols(data, c("name", "nested")), "nested")
 })
 
 test_that("detect_complex_cols finds data-frame elements", {
-  data <- tibble::tibble(
-    df_col = list(data.frame(x = 1:3, y = letters[1:3]))
-  )
+  data <- tibble::tibble(df_col = list(data.frame(x = 1:3, y = letters[1:3])))
   expect_equal(detect_complex_cols(data, "df_col"), "df_col")
 })
 
@@ -527,8 +529,14 @@ test_that("detect_complex_cols ignores NULL elements (all-NULL list col)", {
 })
 
 test_that("detect_complex_cols ignores air_*-classed columns", {
-  air_classes <- c("air_links", "air_multiselect", "air_attachments",
-                   "air_collaborator", "air_collaborators", "air_barcode")
+  air_classes <- c(
+    "air_links",
+    "air_multiselect",
+    "air_attachments",
+    "air_collaborator",
+    "air_collaborators",
+    "air_barcode"
+  )
   for (cls in air_classes) {
     col <- structure(list(list(a = 1)), class = c(cls, "list"))
     data <- tibble::tibble(x = col)
@@ -543,8 +551,14 @@ test_that("detect_complex_cols ignores air_*-classed columns", {
 test_that("detect_complex_cols ignores plain list-columns whose elements have air_* classes", {
   # This is the case produced by lapply(..., new_air_links) — each *element*
   # is an air_* object even though the column itself has no air_* class.
-  all_classes <- c("air_links", "air_multiselect", "air_attachments",
-                   "air_collaborator", "air_collaborators", "air_barcode")
+  all_classes <- c(
+    "air_links",
+    "air_multiselect",
+    "air_attachments",
+    "air_collaborator",
+    "air_collaborators",
+    "air_barcode"
+  )
   for (cls in all_classes) {
     elem <- structure(list(id = "recXXX"), class = c(cls, "list"))
     # plain list column — no class at the column level
@@ -566,28 +580,34 @@ test_that("air_upsert does not error when a linked-records column uses new_air_l
     get_computed_fields = function(...) character(),
     at_get_schema = function(...) {
       list(list(
-        id = "tbl1", name = "Projects",
+        id = "tbl1",
+        name = "Projects",
         fields = list(
           list(name = "Project Name", type = "singleLineText"),
-          list(name = "Lead Artist",  type = "multipleRecordLinks")
+          list(name = "Lead Artist", type = "multipleRecordLinks")
         )
       ))
     },
     at_update_records = function(base_id, table_id, records, ...) {
       captured <<- records
-      list(records = records, createdRecords = character(), updatedRecords = "rec1")
+      list(
+        records = records,
+        createdRecords = character(),
+        updatedRecords = "rec1"
+      )
     }
   )
 
   link_data <- tibble::tibble(
     `Project Name` = "Alpha",
-    `Lead Artist`  = list(new_air_links(list("recArtist1")))
+    `Lead Artist` = list(new_air_links(list("recArtist1")))
   )
-  expect_no_error(
-    suppressMessages(
-      air_upsert(link_data, "Projects", "Project Name", "appX")
-    )
-  )
+  expect_no_error(suppressMessages(air_upsert(
+    link_data,
+    "Projects",
+    "Project Name",
+    "appX"
+  )))
 })
 
 # ── serialize_json_cols() ─────────────────────────────────────────────────────
@@ -608,7 +628,7 @@ test_that("serialize_json_cols maps NULL and NA elements to NA_character_", {
 })
 
 test_that("serialize_json_cols warns and NAs oversized values for singleLineText", {
-  big <- paste(rep("x", 100001L), collapse = "")   # JSON will be > 100k chars
+  big <- paste(rep("x", 100001L), collapse = "") # JSON will be > 100k chars
   data <- tibble::tibble(col = list(list(v = big), list(v = "small")))
   expect_warning(
     result <- serialize_json_cols(data, "col", c(col = "singleLineText")),
@@ -649,20 +669,17 @@ test_that("serialize_json_cols does not truncate when field_types is NULL", {
 
 test_that("air_write errors on complex columns by default", {
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character()
   )
   data <- tibble::tibble(name = "Alice", info = list(list(a = 1)))
-  expect_error(
-    air_write(data, "Table1", "appX"),
-    "complex"
-  )
+  expect_error(air_write(data, "Table1", "appX"), "complex")
 })
 
 test_that("air_write complex_fields='warn' drops complex columns with a warning", {
   captured <- NULL
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_create_records = function(base_id, table_id, records, ...) {
       captured <<- records
@@ -671,32 +688,30 @@ test_that("air_write complex_fields='warn' drops complex columns with a warning"
   )
   data <- tibble::tibble(name = "Alice", info = list(list(a = 1)))
   expect_warning(
-    suppressMessages(
-      air_write(data, "Table1", "appX", complex_fields = "warn")
-    ),
+    suppressMessages(air_write(
+      data,
+      "Table1",
+      "appX",
+      complex_fields = "warn"
+    )),
     "complex column"
   )
   expect_false("info" %in% names(captured[[1L]]$fields))
   expect_true("name" %in% names(captured[[1L]]$fields))
 })
 
-test_that("air_write complex_fields='json' serialises complex columns to JSON strings", {
+test_that("air_write complex_fields='json' serializes complex columns to JSON strings", {
   captured <- NULL
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_create_records = function(base_id, table_id, records, ...) {
       captured <<- records
       list(list(id = "rec1"))
     }
   )
-  data <- tibble::tibble(
-    name = "Alice",
-    info = list(list(a = 1L, b = "hello"))
-  )
-  suppressMessages(
-    air_write(data, "Table1", "appX", complex_fields = "json")
-  )
+  data <- tibble::tibble(name = "Alice", info = list(list(a = 1L, b = "hello")))
+  suppressMessages(air_write(data, "Table1", "appX", complex_fields = "json"))
   json_val <- captured[[1L]]$fields$info
   expect_type(json_val, "character")
   parsed <- jsonlite::fromJSON(json_val)
@@ -707,7 +722,7 @@ test_that("air_write complex_fields='json' serialises complex columns to JSON st
 test_that("air_write complex_fields='json' NA rows produce NULL field (dropped)", {
   captured <- NULL
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_create_records = function(base_id, table_id, records, ...) {
       captured <<- records
@@ -718,11 +733,9 @@ test_that("air_write complex_fields='json' NA rows produce NULL field (dropped)"
     name = c("Alice", "Bob"),
     info = list(list(a = 1), NULL)
   )
-  suppressMessages(
-    air_write(data, "Table1", "appX", complex_fields = "json")
-  )
+  suppressMessages(air_write(data, "Table1", "appX", complex_fields = "json"))
   expect_type(captured[[1L]]$fields$info, "character")
-  expect_null(captured[[2L]]$fields$info)   # NA serialised → dropped by compact
+  expect_null(captured[[2L]]$fields$info) # NA serialized → dropped by compact
 })
 
 # ── add_fields='yes' field-type inference ─────────────────────────────────────
@@ -730,17 +743,24 @@ test_that("air_write complex_fields='json' NA rows produce NULL field (dropped)"
 test_that("add_fields='yes' creates checkbox fields with required icon/color options", {
   created <- list()
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_get_schema = function(...) {
       list(list(
-        id = "tbl1", name = "Table1",
+        id = "tbl1",
+        name = "Table1",
         fields = list(list(name = "Name", type = "singleLineText"))
       ))
     },
     schema_cache_invalidate = function(...) invisible(NULL),
-    at_create_field = function(name, base_id, table_id, type,
-                               options = NULL, token = NULL) {
+    at_create_field = function(
+      name,
+      base_id,
+      table_id,
+      type,
+      options = NULL,
+      token = NULL
+    ) {
       created[[name]] <<- list(type = type, options = options)
       list(id = paste0("fld", name), name = name, type = type)
     },
@@ -758,17 +778,24 @@ test_that("add_fields='yes' creates checkbox fields with required icon/color opt
 test_that("add_fields='yes' creates multilineText for complex_fields='json' columns", {
   created <- list()
   local_mocked_bindings(
-    get_computed_fields   = function(...) character(),
+    get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_get_schema = function(...) {
       list(list(
-        id = "tbl1", name = "Table1",
+        id = "tbl1",
+        name = "Table1",
         fields = list(list(name = "Name", type = "singleLineText"))
       ))
     },
     schema_cache_invalidate = function(...) invisible(NULL),
-    at_create_field = function(name, base_id, table_id, type,
-                               options = NULL, token = NULL) {
+    at_create_field = function(
+      name,
+      base_id,
+      table_id,
+      type,
+      options = NULL,
+      token = NULL
+    ) {
       created[[name]] <<- list(type = type, options = options)
       list(id = paste0("fld", name), name = name, type = type)
     },
@@ -776,9 +803,13 @@ test_that("add_fields='yes' creates multilineText for complex_fields='json' colu
   )
 
   data <- tibble::tibble(Name = "Alice", events = list(list(x = 1)))
-  suppressMessages(
-    air_write(data, "Table1", "appX", add_fields = "yes", complex_fields = "json")
-  )
+  suppressMessages(air_write(
+    data,
+    "Table1",
+    "appX",
+    add_fields = "yes",
+    complex_fields = "json"
+  ))
 
   expect_equal(created$events$type, "multilineText")
 })
@@ -816,12 +847,18 @@ test_that("air_write with create_table = TRUE skips creation when table exists",
 
   local_mocked_bindings(
     get_table_schema = function(...) {
-      list(id = "tblEx", name = "Existing", fields = list(
-        list(name = "Name", type = "singleLineText"),
-        list(name = "Age",  type = "number")
-      ))
+      list(
+        id = "tblEx",
+        name = "Existing",
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age", type = "number")
+        )
+      )
     },
-    at_create_table = function(...) { create_called <<- TRUE },
+    at_create_table = function(...) {
+      create_called <<- TRUE
+    },
     get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_create_records = function(...) list(list(id = "rec1"))
@@ -840,7 +877,9 @@ test_that("air_write does not create table when create_table = FALSE (default)",
 
   local_mocked_bindings(
     get_table_schema = function(...) NULL,
-    at_create_table = function(...) { create_called <<- TRUE },
+    at_create_table = function(...) {
+      create_called <<- TRUE
+    },
     get_computed_fields = function(...) character(),
     get_attachment_fields = function(...) character(),
     at_create_records = function(...) list(list(id = "rec1"))
@@ -854,23 +893,25 @@ test_that("air_write does not create table when create_table = FALSE (default)",
 # ── normalize_for_hash() unit tests ───────────────────────────────────────────
 
 # Minimal schema used across normalize tests
-.norm_schema <- list(fields = list(
-  list(name = "Tags",   type = "multipleSelects"),
-  list(name = "Notes",  type = "richText"),
-  list(name = "Active", type = "checkbox"),
-  list(name = "Age",    type = "number"),
-  list(name = "Name",   type = "singleLineText"),
-  list(name = "Date",   type = "date"),
-  list(name = "When",   type = "dateTime"),
-  list(name = "Links",  type = "multipleRecordLinks")
-))
+.norm_schema <- list(
+  fields = list(
+    list(name = "Tags", type = "multipleSelects"),
+    list(name = "Notes", type = "richText"),
+    list(name = "Active", type = "checkbox"),
+    list(name = "Age", type = "number"),
+    list(name = "Name", type = "singleLineText"),
+    list(name = "Date", type = "date"),
+    list(name = "When", type = "dateTime"),
+    list(name = "Links", type = "multipleRecordLinks")
+  )
+)
 .norm_types <- field_types_from_schema(.norm_schema)
 
 test_that("normalize_for_hash: richText trailing newline stripped", {
   existing <- tibble::tibble(Notes = "hello\n")
-  data_df  <- tibble::tibble(Notes = "hello")
+  data_df <- tibble::tibble(Notes = "hello")
   en <- normalize_for_hash(existing, .norm_types)
-  dn <- normalize_for_hash(data_df,  .norm_types)
+  dn <- normalize_for_hash(data_df, .norm_types)
   expect_equal(en$Notes, dn$Notes)
 })
 
@@ -908,9 +949,9 @@ test_that("normalize_for_hash: integer becomes numeric", {
 
 test_that("normalize_for_hash: list-column hashes identically on both sides", {
   existing <- tibble::tibble(Tags = list(c("R", "Python"), NULL))
-  data_df  <- tibble::tibble(Tags = list(c("R", "Python"), NULL))
+  data_df <- tibble::tibble(Tags = list(c("R", "Python"), NULL))
   en <- normalize_for_hash(existing, .norm_types)
-  dn <- normalize_for_hash(data_df,  .norm_types)
+  dn <- normalize_for_hash(data_df, .norm_types)
   expect_equal(en$Tags, dn$Tags)
   expect_equal(en$Tags, c("R\x01Python", NA_character_))
 })
@@ -924,17 +965,17 @@ test_that("normalize_for_hash: air_multiselect S3 class stripped and flattened",
 
 test_that("normalize_for_hash: character multipleSelects semicolon-delimited matches list form", {
   existing <- tibble::tibble(Tags = list(c("R", "Python")))
-  data_df  <- tibble::tibble(Tags = "R; Python")
+  data_df <- tibble::tibble(Tags = "R; Python")
   en <- normalize_for_hash(existing, .norm_types)
-  dn <- normalize_for_hash(data_df,  .norm_types)
+  dn <- normalize_for_hash(data_df, .norm_types)
   expect_equal(en$Tags, dn$Tags)
 })
 
 test_that("normalize_for_hash: character multipleSelects with wrong delimiter NOT normalized", {
   existing <- tibble::tibble(Tags = list(c("R", "Python")))
-  data_df  <- tibble::tibble(Tags = "R, Python")  # comma delimiter, not semicolon
+  data_df <- tibble::tibble(Tags = "R, Python") # comma delimiter, not semicolon
   en <- normalize_for_hash(existing, .norm_types)
-  dn <- normalize_for_hash(data_df,  .norm_types)
+  dn <- normalize_for_hash(data_df, .norm_types)
   expect_false(identical(en$Tags, dn$Tags))
 })
 
@@ -950,17 +991,24 @@ test_that("air_sync hash normalization: multipleSelects list vs character match"
   local_mocked_bindings(
     get_table_schema = function(...) .norm_schema,
     air_read = function(...) existing,
-    air_upsert = function(...) list(created = character(), updated = character()),
+    air_upsert = function(...) {
+      list(created = character(), updated = character())
+    },
     at_delete_records = function(...) invisible(NULL)
   )
   desired <- tibble::tibble(Name = "Alice", Tags = "R; Python")
   expect_message(
-    result <- air_sync(desired, "Table1", "Name", "appX",
-                       hash_fields = c("Name", "Tags")),
+    result <- air_sync(
+      desired,
+      "Table1",
+      "Name",
+      "appX",
+      hash_fields = c("Name", "Tags")
+    ),
     "Sync complete"
   )
   expect_equal(result$unchanged, 1L)
-  expect_equal(result$updated,   0L)
+  expect_equal(result$updated, 0L)
 })
 
 test_that("air_sync hash normalization: richText trailing newline is not a change", {
@@ -971,20 +1019,31 @@ test_that("air_sync hash normalization: richText trailing newline is not a chang
     Notes = "hello\n"
   )
   local_mocked_bindings(
-    get_table_schema = function(...) list(fields = list(
-      list(name = "Name",  type = "singleLineText"),
-      list(name = "Notes", type = "richText")
-    )),
+    get_table_schema = function(...) {
+      list(
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Notes", type = "richText")
+        )
+      )
+    },
     air_read = function(...) existing,
-    air_upsert = function(...) list(created = character(), updated = character()),
+    air_upsert = function(...) {
+      list(created = character(), updated = character())
+    },
     at_delete_records = function(...) invisible(NULL)
   )
   desired <- tibble::tibble(Name = "Alice", Notes = "hello")
   expect_message(
-    result <- air_sync(desired, "Table1", "Name", "appX",
-                       hash_fields = c("Name", "Notes")),
+    result <- air_sync(
+      desired,
+      "Table1",
+      "Name",
+      "appX",
+      hash_fields = c("Name", "Notes")
+    ),
     "Sync complete"
   )
   expect_equal(result$unchanged, 1L)
-  expect_equal(result$updated,   0L)
+  expect_equal(result$updated, 0L)
 })

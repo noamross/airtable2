@@ -48,31 +48,26 @@ air_demo_setup <- function(
   .token = NULL
 ) {
   if (!nzchar(workspace_id)) {
-    cli::cli_abort(
-      c(
-        "x" = "{.arg workspace_id} is required.",
-        "i" = paste0(
-          "Find yours in the browser URL when you open Airtable: ",
-          "{.url https://airtable.com/wspXXXXX/...}"
-        ),
-        "i" = "Set {.envvar AIRTABLE_WORKSPACE_ID} or pass it directly."
-      )
-    )
+    cli::cli_abort(c(
+      "x" = "{.arg workspace_id} is required.",
+      "i" = paste0(
+        "Find yours in the browser URL when you open Airtable: ",
+        "{.url https://airtable.com/wspXXXXX/...}"
+      ),
+      "i" = "Set {.envvar AIRTABLE_WORKSPACE_ID} or pass it directly."
+    ))
   }
 
-  cli::cli_inform(
-    c(
-      "i" = "Creating demo base {.val {name}} in workspace {.val {workspace_id}}.",
-      "i" = "Theme: BollardsForArt \u2014 creative-arts advocacy nonprofit.",
-      "i" = "This uses several API calls and creates a real base."
-    )
-  )
+  cli::cli_inform(c(
+    "i" = "Creating demo base {.val {name}} in workspace {.val {workspace_id}}.",
+    "i" = "Theme: BollardsForArt \u2014 creative-arts advocacy nonprofit.",
+    "i" = "This uses several API calls and creates a real base."
+  ))
 
   # --- Build Artists table config (created with the base) --------------------
   artists_fields <- list(
-    list(name = "Name",         type = "singleLineText"),
-    list(name = "Age",          type = "number",
-         options = list(precision = 0L)),
+    list(name = "Name", type = "singleLineText"),
+    list(name = "Age", type = "number", options = list(precision = 0L)),
     list(
       name = "Active",
       type = "checkbox",
@@ -110,16 +105,18 @@ air_demo_setup <- function(
         )
       )
     ),
-    list(name = "Member Since", type = "date",
-         options = list(dateFormat = list(name = "iso"))),
-    list(name = "Email",        type = "email")
+    list(
+      name = "Member Since",
+      type = "date",
+      options = list(dateFormat = list(name = "iso"))
+    ),
+    list(name = "Email", type = "email")
   )
 
   # --- Build Projects table config (created with the base) ------------------
   projects_fields <- list(
     list(name = "Project Name", type = "singleLineText"),
-    list(name = "Budget",       type = "number",
-         options = list(precision = 2L)),
+    list(name = "Budget", type = "number", options = list(precision = 2L)),
     list(
       name = "Status",
       type = "singleSelect",
@@ -133,25 +130,30 @@ air_demo_setup <- function(
         )
       )
     ),
-    list(name = "Installation Date", type = "date",
-         options = list(dateFormat = list(name = "iso"))),
-    list(name = "Files",        type = "multipleAttachments")
+    list(
+      name = "Installation Date",
+      type = "date",
+      options = list(dateFormat = list(name = "iso"))
+    ),
+    list(name = "Files", type = "multipleAttachments")
   )
 
   # --- Build Supporters table config (created with the base) ---------------
   supporters_fields <- list(
-    list(name = "Name",   type = "singleLineText"),
-    list(name = "Email",  type = "email"),
-    list(name = "Joined", type = "date",
-         options = list(dateFormat = list(name = "iso"))),
-    list(name = "City",   type = "singleLineText")
+    list(name = "Name", type = "singleLineText"),
+    list(name = "Email", type = "email"),
+    list(
+      name = "Joined",
+      type = "date",
+      options = list(dateFormat = list(name = "iso"))
+    ),
+    list(name = "City", type = "singleLineText")
   )
 
   # --- Build Grants table config (created with the base) --------------------
   grants_fields <- list(
-    list(name = "Grant Name",   type = "singleLineText"),
-    list(name = "Amount",       type = "number",
-         options = list(precision = 2L)),
+    list(name = "Grant Name", type = "singleLineText"),
+    list(name = "Amount", type = "number", options = list(precision = 2L)),
     list(
       name = "Status",
       type = "singleSelect",
@@ -165,9 +167,12 @@ air_demo_setup <- function(
         )
       )
     ),
-    list(name = "Deadline",     type = "date",
-         options = list(dateFormat = list(name = "iso"))),
-    list(name = "Funder",       type = "singleLineText")
+    list(
+      name = "Deadline",
+      type = "date",
+      options = list(dateFormat = list(name = "iso"))
+    ),
+    list(name = "Funder", type = "singleLineText")
   )
 
   # Create the base with all three tables
@@ -176,10 +181,10 @@ air_demo_setup <- function(
     name = name,
     workspace_id = workspace_id,
     tables = list(
-      list(name = "Artists",    fields = artists_fields),
-      list(name = "Projects",   fields = projects_fields),
+      list(name = "Artists", fields = artists_fields),
+      list(name = "Projects", fields = projects_fields),
       list(name = "Supporters", fields = supporters_fields),
-      list(name = "Grants",     fields = grants_fields)
+      list(name = "Grants", fields = grants_fields)
     ),
     token = .token
   )
@@ -191,9 +196,9 @@ air_demo_setup <- function(
 
   # --- Identify created tables -----------------------------------------------
   created_tables <- new_base$tables %||% list()
-  artists_tbl  <- Find(function(t) t$name == "Artists",  created_tables)
+  artists_tbl <- Find(function(t) t$name == "Artists", created_tables)
   projects_tbl <- Find(function(t) t$name == "Projects", created_tables)
-  grants_tbl   <- Find(function(t) t$name == "Grants",   created_tables)
+  grants_tbl <- Find(function(t) t$name == "Grants", created_tables)
 
   # --- Add linked-records field: Lead Artist on Projects --------------------
   if (!is.null(artists_tbl) && !is.null(projects_tbl)) {
@@ -202,11 +207,11 @@ air_demo_setup <- function(
     )
     tryCatch(
       at_create_field(
-        name     = "Lead Artist",
+        name = "Lead Artist",
         table_id = projects_tbl$id,
-        type     = "multipleRecordLinks",
-        base_id  = base_id,
-        options  = list(linkedTableId = artists_tbl$id),
+        type = "multipleRecordLinks",
+        base_id = base_id,
+        options = list(linkedTableId = artists_tbl$id),
         token = .token
       ),
       error = function(e) {
@@ -224,11 +229,11 @@ air_demo_setup <- function(
     )
     tryCatch(
       at_create_field(
-        name     = "Funded Projects",
+        name = "Funded Projects",
         table_id = grants_tbl$id,
-        type     = "multipleRecordLinks",
-        base_id  = base_id,
-        options  = list(linkedTableId = projects_tbl$id),
+        type = "multipleRecordLinks",
+        base_id = base_id,
+        options = list(linkedTableId = projects_tbl$id),
         token = .token
       ),
       error = function(e) {
@@ -242,28 +247,75 @@ air_demo_setup <- function(
   # --- Write sample Artists records -----------------------------------------
   cli::cli_inform("Writing sample Artists records...")
   artists_data <- tibble::tibble(
-    Name           = c(
-      "Zara Okonkwo",         "Dmitri Volkov",       "Sun-Li Park",
-      "Fatima El-Rashid",     "Carlos Mendes",       "Ingrid Holm\u00e5s",
-      "Kofi Asante",          "Priya Nair",          "Tomasz Wierzbicki",
-      "Amara Diallo",         "Hiroshi Nakamura",    "Beatriz Santos",
-      "Rashida Osei",         "Luka\u0161 Nova\u010dek",  "Miriam Khoury"
+    Name = c(
+      "Zara Okonkwo",
+      "Dmitri Volkov",
+      "Sun-Li Park",
+      "Fatima El-Rashid",
+      "Carlos Mendes",
+      "Ingrid Holm\u00e5s",
+      "Kofi Asante",
+      "Priya Nair",
+      "Tomasz Wierzbicki",
+      "Amara Diallo",
+      "Hiroshi Nakamura",
+      "Beatriz Santos",
+      "Rashida Osei",
+      "Luka\u0161 Nova\u010dek",
+      "Miriam Khoury"
     ),
-    Age            = c(34L, 41L, 28L, 36L, 45L, 29L, 38L, 32L, 44L,
-                       27L, 51L, 33L, 39L, 25L, 47L),
-    Active         = c(TRUE,  TRUE,  TRUE,  TRUE,  FALSE, TRUE,  TRUE,
-                       TRUE,  FALSE, TRUE,  TRUE,  TRUE,  FALSE, TRUE, TRUE),
-    Role           = c(
-      "Guerilla Muralist",          "Kinetic Sculptor",
-      "Sound Installation Designer","Community Arts Agitator",
-      "Concrete Poet",              "Site-Specific Weaver",
-      "Street Typographer",         "Light & Shadow Artist",
-      "Guerilla Muralist",          "Sound Installation Designer",
-      "Kinetic Sculptor",           "Community Arts Agitator",
-      "Concrete Poet",              "Light & Shadow Artist",
+    Age = c(
+      34L,
+      41L,
+      28L,
+      36L,
+      45L,
+      29L,
+      38L,
+      32L,
+      44L,
+      27L,
+      51L,
+      33L,
+      39L,
+      25L,
+      47L
+    ),
+    Active = c(
+      TRUE,
+      TRUE,
+      TRUE,
+      TRUE,
+      FALSE,
+      TRUE,
+      TRUE,
+      TRUE,
+      FALSE,
+      TRUE,
+      TRUE,
+      TRUE,
+      FALSE,
+      TRUE,
+      TRUE
+    ),
+    Role = c(
+      "Guerilla Muralist",
+      "Kinetic Sculptor",
+      "Sound Installation Designer",
+      "Community Arts Agitator",
+      "Concrete Poet",
+      "Site-Specific Weaver",
+      "Street Typographer",
+      "Light & Shadow Artist",
+      "Guerilla Muralist",
+      "Sound Installation Designer",
+      "Kinetic Sculptor",
+      "Community Arts Agitator",
+      "Concrete Poet",
+      "Light & Shadow Artist",
       "Site-Specific Weaver"
     ),
-    Disciplines    = list(
+    Disciplines = list(
       c("Mural", "Street Art"),
       c("Sculpture", "Community"),
       c("Sound", "Community"),
@@ -281,115 +333,242 @@ air_demo_setup <- function(
       c("Textile", "Sculpture")
     ),
     `Member Since` = as.Date(c(
-      "2019-03-12", "2018-07-01", "2022-01-20", "2020-09-15", "2016-04-08",
-      "2021-11-03", "2019-06-25", "2023-02-14", "2017-08-30", "2022-05-11",
-      "2015-12-05", "2020-03-28", "2018-10-19", "2023-07-07", "2016-01-22"
+      "2019-03-12",
+      "2018-07-01",
+      "2022-01-20",
+      "2020-09-15",
+      "2016-04-08",
+      "2021-11-03",
+      "2019-06-25",
+      "2023-02-14",
+      "2017-08-30",
+      "2022-05-11",
+      "2015-12-05",
+      "2020-03-28",
+      "2018-10-19",
+      "2023-07-07",
+      "2016-01-22"
     )),
-    Email          = c(
-      "zara@bollardsforart.org",     "dmitri@bollardsforart.org",
-      "sunli@bollardsforart.org",    "fatima@bollardsforart.org",
-      "carlos@bollardsforart.org",   "ingrid@bollardsforart.org",
-      "kofi@bollardsforart.org",     "priya@bollardsforart.org",
-      "tomasz@bollardsforart.org",   "amara@bollardsforart.org",
-      "hiroshi@bollardsforart.org",  "beatriz@bollardsforart.org",
-      "rashida@bollardsforart.org",  "lukas@bollardsforart.org",
+    Email = c(
+      "zara@bollardsforart.org",
+      "dmitri@bollardsforart.org",
+      "sunli@bollardsforart.org",
+      "fatima@bollardsforart.org",
+      "carlos@bollardsforart.org",
+      "ingrid@bollardsforart.org",
+      "kofi@bollardsforart.org",
+      "priya@bollardsforart.org",
+      "tomasz@bollardsforart.org",
+      "amara@bollardsforart.org",
+      "hiroshi@bollardsforart.org",
+      "beatriz@bollardsforart.org",
+      "rashida@bollardsforart.org",
+      "lukas@bollardsforart.org",
       "miriam@bollardsforart.org"
     )
   )
-  artist_ids <- air_write(artists_data, "Artists", base_id,
-                          typecast = TRUE, add_fields = "warn", .token = .token)
+  artist_ids <- air_write(
+    artists_data,
+    "Artists",
+    base_id,
+    typecast = TRUE,
+    add_fields = "warn",
+    .token = .token
+  )
 
   # --- Write sample Projects records ----------------------------------------
   cli::cli_inform("Writing sample Projects records...")
 
   # Picsum stable image URLs keyed by project seed
   project_seeds <- c(
-    "night-bloom",    "listening-wall",   "fugitive-geom",
-    "concrete-chant", "meridian-pulse",   "rust-and-bloom",
-    "echo-chamber",   "sky-anchors",      "tide-grammars",
-    "hidden-clocks",  "soft-machines",    "border-crossings",
-    "grief-garden",   "signal-fire",      "radiant-commons"
+    "night-bloom",
+    "listening-wall",
+    "fugitive-geom",
+    "concrete-chant",
+    "meridian-pulse",
+    "rust-and-bloom",
+    "echo-chamber",
+    "sky-anchors",
+    "tide-grammars",
+    "hidden-clocks",
+    "soft-machines",
+    "border-crossings",
+    "grief-garden",
+    "signal-fire",
+    "radiant-commons"
   )
-  picsum_urls <- paste0("https://picsum.photos/seed/", project_seeds, "/640/480")
+  picsum_urls <- paste0(
+    "https://picsum.photos/seed/",
+    project_seeds,
+    "/640/480"
+  )
 
   projects_data <- tibble::tibble(
-    `Project Name`      = c(
-      "Night Bloom at Pier 7",          "The Listening Wall",
-      "Fugitive Geometries",            "Concrete Chant",
-      "Meridian Pulse",                 "Rust & Bloom",
-      "Echo Chamber / Camara de Eco",   "Sky Anchors",
-      "Tide Grammars",                  "Hidden Clocks",
-      "Soft Machines",                  "Border Crossings",
-      "Grief Garden",                   "Signal Fire",
+    `Project Name` = c(
+      "Night Bloom at Pier 7",
+      "The Listening Wall",
+      "Fugitive Geometries",
+      "Concrete Chant",
+      "Meridian Pulse",
+      "Rust & Bloom",
+      "Echo Chamber / Camara de Eco",
+      "Sky Anchors",
+      "Tide Grammars",
+      "Hidden Clocks",
+      "Soft Machines",
+      "Border Crossings",
+      "Grief Garden",
+      "Signal Fire",
       "The Radiant Commons"
     ),
-    Budget              = c(
-       4200, 11500, 8750,  2300, 15000,
-       6400,  9800, 3100, 12000,  5500,
-       7200, 14000, 3800,  6900, 20000
+    Budget = c(
+      4200,
+      11500,
+      8750,
+      2300,
+      15000,
+      6400,
+      9800,
+      3100,
+      12000,
+      5500,
+      7200,
+      14000,
+      3800,
+      6900,
+      20000
     ),
-    Status              = c(
-      "Installed",    "In Progress", "Proposed",
-      "Installed",    "In Progress", "Installed",
-      "On Hold",      "Installed",   "Proposed",
-      "In Progress",  "Dismantled",  "Installed",
-      "Proposed",     "In Progress", "Installed"
+    Status = c(
+      "Installed",
+      "In Progress",
+      "Proposed",
+      "Installed",
+      "In Progress",
+      "Installed",
+      "On Hold",
+      "Installed",
+      "Proposed",
+      "In Progress",
+      "Dismantled",
+      "Installed",
+      "Proposed",
+      "In Progress",
+      "Installed"
     ),
     `Installation Date` = as.Date(c(
-      "2024-06-21", "2025-03-15", NA,
-      "2023-09-08", "2025-07-01", "2024-11-02",
-      NA,           "2024-04-18", NA,
-      "2025-01-10", "2022-08-05", "2023-12-14",
-      NA,           "2025-05-20", "2024-09-30"
+      "2024-06-21",
+      "2025-03-15",
+      NA,
+      "2023-09-08",
+      "2025-07-01",
+      "2024-11-02",
+      NA,
+      "2024-04-18",
+      NA,
+      "2025-01-10",
+      "2022-08-05",
+      "2023-12-14",
+      NA,
+      "2025-05-20",
+      "2024-09-30"
     )),
-    Files               = lapply(picsum_urls, function(u) {
+    Files = lapply(picsum_urls, function(u) {
       list(list(url = u))
     })
   )
-  project_ids <- air_write(projects_data, "Projects", base_id,
-                           typecast = TRUE, add_fields = "warn", .token = .token)
+  project_ids <- air_write(
+    projects_data,
+    "Projects",
+    base_id,
+    typecast = TRUE,
+    add_fields = "warn",
+    .token = .token
+  )
 
   # --- Upload project images as proper attachments --------------------------
   # Demonstrate at_upload_attachment by downloading the first project's image
   # to a temp file and uploading it as a binary attachment.
   cli::cli_inform("Uploading sample project image attachment...")
   .demo_upload_image(
-    base_id      = base_id,
-    table_id     = projects_tbl$id %||% "Projects",
-    project_ids  = project_ids,
-    image_url    = picsum_urls[[1L]],
-    .token       = .token
+    base_id = base_id,
+    table_id = projects_tbl$id %||% "Projects",
+    project_ids = project_ids,
+    image_url = picsum_urls[[1L]],
+    .token = .token
   )
 
   # --- Write sample Grants records ------------------------------------------
   cli::cli_inform("Writing sample Grants records...")
   grants_data <- tibble::tibble(
-    `Grant Name`  = c(
-      "NEA Our Town",                "NYSCA Individual Artist",
-      "Kresge Arts in Detroit",      "Creative Capital Award",
-      "Pollock-Krasner Foundation",  "MAP Fund",
-      "Rasmuson Foundation",         "Joan Mitchell Foundation",
-      "Herb Alpert Award",           "United States Artists",
-      "Andy Warhol Foundation",      "Foundation for Contemporary Arts",
-      "ArtPlace America",            "Surdna Foundation Arts",
+    `Grant Name` = c(
+      "NEA Our Town",
+      "NYSCA Individual Artist",
+      "Kresge Arts in Detroit",
+      "Creative Capital Award",
+      "Pollock-Krasner Foundation",
+      "MAP Fund",
+      "Rasmuson Foundation",
+      "Joan Mitchell Foundation",
+      "Herb Alpert Award",
+      "United States Artists",
+      "Andy Warhol Foundation",
+      "Foundation for Contemporary Arts",
+      "ArtPlace America",
+      "Surdna Foundation Arts",
       "Tiny Spark Community Arts"
     ),
-    Amount        = c(
-       75000,  15000, 25000, 50000,  20000,
-       30000,  10000, 40000, 35000,  50000,
-       60000,   8000, 45000, 22000,   5000
+    Amount = c(
+      75000,
+      15000,
+      25000,
+      50000,
+      20000,
+      30000,
+      10000,
+      40000,
+      35000,
+      50000,
+      60000,
+      8000,
+      45000,
+      22000,
+      5000
     ),
-    Status        = c(
-      "Awarded",    "Applied",    "Awarded",  "Identified", "Applied",
-      "Awarded",    "Rejected",   "Awarded",  "Identified", "Applied",
-      "Reporting",  "Awarded",    "Applied",  "Identified", "Awarded"
+    Status = c(
+      "Awarded",
+      "Applied",
+      "Awarded",
+      "Identified",
+      "Applied",
+      "Awarded",
+      "Rejected",
+      "Awarded",
+      "Identified",
+      "Applied",
+      "Reporting",
+      "Awarded",
+      "Applied",
+      "Identified",
+      "Awarded"
     ),
-    Deadline      = as.Date(c(
-      "2025-04-01", "2025-09-15", "2025-06-30", "2026-01-31", "2025-11-01",
-      "2025-08-15", "2025-03-01", "2025-10-31", "2026-02-28", "2025-07-15",
-      "2025-05-15", "2025-12-01", "2026-03-31", "2025-08-01", "2025-06-01"
+    Deadline = as.Date(c(
+      "2025-04-01",
+      "2025-09-15",
+      "2025-06-30",
+      "2026-01-31",
+      "2025-11-01",
+      "2025-08-15",
+      "2025-03-01",
+      "2025-10-31",
+      "2026-02-28",
+      "2025-07-15",
+      "2025-05-15",
+      "2025-12-01",
+      "2026-03-31",
+      "2025-08-01",
+      "2025-06-01"
     )),
-    Funder        = c(
+    Funder = c(
       "National Endowment for the Arts",
       "New York State Council on the Arts",
       "Kresge Foundation",
@@ -407,98 +586,154 @@ air_demo_setup <- function(
       "Tiny Spark"
     )
   )
-  air_write(grants_data, "Grants", base_id,
-            typecast = TRUE, add_fields = "warn", .token = .token)
+  air_write(
+    grants_data,
+    "Grants",
+    base_id,
+    typecast = TRUE,
+    add_fields = "warn",
+    .token = .token
+  )
 
   # --- Add field descriptions -----------------------------------------------
   # Retrieve the schema to get field IDs, then patch descriptions
   cli::cli_inform("Adding field descriptions...")
-  tryCatch({
-    schema <- at_get_schema(base_id)
+  tryCatch(
+    {
+      schema <- at_get_schema(base_id)
 
-    .describe_field <- function(table_name, field_name, description) {
-      tbl <- Find(function(t) t$name == table_name, schema)
-      if (is.null(tbl)) return(invisible(NULL))
-      fld <- Find(function(f) f$name == field_name, tbl$fields)
-      if (is.null(fld)) return(invisible(NULL))
-      tryCatch(
-        at_update_field(
-          base_id     = base_id,
-          table_id    = tbl$id,
-          field_id    = fld$id,
-          description = description,
-          token       = .token
-        ),
-        error = function(e) {
-          cli::cli_warn(
-            "Could not set description for {.field {field_name}}: {conditionMessage(e)}"
-          )
+      .describe_field <- function(table_name, field_name, description) {
+        tbl <- Find(function(t) t$name == table_name, schema)
+        if (is.null(tbl)) {
+          return(invisible(NULL))
         }
+        fld <- Find(function(f) f$name == field_name, tbl$fields)
+        if (is.null(fld)) {
+          return(invisible(NULL))
+        }
+        tryCatch(
+          at_update_field(
+            base_id = base_id,
+            table_id = tbl$id,
+            field_id = fld$id,
+            description = description,
+            token = .token
+          ),
+          error = function(e) {
+            cli::cli_warn(
+              "Could not set description for {.field {field_name}}: {conditionMessage(e)}"
+            )
+          }
+        )
+      }
+
+      # Artists field descriptions
+      .describe_field(
+        "Artists",
+        "Name",
+        "Full name of the artist as they wish to be credited in public materials."
       )
+      .describe_field(
+        "Artists",
+        "Role",
+        "Primary artistic practice or role within BollardsForArt campaigns."
+      )
+      .describe_field(
+        "Artists",
+        "Disciplines",
+        "All artistic disciplines the artist works across."
+      )
+      .describe_field(
+        "Artists",
+        "Active",
+        "Whether the artist is currently active in BollardsForArt projects."
+      )
+      .describe_field(
+        "Artists",
+        "Member Since",
+        "Date the artist joined the BollardsForArt collective."
+      )
+      .describe_field(
+        "Artists",
+        "Email",
+        "Contact email for project coordination and grant applications."
+      )
+
+      # Projects field descriptions
+      .describe_field(
+        "Projects",
+        "Project Name",
+        "The public-facing title of the art installation or campaign."
+      )
+      .describe_field(
+        "Projects",
+        "Budget",
+        "Total budget in USD approved or estimated for the project."
+      )
+      .describe_field(
+        "Projects",
+        "Status",
+        "Current lifecycle stage of the project."
+      )
+      .describe_field(
+        "Projects",
+        "Installation Date",
+        "Date the work was or is scheduled to be installed in public space."
+      )
+      .describe_field(
+        "Projects",
+        "Files",
+        "Reference images, documentation photos, or design files for the project."
+      )
+
+      # Grants field descriptions
+      .describe_field(
+        "Grants",
+        "Grant Name",
+        "Name of the grant program or award."
+      )
+      .describe_field(
+        "Grants",
+        "Amount",
+        "Dollar amount of the grant, either awarded or applied for."
+      )
+      .describe_field(
+        "Grants",
+        "Status",
+        "Current status of the grant application or relationship."
+      )
+      .describe_field(
+        "Grants",
+        "Deadline",
+        "Application deadline or next reporting due date."
+      )
+      .describe_field(
+        "Grants",
+        "Funder",
+        "Name of the funding organization or foundation."
+      )
+    },
+    error = function(e) {
+      cli::cli_warn("Could not add field descriptions: {conditionMessage(e)}")
     }
-
-    # Artists field descriptions
-    .describe_field("Artists", "Name",
-      "Full name of the artist as they wish to be credited in public materials.")
-    .describe_field("Artists", "Role",
-      "Primary artistic practice or role within BollardsForArt campaigns.")
-    .describe_field("Artists", "Disciplines",
-      "All artistic disciplines the artist works across.")
-    .describe_field("Artists", "Active",
-      "Whether the artist is currently active in BollardsForArt projects.")
-    .describe_field("Artists", "Member Since",
-      "Date the artist joined the BollardsForArt collective.")
-    .describe_field("Artists", "Email",
-      "Contact email for project coordination and grant applications.")
-
-    # Projects field descriptions
-    .describe_field("Projects", "Project Name",
-      "The public-facing title of the art installation or campaign.")
-    .describe_field("Projects", "Budget",
-      "Total budget in USD approved or estimated for the project.")
-    .describe_field("Projects", "Status",
-      "Current lifecycle stage of the project.")
-    .describe_field("Projects", "Installation Date",
-      "Date the work was or is scheduled to be installed in public space.")
-    .describe_field("Projects", "Files",
-      "Reference images, documentation photos, or design files for the project.")
-
-    # Grants field descriptions
-    .describe_field("Grants", "Grant Name",
-      "Name of the grant program or award.")
-    .describe_field("Grants", "Amount",
-      "Dollar amount of the grant, either awarded or applied for.")
-    .describe_field("Grants", "Status",
-      "Current status of the grant application or relationship.")
-    .describe_field("Grants", "Deadline",
-      "Application deadline or next reporting due date.")
-    .describe_field("Grants", "Funder",
-      "Name of the funding organization or foundation.")
-
-  }, error = function(e) {
-    cli::cli_warn(
-      "Could not add field descriptions: {conditionMessage(e)}"
-    )
-  })
+  )
 
   # --- Summary ---------------------------------------------------------------
   base_url <- paste0("https://airtable.com/", base_id)
-  cli::cli_inform(
-    c(
-      "v" = "Demo base created: {.val {name}} ({.val {base_id}})",
-      "*" = "Artists: {nrow(artists_data)} records",
-      "*" = "Projects: {nrow(projects_data)} records (with image attachments)",
-      "*" = "Supporters: (empty \u2014 filled by {.fn air_demo} step 3)",
-      "*" = "Grants: {nrow(grants_data)} records",
-      "i" = "Set as default with {.run air_set_base(\"{base_id}\")}",
-      "i" = "Open in browser: {.url {base_url}}",
-      "i" = "Run {.fn air_demo} for an interactive walkthrough.",
-      "!" = paste0(
-        "Delete the base manually in the Airtable web UI when done: ",
-        "{.url https://airtable.com}"
-      )
+  cli::cli_inform(c(
+    "v" = "Demo base created: {.val {name}} ({.val {base_id}})",
+    "*" = "Artists: {nrow(artists_data)} records",
+    "*" = "Projects: {nrow(projects_data)} records (with image attachments)",
+    "*" = "Supporters: (empty \u2014 filled by {.fn air_demo} step 3)",
+    "*" = "Grants: {nrow(grants_data)} records",
+    "i" = "Set as default with {.run air_set_base(\"{base_id}\")}",
+    "i" = "Open in browser: {.url {base_url}}",
+    "i" = "Run {.fn air_demo} for an interactive walkthrough.",
+    "!" = paste0(
+      "Delete the base manually in the Airtable web UI when done: ",
+      "{.url https://airtable.com}"
     )
-  )
+  ))
 
   invisible(base_id)
 }
@@ -615,12 +850,15 @@ air_demo <- function(
   .demo_wait()
   air_write(
     tibble::tibble(
-      Name          = "Demo Artist",
-      Role          = "Community Arts Agitator",
-      Active        = TRUE,
+      Name = "Demo Artist",
+      Role = "Community Arts Agitator",
+      Active = TRUE,
       `Member Since` = Sys.Date()
     ),
-    "Artists", base_id, typecast = TRUE, .token = .token
+    "Artists",
+    base_id,
+    typecast = TRUE,
+    .token = .token
   )
   .demo_sleep()
   after_write <- air_read("Artists", base_id, .token = .token)
@@ -638,12 +876,18 @@ air_demo <- function(
       "in 12 batches of 10, making the progress bar clearly visible."
     )
   ))
-  .demo_code('air_write(.demo_supporters(), "Supporters", base_id, progress = TRUE)')
+  .demo_code(
+    'air_write(.demo_supporters(), "Supporters", base_id, progress = TRUE)'
+  )
   .demo_wait("  Press <Enter> (switching to Supporters table)... ")
   supporter_ids <- tryCatch(
     air_write(
-      .demo_supporters(), "Supporters", base_id,
-      typecast = TRUE, progress = TRUE, .token = .token
+      .demo_supporters(),
+      "Supporters",
+      base_id,
+      typecast = TRUE,
+      progress = TRUE,
+      .token = .token
     ),
     error = function(e) {
       cli::cli_warn("Could not write supporters: {conditionMessage(e)}")
@@ -656,7 +900,12 @@ air_demo <- function(
       "Reading back all 120 supporters across 2 pages of 100 (watch the progress bar)..."
     )
     .demo_code('air_read("Supporters", base_id, progress = TRUE)')
-    supporters <- air_read("Supporters", base_id, progress = TRUE, .token = .token)
+    supporters <- air_read(
+      "Supporters",
+      base_id,
+      progress = TRUE,
+      .token = .token
+    )
     .demo_print(supporters, c("Name", "City", "Joined"))
     results$supporters <- supporters
   }
@@ -667,12 +916,18 @@ air_demo <- function(
   cli::cli_inform(
     "Watch {.strong Artists} \u2014 15 rows update, ~15 new rows appear."
   )
-  .demo_code('air_upsert(artists_30, "Artists", merge_on = "Name", progress = TRUE)')
+  .demo_code(
+    'air_upsert(artists_30, "Artists", merge_on = "Name", progress = TRUE)'
+  )
   .demo_wait()
   results$upsert <- air_upsert(
-    .demo_artists(), "Artists",
-    merge_on = "Name", base_id = base_id,
-    typecast = TRUE, progress = TRUE, .token = .token
+    .demo_artists(),
+    "Artists",
+    merge_on = "Name",
+    base_id = base_id,
+    typecast = TRUE,
+    progress = TRUE,
+    .token = .token
   )
   .demo_sleep()
   after_upsert <- air_read("Artists", base_id, .token = .token)
@@ -684,13 +939,22 @@ air_demo <- function(
   cli::cli_inform(
     "Watch {.strong Artists} \u2014 the extra rows will be deleted."
   )
-  .demo_code('air_sync(original_artists, "Artists", key = "Name", progress = TRUE)')
+  .demo_code(
+    'air_sync(original_artists, "Artists", key = "Name", progress = TRUE)'
+  )
   .demo_wait()
-  orig <- artists[setdiff(names(artists), c("airtable_id", "airtable_created_time"))]
+  orig <- artists[setdiff(
+    names(artists),
+    c("airtable_id", "airtable_created_time")
+  )]
   results$sync <- air_sync(
-    orig, "Artists",
-    key = "Name", base_id = base_id,
-    typecast = TRUE, progress = TRUE, .token = .token
+    orig,
+    "Artists",
+    key = "Name",
+    base_id = base_id,
+    typecast = TRUE,
+    progress = TRUE,
+    .token = .token
   )
 
   # ---- Step 6: Upsert a new column from R ----------------------------------
@@ -699,23 +963,32 @@ air_demo <- function(
   cli::cli_inform(
     "Watch {.strong Artists} \u2014 an {.field Engagement Score} column will appear."
   )
-  .demo_code('air_upsert(scores, "Artists", merge_on = "Name", add_fields = "yes")')
+  .demo_code(
+    'air_upsert(scores, "Artists", merge_on = "Name", add_fields = "yes")'
+  )
   .demo_wait()
   air_upsert(
-    .demo_scores(), "Artists",
-    merge_on = "Name", base_id = base_id,
-    add_fields = "yes", typecast = TRUE, .token = .token
+    .demo_scores(),
+    "Artists",
+    merge_on = "Name",
+    base_id = base_id,
+    add_fields = "yes",
+    typecast = TRUE,
+    .token = .token
   )
   .demo_sleep()
   after_score <- air_read("Artists", base_id, .token = .token)
-  .demo_print(after_score, c("Name", "Engagement Score", "airtable_created_time"))
+  .demo_print(
+    after_score,
+    c("Name", "Engagement Score", "airtable_created_time")
+  )
 
   # ---- Step 7: Create a table from R data + complex columns -------------------
   .demo_sleep()
   cli::cli_h1("Step 7: Create a table from R data")
   cli::cli_inform(c(
     "i" = paste0(
-      "Watch the base navigation — a new {.strong Workshop Events} table ",
+      "Watch the base navigation - a new {.strong Workshop Events} table ",
       "will appear with field types inferred from the data frame."
     ),
     "i" = paste0(
@@ -724,22 +997,29 @@ air_demo <- function(
     )
   ))
   events <- tibble::tibble(
-    Event    = c("Mural Jam", "Sound Walk", "Pop-up Gallery"),
-    Date     = as.Date(c("2026-07-04", "2026-07-18", "2026-08-01")),
+    Event = c("Mural Jam", "Sound Walk", "Pop-up Gallery"),
+    Date = as.Date(c("2026-07-04", "2026-07-18", "2026-08-01")),
     Capacity = c(30L, 20L, 50L),
-    Free     = c(TRUE, TRUE, FALSE)
+    Free = c(TRUE, TRUE, FALSE)
   )
   .demo_code(
     'air_write(events, "Workshop Events", base_id, create_table = TRUE)'
   )
   .demo_wait("  Press <Enter> to create Workshop Events table... ")
   tryCatch(
-    air_write(events, "Workshop Events", base_id,
-              create_table = TRUE, .token = .token),
-    error = function(e) cli::cli_warn("Could not create table: {conditionMessage(e)}")
+    air_write(
+      events,
+      "Workshop Events",
+      base_id,
+      create_table = TRUE,
+      .token = .token
+    ),
+    error = function(e) {
+      cli::cli_warn("Could not create table: {conditionMessage(e)}")
+    }
   )
   cli::cli_inform(c(
-    "i" = "Field types were inferred: Date → date, integer → number, logical → checkbox.",
+    "i" = "Field types were inferred: Date -> date, integer -> number, logical -> checkbox.",
     "i" = paste0(
       "{.fn air_infer_fields} drives this. You can also call it directly to ",
       "preview or customise the spec before passing to {.fn at_create_table}."
@@ -757,21 +1037,29 @@ air_demo <- function(
     )
   ))
   events$Details <- list(
-    list(theme = "urban",    outdoor = TRUE),
+    list(theme = "urban", outdoor = TRUE),
     list(theme = "acoustic", outdoor = TRUE),
-    list(theme = "visual",   outdoor = FALSE)
+    list(theme = "visual", outdoor = FALSE)
   )
   .demo_code(
     'air_write(events, "Workshop Events", base_id,\n  add_fields = "yes", complex_fields = "json")'
   )
   .demo_wait()
   tryCatch(
-    air_write(events, "Workshop Events", base_id,
-              add_fields = "yes", complex_fields = "json", .token = .token),
-    error = function(e) cli::cli_warn("Could not write complex column: {conditionMessage(e)}")
+    air_write(
+      events,
+      "Workshop Events",
+      base_id,
+      add_fields = "yes",
+      complex_fields = "json",
+      .token = .token
+    ),
+    error = function(e) {
+      cli::cli_warn("Could not write complex column: {conditionMessage(e)}")
+    }
   )
   cli::cli_inform(
-    "Check the {.field Details} column in Workshop Events — each cell holds a JSON string."
+    "Check the {.field Details} column in Workshop Events - each cell holds a JSON string."
   )
   results$create_table <- events
 
@@ -791,7 +1079,7 @@ air_demo <- function(
   .demo_print(projects, c("Project Name", "Files", "airtable_created_time"))
 
   if (nrow(projects) > 0L) {
-    first_proj  <- projects$`Project Name`[[1L]]
+    first_proj <- projects$`Project Name`[[1L]]
     new_img_url <- "https://picsum.photos/seed/demo-attach2/640/480"
     .demo_code(
       'air_upsert(\n  tibble(Project Name = first_proj, Files = list(list(url = new_img_url))),\n  "Projects", merge_on = "Project Name"\n)'
@@ -803,12 +1091,17 @@ air_demo <- function(
       air_upsert(
         tibble::tibble(
           `Project Name` = first_proj,
-          Files          = list(list(list(url = new_img_url)))
+          Files = list(list(list(url = new_img_url)))
         ),
-        "Projects", base_id,
-        merge_on = "Project Name", typecast = TRUE, .token = .token
+        "Projects",
+        base_id,
+        merge_on = "Project Name",
+        typecast = TRUE,
+        .token = .token
       ),
-      error = function(e) cli::cli_warn("Could not add attachment: {conditionMessage(e)}")
+      error = function(e) {
+        cli::cli_warn("Could not add attachment: {conditionMessage(e)}")
+      }
     )
     .demo_sleep()
     after_att <- air_read("Projects", base_id, .token = .token)
@@ -834,12 +1127,17 @@ air_demo <- function(
   n_link <- min(5L, nrow(artists_now), nrow(projects))
   link_data <- tibble::tibble(
     `Project Name` = projects$`Project Name`[seq_len(n_link)],
-    `Lead Artist`  = new_air_links(as.list(artists_now$airtable_id[seq_len(n_link)]))
+    `Lead Artist` = new_air_links(as.list(artists_now$airtable_id[seq_len(
+      n_link
+    )]))
   )
   results$links <- air_upsert(
-    link_data, "Projects",
-    merge_on = "Project Name", base_id = base_id,
-    typecast = TRUE, .token = .token
+    link_data,
+    "Projects",
+    merge_on = "Project Name",
+    base_id = base_id,
+    typecast = TRUE,
+    .token = .token
   )
   .demo_sleep()
   linked <- air_read("Projects", base_id, .token = .token)
@@ -853,11 +1151,23 @@ air_demo <- function(
   )
   .demo_code('air_left_join(local_hours, "Artists", base_id, by = "Name")')
   local_hours <- tibble::tibble(
-    Name            = c("Zara Okonkwo", "Dmitri Volkov", "Sun-Li Park",
-                        "Fatima El-Rashid", "Carlos Mendes", "Ingrid Holm\u00e5s"),
+    Name = c(
+      "Zara Okonkwo",
+      "Dmitri Volkov",
+      "Sun-Li Park",
+      "Fatima El-Rashid",
+      "Carlos Mendes",
+      "Ingrid Holm\u00e5s"
+    ),
     `Workshop Hours` = c(12L, 8L, 15L, 10L, 6L, 14L)
   )
-  joined <- air_left_join(local_hours, "Artists", base_id, by = "Name", .token = .token)
+  joined <- air_left_join(
+    local_hours,
+    "Artists",
+    base_id,
+    by = "Name",
+    .token = .token
+  )
   .demo_print(joined, c("Name", "Workshop Hours", "Role", "Active"))
   results$join <- joined
 
@@ -871,7 +1181,7 @@ air_demo <- function(
       "only new or changed field values."
     ),
     "i" = paste0(
-      "Watch {.strong Artists} — a {.field Workshop Hours} column will appear, ",
+      "Watch {.strong Artists} - a {.field Workshop Hours} column will appear, ",
       "populated only for the 6 matched artists."
     )
   ))
@@ -881,13 +1191,16 @@ air_demo <- function(
   .demo_wait()
   tryCatch(
     air_left_join_upload(
-      local_hours, "Artists",
+      local_hours,
+      "Artists",
       base_id = base_id,
-      by      = "Name",
+      by = "Name",
       add_fields = "yes",
-      .token  = .token
+      .token = .token
     ),
-    error = function(e) cli::cli_warn("Could not run left_join_upload: {conditionMessage(e)}")
+    error = function(e) {
+      cli::cli_warn("Could not run left_join_upload: {conditionMessage(e)}")
+    }
   )
   .demo_sleep()
   after_lju <- air_read("Artists", base_id, .token = .token)
@@ -927,30 +1240,43 @@ air_demo <- function(
   .demo_wait("  Press <Enter> once you are viewing _metadata... ")
 
   # Read _metadata back so we can upsert the edits into it
-  meta_now  <- air_read("_metadata", base_id, .token = .token)
-  .demo_print(meta_now, c("table_name", "field_name", "field_type", "description"))
+  meta_now <- air_read("_metadata", base_id, .token = .token)
+  .demo_print(
+    meta_now,
+    c("table_name", "field_name", "field_type", "description")
+  )
 
   meta_edit <- meta_now
   grants_rows <- !is.na(meta_edit$table_name) & meta_edit$table_name == "Grants"
-  age_row     <- !is.na(meta_edit$field_name) &
-                 meta_edit$table_name == "Artists" & meta_edit$field_name == "Age"
+  age_row <- !is.na(meta_edit$field_name) &
+    meta_edit$table_name == "Artists" &
+    meta_edit$field_name == "Age"
   if (any(grants_rows)) {
     meta_edit$table_name[grants_rows] <- "Grants & Funding"
   }
   if (any(age_row)) {
-    meta_edit$field_name[age_row]  <- "Age (years)"
+    meta_edit$field_name[age_row] <- "Age (years)"
     meta_edit$description[age_row] <- "Age of the artist in whole years."
   }
 
-  edit_rows <- if (length(grants_rows) && length(age_row)) grants_rows | age_row else logical(0)
+  edit_rows <- if (length(grants_rows) && length(age_row)) {
+    grants_rows | age_row
+  } else {
+    logical(0)
+  }
   cli::cli_inform(
     "Watch {.strong _metadata} \u2014 {sum(edit_rows)} rows updating..."
   )
   .demo_wait()
   if (any(edit_rows)) {
     air_upsert(
-      meta_edit[edit_rows, ], "_metadata", base_id,
-      merge_on = "meta_key", add_fields = "warn", typecast = TRUE, .token = .token
+      meta_edit[edit_rows, ],
+      "_metadata",
+      base_id,
+      merge_on = "meta_key",
+      add_fields = "warn",
+      typecast = TRUE,
+      .token = .token
     )
   }
 
@@ -993,27 +1319,38 @@ air_demo <- function(
 
   if (!is.null(con)) {
     .demo_code("DBI::dbListTables(con)")
-    tbls <- tryCatch(DBI::dbListTables(con),
-                     error = function(e) { cli::cli_warn("dbListTables: {conditionMessage(e)}"); character() })
+    tbls <- tryCatch(DBI::dbListTables(con), error = function(e) {
+      cli::cli_warn("dbListTables: {conditionMessage(e)}")
+      character()
+    })
     cli::cli_inform("Tables: {.val {tbls}}")
 
     .demo_code('DBI::dbListFields(con, "Artists")')
-    flds <- tryCatch(DBI::dbListFields(con, "Artists"),
-                     error = function(e) { cli::cli_warn("dbListFields: {conditionMessage(e)}"); character() })
+    flds <- tryCatch(DBI::dbListFields(con, "Artists"), error = function(e) {
+      cli::cli_warn("dbListFields: {conditionMessage(e)}")
+      character()
+    })
     cli::cli_inform("Artists fields: {.val {flds}}")
 
     .demo_code('DBI::dbReadTable(con, "Artists")')
     .demo_sleep()
-    artists_dbi <- tryCatch(DBI::dbReadTable(con, "Artists"), error = function(e) NULL)
+    artists_dbi <- tryCatch(
+      DBI::dbReadTable(con, "Artists"),
+      error = function(e) NULL
+    )
     if (!is.null(artists_dbi)) {
       .demo_print(artists_dbi, c("Name", "Role", "Active", "Engagement Score"))
     }
 
     .demo_code('DBI::dbWriteTable(con, "Artists", new_row, append = TRUE)')
-    cli::cli_inform("Watch {.strong Artists} \u2014 a DBI-written row will appear.")
+    cli::cli_inform(
+      "Watch {.strong Artists} \u2014 a DBI-written row will appear."
+    )
     .demo_wait()
     new_dbi_row <- tibble::tibble(
-      Name = "DBI Artist", Role = "Street Typographer", Active = TRUE,
+      Name = "DBI Artist",
+      Role = "Street Typographer",
+      Active = TRUE,
       `Member Since` = Sys.Date()
     )
     tryCatch(
@@ -1034,7 +1371,9 @@ air_demo <- function(
   if (!is.null(usage)) {
     print(usage)
   } else {
-    cli::cli_inform("API usage not available (counter disabled or workspace unknown).")
+    cli::cli_inform(
+      "API usage not available (counter disabled or workspace unknown)."
+    )
   }
   results["usage"] <- list(usage)
 
@@ -1049,12 +1388,9 @@ air_demo <- function(
   in_ide <- Sys.getenv("RSTUDIO") == "1" || Sys.getenv("POSITRON") == "1"
   if (in_ide) {
     cli::cli_inform("Opening base in the Connections pane via {.fn air_pane}.")
-    tryCatch(
-      air_pane(base = base_id, .token = .token),
-      error = function(e) {
-        cli::cli_warn("Could not open connection pane: {conditionMessage(e)}")
-      }
-    )
+    tryCatch(air_pane(base = base_id, .token = .token), error = function(e) {
+      cli::cli_warn("Could not open connection pane: {conditionMessage(e)}")
+    })
   }
 
   invisible(results)
@@ -1066,7 +1402,9 @@ air_demo <- function(
 #' Pause for Enter in interactive sessions
 #' @noRd
 .demo_wait <- function(prompt = "  Press <Enter> to continue... ") {
-  if (interactive()) readline(prompt = prompt)
+  if (interactive()) {
+    readline(prompt = prompt)
+  }
   invisible(NULL)
 }
 
@@ -1092,32 +1430,81 @@ air_demo <- function(
 #' @noRd
 .demo_supporters <- function() {
   firsts <- c(
-    "Ada", "Ben", "Cara", "Dan", "Eli", "Flo", "Gil", "Hana", "Ira", "Joy",
-    "Kai", "Lena", "Max", "Nia", "Omar", "Paz", "Quinn", "Ren", "Sage", "Tae"
+    "Ada",
+    "Ben",
+    "Cara",
+    "Dan",
+    "Eli",
+    "Flo",
+    "Gil",
+    "Hana",
+    "Ira",
+    "Joy",
+    "Kai",
+    "Lena",
+    "Max",
+    "Nia",
+    "Omar",
+    "Paz",
+    "Quinn",
+    "Ren",
+    "Sage",
+    "Tae"
   )
   lasts <- c(
-    "Adeyemi", "Berg", "Chen", "Dubois", "Evans", "Ferreira", "Gao", "Hansen",
-    "Ibrahim", "Johansson", "Kim", "Lopez", "Musa", "Nguyen", "Olsen",
-    "Petersen", "Qian", "Russo", "Silva", "Torres", "Ueda", "Vasquez",
-    "Wang", "Xavier", "Yamamoto", "Zaitsev"
+    "Adeyemi",
+    "Berg",
+    "Chen",
+    "Dubois",
+    "Evans",
+    "Ferreira",
+    "Gao",
+    "Hansen",
+    "Ibrahim",
+    "Johansson",
+    "Kim",
+    "Lopez",
+    "Musa",
+    "Nguyen",
+    "Olsen",
+    "Petersen",
+    "Qian",
+    "Russo",
+    "Silva",
+    "Torres",
+    "Ueda",
+    "Vasquez",
+    "Wang",
+    "Xavier",
+    "Yamamoto",
+    "Zaitsev"
   )
   cities <- c(
-    "Detroit", "Oakland", "Philadelphia", "New Orleans", "Baltimore",
-    "Cleveland", "Memphis", "Atlanta", "Louisville", "St. Louis"
+    "Detroit",
+    "Oakland",
+    "Philadelphia",
+    "New Orleans",
+    "Baltimore",
+    "Cleveland",
+    "Memphis",
+    "Atlanta",
+    "Louisville",
+    "St. Louis"
   )
   n <- 120L
   idx <- seq_len(n)
   tibble::tibble(
-    Name   = paste(
+    Name = paste(
       firsts[(idx - 1L) %% length(firsts) + 1L],
-      lasts[(idx - 1L)  %% length(lasts) + 1L]
+      lasts[(idx - 1L) %% length(lasts) + 1L]
     ),
-    Email  = paste0(
+    Email = paste0(
       tolower(firsts[(idx - 1L) %% length(firsts) + 1L]),
-      idx, "@community.bollardsforart.org"
+      idx,
+      "@community.bollardsforart.org"
     ),
     Joined = as.Date("2020-01-01") + (idx - 1L) * 11L,
-    City   = cities[(idx - 1L) %% length(cities) + 1L]
+    City = cities[(idx - 1L) %% length(cities) + 1L]
   )
 }
 
@@ -1125,32 +1512,84 @@ air_demo <- function(
 #' @noRd
 .demo_artists <- function() {
   first <- c(
-    "Zara",    "Dmitri",  "Sun-Li",  "Fatima",  "Carlos",
-    "Ingrid",  "Kofi",    "Priya",   "Tomasz",  "Amara",
-    "Hiroshi", "Beatriz", "Rashida", "Luka\u0161",   "Miriam",
-    "Xavier",  "Aisha",   "Piotr",   "Yuki",    "Leila",
-    "Nadia",   "Elan",    "Rosa",    "Obi",     "Cleo",
-    "Sven",    "Tamar",   "Felix",   "Yara",    "Joaquin"
+    "Zara",
+    "Dmitri",
+    "Sun-Li",
+    "Fatima",
+    "Carlos",
+    "Ingrid",
+    "Kofi",
+    "Priya",
+    "Tomasz",
+    "Amara",
+    "Hiroshi",
+    "Beatriz",
+    "Rashida",
+    "Luka\u0161",
+    "Miriam",
+    "Xavier",
+    "Aisha",
+    "Piotr",
+    "Yuki",
+    "Leila",
+    "Nadia",
+    "Elan",
+    "Rosa",
+    "Obi",
+    "Cleo",
+    "Sven",
+    "Tamar",
+    "Felix",
+    "Yara",
+    "Joaquin"
   )
   last <- c(
-    "Okonkwo",   "Volkov",      "Park",        "El-Rashid",  "Mendes",
-    "Holm\u00e5s",    "Asante",      "Nair",        "Wierzbicki", "Diallo",
-    "Nakamura",  "Santos",      "Osei",        "Nova\u010dek",    "Khoury",
-    "Fontaine",  "Bakr",        "Kowalski",    "Tanaka",     "Ahmadi",
-    "Petrov",    "Reyes",       "Abramowitz",  "Okafor",     "Marchetti",
-    "Lindqvist", "Cohen",       "M\u00fcller",      "Hassan",     "Lima"
+    "Okonkwo",
+    "Volkov",
+    "Park",
+    "El-Rashid",
+    "Mendes",
+    "Holm\u00e5s",
+    "Asante",
+    "Nair",
+    "Wierzbicki",
+    "Diallo",
+    "Nakamura",
+    "Santos",
+    "Osei",
+    "Nova\u010dek",
+    "Khoury",
+    "Fontaine",
+    "Bakr",
+    "Kowalski",
+    "Tanaka",
+    "Ahmadi",
+    "Petrov",
+    "Reyes",
+    "Abramowitz",
+    "Okafor",
+    "Marchetti",
+    "Lindqvist",
+    "Cohen",
+    "M\u00fcller",
+    "Hassan",
+    "Lima"
   )
   roles <- c(
-    "Guerilla Muralist",          "Kinetic Sculptor",
-    "Sound Installation Designer","Community Arts Agitator",
-    "Concrete Poet",              "Site-Specific Weaver",
-    "Light & Shadow Artist",      "Street Typographer"
+    "Guerilla Muralist",
+    "Kinetic Sculptor",
+    "Sound Installation Designer",
+    "Community Arts Agitator",
+    "Concrete Poet",
+    "Site-Specific Weaver",
+    "Light & Shadow Artist",
+    "Street Typographer"
   )
   n <- length(first)
   tibble::tibble(
-    Name          = paste(first, last),
-    Role          = roles[(seq_len(n) - 1L) %% length(roles) + 1L],
-    Active        = rep(c(TRUE, TRUE, FALSE), length.out = n),
+    Name = paste(first, last),
+    Role = roles[(seq_len(n) - 1L) %% length(roles) + 1L],
+    Active = rep(c(TRUE, TRUE, FALSE), length.out = n),
     `Member Since` = as.Date("2015-01-01") + (seq_len(n) - 1L) * 87L
   )
 }
@@ -1159,10 +1598,15 @@ air_demo <- function(
 #' @noRd
 .demo_scores <- function() {
   tibble::tibble(
-    Name               = c(
-      "Zara Okonkwo",    "Dmitri Volkov",  "Sun-Li Park",
-      "Fatima El-Rashid","Carlos Mendes",  "Ingrid Holm\u00e5s",
-      "Kofi Asante",     "Priya Nair"
+    Name = c(
+      "Zara Okonkwo",
+      "Dmitri Volkov",
+      "Sun-Li Park",
+      "Fatima El-Rashid",
+      "Carlos Mendes",
+      "Ingrid Holm\u00e5s",
+      "Kofi Asante",
+      "Priya Nair"
     ),
     `Engagement Score` = c(98L, 85L, 92L, 88L, 74L, 95L, 81L, 90L)
   )
@@ -1180,24 +1624,34 @@ air_demo <- function(
 #' @param .token API token.
 #' @return Invisible NULL.
 #' @noRd
-.demo_upload_image <- function(base_id, table_id, project_ids, image_url,
-                                .token = NULL) {
-  if (length(project_ids) == 0L) return(FALSE)
-  tryCatch({
-    tmp_img <- tempfile(fileext = ".jpg")
-    on.exit(unlink(tmp_img), add = TRUE)
-    httr2::request(image_url) |> httr2::req_perform(path = tmp_img)
-    at_upload_attachment(
-      base_id   = base_id,
-      table_id  = table_id,
-      record_id = project_ids[[1L]],
-      field_id  = "Files",
-      file      = tmp_img,
-      token     = .token
-    )
-    TRUE
-  }, error = function(e) {
-    cli::cli_warn("Could not upload sample attachment: {conditionMessage(e)}")
-    FALSE
-  })
+.demo_upload_image <- function(
+  base_id,
+  table_id,
+  project_ids,
+  image_url,
+  .token = NULL
+) {
+  if (length(project_ids) == 0L) {
+    return(FALSE)
+  }
+  tryCatch(
+    {
+      tmp_img <- tempfile(fileext = ".jpg")
+      on.exit(unlink(tmp_img), add = TRUE)
+      httr2::request(image_url) |> httr2::req_perform(path = tmp_img)
+      at_upload_attachment(
+        base_id = base_id,
+        table_id = table_id,
+        record_id = project_ids[[1L]],
+        field_id = "Files",
+        file = tmp_img,
+        token = .token
+      )
+      TRUE
+    },
+    error = function(e) {
+      cli::cli_warn("Could not upload sample attachment: {conditionMessage(e)}")
+      FALSE
+    }
+  )
 }

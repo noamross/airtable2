@@ -17,23 +17,68 @@
 #' air_left_join(scores, "Contacts", "appXXXX", by = "Name")
 #' }
 #' @export
-air_left_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NULL) {
-  air_join_impl(x, table = table, base_id = base_id, by = by,
-                all.x = TRUE, all.y = FALSE, ..., .token = .token)
+air_left_join <- function(
+  x,
+  table,
+  base_id = NULL,
+  by = NULL,
+  ...,
+  .token = NULL
+) {
+  air_join_impl(
+    x,
+    table = table,
+    base_id = base_id,
+    by = by,
+    all.x = TRUE,
+    all.y = FALSE,
+    ...,
+    .token = .token
+  )
 }
 
 #' @rdname air_left_join
 #' @export
-air_inner_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NULL) {
-  air_join_impl(x, table = table, base_id = base_id, by = by,
-                all.x = FALSE, all.y = FALSE, ..., .token = .token)
+air_inner_join <- function(
+  x,
+  table,
+  base_id = NULL,
+  by = NULL,
+  ...,
+  .token = NULL
+) {
+  air_join_impl(
+    x,
+    table = table,
+    base_id = base_id,
+    by = by,
+    all.x = FALSE,
+    all.y = FALSE,
+    ...,
+    .token = .token
+  )
 }
 
 #' @rdname air_left_join
 #' @export
-air_full_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NULL) {
-  air_join_impl(x, table = table, base_id = base_id, by = by,
-                all.x = TRUE, all.y = TRUE, ..., .token = .token)
+air_full_join <- function(
+  x,
+  table,
+  base_id = NULL,
+  by = NULL,
+  ...,
+  .token = NULL
+) {
+  air_join_impl(
+    x,
+    table = table,
+    base_id = base_id,
+    by = by,
+    all.x = TRUE,
+    all.y = TRUE,
+    ...,
+    .token = .token
+  )
 }
 
 #' Upload local data to matched Airtable records
@@ -75,7 +120,7 @@ air_full_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NUL
 #'   to match field types. Passed through to [air_upsert()].
 #' @param complex_fields What to do with complex (nested list or data-frame)
 #'   columns: `"error"` (default) aborts, `"warn"` drops them, `"json"`
-#'   serialises them as JSON text. Passed through to [air_upsert()].
+#'   serializes them as JSON text. Passed through to [air_upsert()].
 #' @param progress Logical or `NULL`. If `TRUE`, shows a progress bar.
 #'   Passed through to [air_upsert()].
 #' @param .token Optional API token.
@@ -93,13 +138,18 @@ air_full_join <- function(x, table, base_id = NULL, by = NULL, ..., .token = NUL
 #' @seealso [air_left_join()] for the read direction, [air_upsert()] to also
 #'   insert new records.
 #' @export
-air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
-                            fields = NULL,
-                            add_fields = "yes",
-                            typecast = TRUE,
-                            complex_fields = c("error", "warn", "json"),
-                            progress = NULL,
-                            .token = NULL) {
+air_left_join_upload <- function(
+  x,
+  table,
+  base_id = NULL,
+  by = NULL,
+  fields = NULL,
+  add_fields = "yes",
+  typecast = TRUE,
+  complex_fields = c("error", "warn", "json"),
+  progress = NULL,
+  .token = NULL
+) {
   if (!is.data.frame(x)) {
     cli_abort("{.arg x} must be a data frame.", call = rlang::caller_env())
   }
@@ -155,10 +205,17 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
   # Learn which upload columns already exist remotely, using the (session-
   # cached) table schema. This lets us read minimally: key + existing targets.
   # New columns (absent from the schema) are not requested.
-  remote_field_names <- tryCatch({
-    sch <- get_table_schema(base_id, table, token = .token)
-    if (is.null(sch)) NULL else vapply(sch$fields, function(f) f$name, character(1))
-  }, error = function(e) NULL)
+  remote_field_names <- tryCatch(
+    {
+      sch <- get_table_schema(base_id, table, token = .token)
+      if (is.null(sch)) {
+        NULL
+      } else {
+        vapply(sch$fields, function(f) f$name, character(1))
+      }
+    },
+    error = function(e) NULL
+  )
 
   if (!is.null(remote_field_names)) {
     existing_targets <- intersect(upload_local, remote_field_names)
@@ -174,8 +231,12 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
     remote <- remote_probe
   } else {
     read_fields <- unique(c(by_remote, existing_targets))
-    remote <- air_read(base_id = base_id, table = table,
-                       fields = read_fields, .token = .token)
+    remote <- air_read(
+      base_id = base_id,
+      table = table,
+      fields = read_fields,
+      .token = .token
+    )
   }
 
   if (!"airtable_id" %in% names(remote)) {
@@ -233,10 +294,17 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
     n_changed_rows <- 0L
     keep <- logical(nrow(payload))
   } else {
-    keep <- vapply(seq_len(nrow(payload)), function(i) {
-      any(vapply(any_change_in_col, function(col) !is.na(payload[[col]][i]),
-                 logical(1)))
-    }, logical(1))
+    keep <- vapply(
+      seq_len(nrow(payload)),
+      function(i) {
+        any(vapply(
+          any_change_in_col,
+          function(col) !is.na(payload[[col]][i]),
+          logical(1)
+        ))
+      },
+      logical(1)
+    )
     n_changed_rows <- sum(keep)
   }
 
@@ -265,8 +333,9 @@ air_left_join_upload <- function(x, table, base_id = NULL, by = NULL,
 
   cli_inform(c(
     "v" = "{sum(is_matched)} matched, {n_changed_rows} updated, {n_unmatched} skipped.",
-    if (n_fields_created > 0L)
+    if (n_fields_created > 0L) {
       c("v" = "{n_fields_created} field{?s} created: {.field {new_cols}}.")
+    }
   ))
 
   invisible(payload)
@@ -288,7 +357,9 @@ values_equal <- function(a, b) {
 empty_upload_summary <- function(by_remote, upload_local) {
   out <- tibble::tibble(airtable_id = character())
   out[[by_remote]] <- character()
-  for (col in upload_local) out[[col]] <- logical(0)
+  for (col in upload_local) {
+    out[[col]] <- logical(0)
+  }
   out
 }
 
@@ -318,7 +389,14 @@ air_join_impl <- function(x, table, base_id, by, all.x, all.y, ..., .token) {
     cli_inform("Joining on {.field {by}}.")
   }
 
-  result <- merge(x, remote, by = by, all.x = all.x, all.y = all.y,
-                  sort = FALSE, suffixes = c(".x", ".y"))
+  result <- merge(
+    x,
+    remote,
+    by = by,
+    all.x = all.x,
+    all.y = all.y,
+    sort = FALSE,
+    suffixes = c(".x", ".y")
+  )
   tibble::as_tibble(result)
 }

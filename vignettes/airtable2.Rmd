@@ -313,7 +313,7 @@ air_write(results, "Exam Results", demo_base_id, create_table = TRUE)
 cannot be stored directly in Airtable. By default `air_write()` (and
 `air_upsert()`, `air_sync()`) will abort with an informative error. Set
 `complex_fields = "warn"` to drop those columns, or `complex_fields = "json"`
-to serialise each value as a JSON text string:
+to serialize each value as a JSON text string:
 
 
 ``` r

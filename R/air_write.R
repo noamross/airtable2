@@ -25,7 +25,7 @@
 #'   directly:
 #'   - `"error"` (default): abort with an informative message.
 #'   - `"warn"`: warn and drop those columns.
-#'   - `"json"`: serialise each complex value to a JSON text string and write
+#'   - `"json"`: serialize each complex value to a JSON text string and write
 #'     it to a `singleLineText` field (creating the field first when
 #'     `add_fields = "yes"`).
 #' @param create_table If `TRUE`, creates the table in the base if it does not
@@ -65,9 +65,9 @@ air_write <- function(
   check_string(table)
   check_bool(typecast)
   check_bool(create_table)
-  add_fields     <- match.arg(add_fields)
+  add_fields <- match.arg(add_fields)
   complex_fields <- match.arg(complex_fields)
-  attachments    <- match.arg(attachments)
+  attachments <- match.arg(attachments)
 
   if (create_table) {
     tbl_schema <- tryCatch(
@@ -82,9 +82,16 @@ air_write <- function(
   }
 
   # Prepare write fields: identify computed/attachment fields, validate unknowns.
-  wf <- prepare_write_fields(base_id, table, data, add_fields, complex_fields, .token,
-                             progress = progress)
-  computed   <- wf$computed
+  wf <- prepare_write_fields(
+    base_id,
+    table,
+    data,
+    add_fields,
+    complex_fields,
+    .token,
+    progress = progress
+  )
+  computed <- wf$computed
   att_fields <- wf$att_fields
   # With attachments = "meta", URL data is written directly to the API — keep
   # att_fields in the payload. With "file"/"blob", attachment upload happens
@@ -146,11 +153,18 @@ air_write <- function(
 #'   character vectors, plus `field_types` (named field name -> Airtable type,
 #'   or `NULL`).
 #' @noRd
-prepare_write_fields <- function(base_id, table, data, add_fields,
-                                 complex_fields, .token, progress = NULL,
-                                 call = rlang::caller_env()) {
+prepare_write_fields <- function(
+  base_id,
+  table,
+  data,
+  add_fields,
+  complex_fields,
+  .token,
+  progress = NULL,
+  call = rlang::caller_env()
+) {
   progress <- resolve_progress(progress)
-  computed   <- get_computed_fields(base_id, table, .token)
+  computed <- get_computed_fields(base_id, table, .token)
   att_fields <- get_attachment_fields(base_id, table, .token)
 
   dropped <- intersect(computed, names(data))
@@ -161,26 +175,26 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
   # Detect complex (nested list / data-frame) columns before schema work so
   # we error/warn early and so "json" columns are still treated as
   # singleLineText candidates by the add_fields path.
-  meta_cols   <- c("airtable_id", "airtable_created_time")
+  meta_cols <- c("airtable_id", "airtable_created_time")
   data_fields <- setdiff(names(data), c(meta_cols, computed, att_fields))
-  json_cols   <- detect_complex_cols(data, data_fields)
-  n_complex   <- length(json_cols)
+  json_cols <- detect_complex_cols(data, data_fields)
+  n_complex <- length(json_cols)
 
   if (n_complex > 0L) {
     if (complex_fields == "error") {
       cli_abort(
         c(
           "{n_complex} column{?s} contain complex (nested list or data-frame) values that Airtable cannot store directly: {.field {json_cols}}.",
-          i = "Set {.arg complex_fields} to {.val warn} to drop these columns, or {.val json} to serialise them as JSON text."
+          i = "Set {.arg complex_fields} to {.val warn} to drop these columns, or {.val json} to serialize them as JSON text."
         ),
         call = call
       )
     } else if (complex_fields == "warn") {
       cli_warn("{n_complex} complex column{?s} dropped: {.field {json_cols}}.")
-      computed  <- c(computed, json_cols)
+      computed <- c(computed, json_cols)
       json_cols <- character()
     }
-    # "json": json_cols returned as-is; caller serialises before tibble_to_records
+    # "json": json_cols returned as-is; caller serializes before tibble_to_records
   }
 
   tbl_schema <- tryCatch(
@@ -197,7 +211,11 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
   }
 
   if (!is.null(tbl_schema)) {
-    existing_fields <- vapply(tbl_schema$fields, function(f) f$name, character(1))
+    existing_fields <- vapply(
+      tbl_schema$fields,
+      function(f) f$name,
+      character(1)
+    )
     # Recompute data_fields after any complex-fields exclusion ("warn" path)
     data_fields <- setdiff(names(data), c(meta_cols, computed, att_fields))
     unknown <- setdiff(data_fields, existing_fields)
@@ -219,7 +237,7 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
         pb <- NULL
         if (progress && length(unknown) > 1L) {
           pb <- cli::cli_progress_bar(
-            name  = paste("Creating", length(unknown), "fields in", table),
+            name = paste("Creating", length(unknown), "fields in", table),
             total = length(unknown),
             clear = FALSE
           )
@@ -247,33 +265,41 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
             list(icon = "check", color = "greenBright")
           }
           if (!is.null(pb)) {
-            cli::cli_progress_update(id = pb, set = field_num, status = field_name)
+            cli::cli_progress_update(
+              id = pb,
+              set = field_num,
+              status = field_name
+            )
           } else {
-            cli_inform("Creating field {.field {field_name}} in {.val {table}}.")
+            cli_inform(
+              "Creating field {.field {field_name}} in {.val {table}}."
+            )
           }
           at_create_field(
             field_name,
-            base_id  = base_id,
+            base_id = base_id,
             table_id = tbl_schema$id,
-            type     = field_type,
-            options  = field_opts,
-            token    = .token
+            type = field_type,
+            options = field_opts,
+            token = .token
           )
         }
-        if (!is.null(pb)) cli::cli_progress_done(id = pb)
+        if (!is.null(pb)) {
+          cli::cli_progress_done(id = pb)
+        }
         schema_cache_invalidate(base_id)
-        computed   <- get_computed_fields(base_id, table, .token)
+        computed <- get_computed_fields(base_id, table, .token)
         att_fields <- get_attachment_fields(base_id, table, .token)
       }
     }
   }
 
   list(
-    computed    = computed,
-    att_fields  = att_fields,
-    exclude     = union(computed, intersect(att_fields, names(data))),
+    computed = computed,
+    att_fields = att_fields,
+    exclude = union(computed, intersect(att_fields, names(data))),
     field_types = field_types,
-    json_cols   = json_cols
+    json_cols = json_cols
   )
 }
 
@@ -281,17 +307,28 @@ prepare_write_fields <- function(base_id, table, data, add_fields,
 # nested lists) — values Airtable fields cannot accept directly.
 detect_complex_cols <- function(data, data_fields) {
   air_classes <- c(
-    "air_multiselect", "air_links", "air_attachments",
-    "air_collaborator", "air_collaborators", "air_barcode"
+    "air_multiselect",
+    "air_links",
+    "air_attachments",
+    "air_collaborator",
+    "air_collaborators",
+    "air_barcode"
   )
-  Filter(function(nm) {
-    col <- data[[nm]]
-    is.list(col) &&
-      !inherits(col, air_classes) &&
-      any(vapply(col, function(x) {
-        !is.null(x) && is.list(x) && !inherits(x, air_classes)
-      }, logical(1L)))
-  }, data_fields)
+  Filter(
+    function(nm) {
+      col <- data[[nm]]
+      is.list(col) &&
+        !inherits(col, air_classes) &&
+        any(vapply(
+          col,
+          function(x) {
+            !is.null(x) && is.list(x) && !inherits(x, air_classes)
+          },
+          logical(1L)
+        ))
+    },
+    data_fields
+  )
 }
 
 # Convert complex list-columns to JSON text strings.
@@ -303,15 +340,21 @@ serialize_json_cols <- function(data, json_cols, field_types = NULL) {
     is_singleline <- !is.null(field_types) &&
       isTRUE(field_types[nm] == "singleLineText")
 
-    serialized <- vapply(data[[nm]], function(x) {
-      if (is.null(x) || (is.atomic(x) && length(x) == 1L && is.na(x))) {
-        return(NA_character_)
-      }
-      as.character(jsonlite::toJSON(x, auto_unbox = TRUE))
-    }, character(1L))
+    serialized <- vapply(
+      data[[nm]],
+      function(x) {
+        if (is.null(x) || (is.atomic(x) && length(x) == 1L && is.na(x))) {
+          return(NA_character_)
+        }
+        as.character(jsonlite::toJSON(x, auto_unbox = TRUE))
+      },
+      character(1L)
+    )
 
     if (is_singleline) {
-      too_long <- which(!is.na(serialized) & nchar(serialized) > singleline_limit)
+      too_long <- which(
+        !is.na(serialized) & nchar(serialized) > singleline_limit
+      )
       if (length(too_long) > 0L) {
         cli_warn(c(
           "{length(too_long)} value{?s} in {.field {nm}} exceed Airtable's 100,000-character {.val singleLineText} limit and will be set to {.code NA}.",

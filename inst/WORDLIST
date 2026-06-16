@@ -10,6 +10,9 @@ DBItest
 EAN
 LLM
 Lifecycle
+multipleCollaborators
+multipleRecordLinks
+multipleSelects
 Modelled
 OAuth
 PATCHes

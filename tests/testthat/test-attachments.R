@@ -42,7 +42,8 @@ test_that("air_write uploads attachments when mode is 'file'", {
       args <- list(...)
       upload_calls[[length(upload_calls) + 1L]] <<- args
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -72,7 +73,8 @@ test_that("air_write does not upload when attachments = 'meta'", {
     upload_attachments_from_tibble = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -96,7 +98,8 @@ test_that("air_write skips attachment upload when no att cols in data", {
     upload_attachments_from_tibble = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(Name = "A", Age = 30L)
@@ -161,7 +164,8 @@ test_that("air_upsert uploads attachments in 'blob' mode", {
     upload_attachments_from_tibble = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -191,7 +195,8 @@ test_that("air_upsert does not count attachment fields as unknown", {
         createdRecords = "rec1",
         updatedRecords = character()
       )
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -209,8 +214,14 @@ test_that("air_upsert does not count attachment fields as unknown", {
 test_that("air_sync excludes attachment fields from hash", {
   # Simulate existing data that differs only in attachment URLs (volatile)
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) "Photos",
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "tbl1",
+      fields = list(
+        list(name = "Name", type = "singleLineText"),
+        list(name = "Age", type = "number"),
+        list(name = "Photos", type = "multipleAttachments")
+      )
+    ),
     air_read = function(...) {
       tibble::tibble(
         airtable_id = "rec1",
@@ -225,7 +236,8 @@ test_that("air_sync excludes attachment fields from hash", {
     air_upsert = function(...) {
       list(created = character(), updated = character())
     },
-    at_delete_records = function(...) invisible(NULL)
+    at_delete_records = function(...) invisible(NULL),
+    .package = "airtable2"
   )
 
   # Local data has same Name + Age but different attachment metadata
@@ -248,8 +260,14 @@ test_that("air_sync uploads attachments for created records", {
   upload_calls <- list()
 
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) "Photos",
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "tbl1",
+      fields = list(
+        list(name = "Name", type = "singleLineText"),
+        list(name = "Age", type = "number"),
+        list(name = "Photos", type = "multipleAttachments")
+      )
+    ),
     air_read = function(...) {
       tibble::tibble(
         airtable_id = character(),
@@ -265,7 +283,8 @@ test_that("air_sync uploads attachments for created records", {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
     },
-    at_delete_records = function(...) invisible(NULL)
+    at_delete_records = function(...) invisible(NULL),
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -290,8 +309,13 @@ test_that("air_sync does not upload attachments in meta mode", {
   upload_calls <- list()
 
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) "Photos",
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "tbl1",
+      fields = list(
+        list(name = "Name", type = "singleLineText"),
+        list(name = "Photos", type = "multipleAttachments")
+      )
+    ),
     air_read = function(...) {
       tibble::tibble(
         airtable_id = character(),
@@ -306,7 +330,8 @@ test_that("air_sync does not upload attachments in meta mode", {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
     },
-    at_delete_records = function(...) invisible(NULL)
+    at_delete_records = function(...) invisible(NULL),
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -331,7 +356,8 @@ test_that("air_dump passes attachments param to air_read", {
       args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Name = "A")
-    }
+    },
+    .package = "airtable2"
   )
 
   air_dump("app1", format = "list", attachments = "file")
@@ -352,7 +378,8 @@ test_that("air_dump defaults to attachments = 'file'", {
       args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Title = "X")
-    }
+    },
+    .package = "airtable2"
   )
 
   # When called without specifying attachments, it should default to "file"
@@ -373,7 +400,8 @@ test_that("air_dump with meta mode does not download attachments", {
       args <- list(table = table, base_id = base_id, ...)
       read_calls[[length(read_calls) + 1L]] <<- args
       tibble::tibble(airtable_id = "rec1", Title = "X")
-    }
+    },
+    .package = "airtable2"
   )
 
   air_dump("app1", format = "list", attachments = "meta")
@@ -472,7 +500,8 @@ test_that("upload_attachments_from_tibble calls at_upload_attachment", {
     at_upload_attachment = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   # Create a temp file
@@ -508,7 +537,8 @@ test_that("upload_attachments_from_tibble handles blob mode", {
     at_upload_attachment = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -542,7 +572,8 @@ test_that("upload_attachments_from_tibble skips NULL attachment entries", {
     at_upload_attachment = function(...) {
       upload_calls[[length(upload_calls) + 1L]] <<- list(...)
       invisible(NULL)
-    }
+    },
+    .package = "airtable2"
   )
 
   data <- tibble::tibble(
@@ -575,7 +606,8 @@ test_that("get_attachment_fields identifies multipleAttachments type", {
           list(name = "Age", type = "number")
         )
       )
-    )
+    ),
+    .package = "airtable2"
   )
 
   result <- get_attachment_fields("app1", "Projects")

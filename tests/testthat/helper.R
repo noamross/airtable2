@@ -254,6 +254,7 @@ ensure_formula_field <- function() {
       type = "formula",
       options = list(formula = "UPPER({Name})")
     )
+    schema_cache_invalidate(base_id)
   }
 
   test_env$formula_field_added <- TRUE
@@ -284,6 +285,7 @@ ensure_notes_field <- function() {
       table_id = table_id,
       type     = "richText"
     )
+    schema_cache_invalidate(base_id)
   }
 
   test_env$notes_field_added <- TRUE

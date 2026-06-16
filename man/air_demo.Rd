@@ -42,9 +42,13 @@ visible; read back over 2 pages to demonstrate read pagination
 \item Bulk-upsert 30 artists with a progress bar
 \item Sync back to the original 15 with a progress bar (watch deletions)
 \item Upsert a new \verb{Engagement Score} column into Artists from R
+\item Create a new table from a local data frame with inferred field types
+(\code{create_table = TRUE}); then write a complex list-column as JSON text
+(\code{complex_fields = "json"})
 \item Upload an image attachment to a Project record
 \item Link artists to projects via \code{multipleRecordLinks}
 \item Left-join Airtable columns into a local R tibble
+\item Push local scores back to Airtable with \code{\link[=air_left_join_upload]{air_left_join_upload()}}
 \item View the base schema
 \item Seed a \verb{_metadata} table with \code{\link[=air_meta_init]{air_meta_init()}}, edit table/column names
 as rows in Airtable, then apply with \code{\link[=air_meta_sync]{air_meta_sync()}}

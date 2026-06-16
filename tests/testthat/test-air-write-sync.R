@@ -132,8 +132,10 @@ test_that("air_sync detects creates, updates, deletes, unchanged", {
   )
 
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) character(),
+    get_table_schema = function(...) list(fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Age",  type = "number")
+    )),
     air_read = function(...) existing,
     air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
       list(created = "recD", updated = "recB")
@@ -174,8 +176,10 @@ test_that("air_sync with delete_missing=FALSE preserves extras", {
   )
 
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) character(),
+    get_table_schema = function(...) list(fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Age",  type = "number")
+    )),
     air_read = function(...) existing
   )
 
@@ -207,8 +211,10 @@ test_that("air_sync is idempotent (no changes needed)", {
   )
 
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) character(),
+    get_table_schema = function(...) list(fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Age",  type = "number")
+    )),
     air_read = function(...) existing
   )
 
@@ -293,8 +299,10 @@ test_that("air_sync(data, table, key, base_id) works with data-first signature",
     Age = integer()
   )
   local_mocked_bindings(
-    get_computed_fields = function(...) character(),
-    get_attachment_fields = function(...) character(),
+    get_table_schema = function(...) list(fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Age",  type = "number")
+    )),
     air_read = function(...) existing,
     air_upsert = function(data, table, merge_on, base_id = NULL, ...) {
       list(created = "rec1", updated = character())
@@ -841,4 +849,142 @@ test_that("air_write does not create table when create_table = FALSE (default)",
   data <- tibble::tibble(Name = "Alice")
   expect_message(air_write(data, "AnyTable", "appX"), "Created 1 record")
   expect_false(create_called)
+})
+
+# ── normalize_for_hash() unit tests ───────────────────────────────────────────
+
+# Minimal schema used across normalize tests
+.norm_schema <- list(fields = list(
+  list(name = "Tags",   type = "multipleSelects"),
+  list(name = "Notes",  type = "richText"),
+  list(name = "Active", type = "checkbox"),
+  list(name = "Age",    type = "number"),
+  list(name = "Name",   type = "singleLineText"),
+  list(name = "Date",   type = "date"),
+  list(name = "When",   type = "dateTime"),
+  list(name = "Links",  type = "multipleRecordLinks")
+))
+.norm_types <- field_types_from_schema(.norm_schema)
+
+test_that("normalize_for_hash: richText trailing newline stripped", {
+  existing <- tibble::tibble(Notes = "hello\n")
+  data_df  <- tibble::tibble(Notes = "hello")
+  en <- normalize_for_hash(existing, .norm_types)
+  dn <- normalize_for_hash(data_df,  .norm_types)
+  expect_equal(en$Notes, dn$Notes)
+})
+
+test_that("normalize_for_hash: empty string becomes NA for character", {
+  df <- tibble::tibble(Name = c("Alice", "", NA_character_))
+  out <- normalize_for_hash(df, .norm_types)
+  expect_equal(out$Name, c("Alice", NA_character_, NA_character_))
+})
+
+test_that("normalize_for_hash: FALSE becomes NA for logical (checkbox)", {
+  df <- tibble::tibble(Active = c(TRUE, FALSE, NA))
+  out <- normalize_for_hash(df, .norm_types)
+  expect_equal(out$Active, c(TRUE, NA, NA))
+})
+
+test_that("normalize_for_hash: Date class converted to YYYY-MM-DD string", {
+  df <- tibble::tibble(Date = as.Date("2024-03-15"))
+  out <- normalize_for_hash(df, .norm_types)
+  expect_equal(out$Date, "2024-03-15")
+})
+
+test_that("normalize_for_hash: POSIXct converted to UTC ISO string", {
+  t <- as.POSIXct("2024-03-15 10:30:00", tz = "UTC")
+  df <- tibble::tibble(When = t)
+  out <- normalize_for_hash(df, .norm_types)
+  expect_match(out$When, "^2024-03-15T10:30:00\\.000Z$")
+})
+
+test_that("normalize_for_hash: integer becomes numeric", {
+  df <- tibble::tibble(Age = 30L)
+  out <- normalize_for_hash(df, .norm_types)
+  expect_type(out$Age, "double")
+  expect_equal(out$Age, 30)
+})
+
+test_that("normalize_for_hash: list-column hashes identically on both sides", {
+  existing <- tibble::tibble(Tags = list(c("R", "Python"), NULL))
+  data_df  <- tibble::tibble(Tags = list(c("R", "Python"), NULL))
+  en <- normalize_for_hash(existing, .norm_types)
+  dn <- normalize_for_hash(data_df,  .norm_types)
+  expect_equal(en$Tags, dn$Tags)
+  expect_equal(en$Tags, c("R\x01Python", NA_character_))
+})
+
+test_that("normalize_for_hash: air_multiselect S3 class stripped and flattened", {
+  ms <- new_air_multiselect(list(c("R", "Python"), c("Julia")))
+  df <- tibble::tibble(Tags = ms)
+  out <- normalize_for_hash(df, .norm_types)
+  expect_equal(out$Tags, c("R\x01Python", "Julia"))
+})
+
+test_that("normalize_for_hash: character multipleSelects semicolon-delimited matches list form", {
+  existing <- tibble::tibble(Tags = list(c("R", "Python")))
+  data_df  <- tibble::tibble(Tags = "R; Python")
+  en <- normalize_for_hash(existing, .norm_types)
+  dn <- normalize_for_hash(data_df,  .norm_types)
+  expect_equal(en$Tags, dn$Tags)
+})
+
+test_that("normalize_for_hash: character multipleSelects with wrong delimiter NOT normalized", {
+  existing <- tibble::tibble(Tags = list(c("R", "Python")))
+  data_df  <- tibble::tibble(Tags = "R, Python")  # comma delimiter, not semicolon
+  en <- normalize_for_hash(existing, .norm_types)
+  dn <- normalize_for_hash(data_df,  .norm_types)
+  expect_false(identical(en$Tags, dn$Tags))
+})
+
+# ── air_sync uses get_table_schema (consolidated schema call) ─────────────────
+
+test_that("air_sync hash normalization: multipleSelects list vs character match", {
+  existing <- tibble::tibble(
+    airtable_id = "recA",
+    airtable_created_time = as.POSIXct("2024-01-01"),
+    Name = "Alice",
+    Tags = list(c("R", "Python"))
+  )
+  local_mocked_bindings(
+    get_table_schema = function(...) .norm_schema,
+    air_read = function(...) existing,
+    air_upsert = function(...) list(created = character(), updated = character()),
+    at_delete_records = function(...) invisible(NULL)
+  )
+  desired <- tibble::tibble(Name = "Alice", Tags = "R; Python")
+  expect_message(
+    result <- air_sync(desired, "Table1", "Name", "appX",
+                       hash_fields = c("Name", "Tags")),
+    "Sync complete"
+  )
+  expect_equal(result$unchanged, 1L)
+  expect_equal(result$updated,   0L)
+})
+
+test_that("air_sync hash normalization: richText trailing newline is not a change", {
+  existing <- tibble::tibble(
+    airtable_id = "recA",
+    airtable_created_time = as.POSIXct("2024-01-01"),
+    Name = "Alice",
+    Notes = "hello\n"
+  )
+  local_mocked_bindings(
+    get_table_schema = function(...) list(fields = list(
+      list(name = "Name",  type = "singleLineText"),
+      list(name = "Notes", type = "richText")
+    )),
+    air_read = function(...) existing,
+    air_upsert = function(...) list(created = character(), updated = character()),
+    at_delete_records = function(...) invisible(NULL)
+  )
+  desired <- tibble::tibble(Name = "Alice", Notes = "hello")
+  expect_message(
+    result <- air_sync(desired, "Table1", "Name", "appX",
+                       hash_fields = c("Name", "Notes")),
+    "Sync complete"
+  )
+  expect_equal(result$unchanged, 1L)
+  expect_equal(result$updated,   0L)
 })

@@ -172,3 +172,109 @@ test_that("air_sync excludes computed fields from hash", {
   expect_equal(result$created, 0L)
   expect_equal(result$updated, 0L)
 })
+
+test_that("air_sync is idempotent with multipleSelects and checkbox fields", {
+  skip_on_cran()
+  clear_test_records()
+  base_id <- get_test_base()
+
+  initial <- tibble::tibble(
+    Name   = c("Alice", "Bob"),
+    Tags   = list(c("R", "Python"), c("Julia")),
+    Active = c(TRUE, FALSE)
+  )
+  air_write(initial, "Contacts", base_id)
+
+  # First sync: all records already match — should be fully unchanged
+  result1 <- air_sync(
+    initial, "Contacts",
+    key = "Name",
+    base_id = base_id,
+    hash_fields = c("Tags", "Active"),
+    delete_missing = FALSE
+  )
+  expect_equal(result1$unchanged, 2L)
+  expect_equal(result1$updated,   0L)
+
+  # Second sync with the same data: still no changes
+  result2 <- air_sync(
+    initial, "Contacts",
+    key = "Name",
+    base_id = base_id,
+    hash_fields = c("Tags", "Active"),
+    delete_missing = FALSE
+  )
+  expect_equal(result2$unchanged, 2L)
+  expect_equal(result2$updated,   0L)
+})
+
+test_that("air_sync is idempotent with date fields", {
+  skip_on_cran()
+  clear_test_records()
+  base_id <- get_test_base()
+  ensure_birthday_field()
+
+  initial <- tibble::tibble(
+    Name     = c("Alice", "Bob"),
+    Birthday = as.Date(c("1990-06-15", "1985-11-03"))
+  )
+  air_write(initial, "Contacts", base_id)
+
+  result <- air_sync(
+    initial, "Contacts",
+    key         = "Name",
+    base_id     = base_id,
+    hash_fields = c("Name", "Birthday"),
+    delete_missing = FALSE
+  )
+  expect_equal(result$unchanged, 2L)
+  expect_equal(result$updated,   0L)
+})
+
+test_that("air_sync is idempotent with dateTime fields", {
+  skip_on_cran()
+  clear_test_records()
+  base_id <- get_test_base()
+  ensure_last_seen_field()
+
+  initial <- tibble::tibble(
+    Name     = c("Alice", "Bob"),
+    LastSeen = as.POSIXct(c("2024-03-15 10:30:00", "2024-06-01 08:00:00"), tz = "UTC")
+  )
+  air_write(initial, "Contacts", base_id)
+
+  result <- air_sync(
+    initial, "Contacts",
+    key         = "Name",
+    base_id     = base_id,
+    hash_fields = c("Name", "LastSeen"),
+    delete_missing = FALSE
+  )
+  expect_equal(result$unchanged, 2L)
+  expect_equal(result$updated,   0L)
+})
+
+test_that("air_sync is idempotent with richText trailing newline", {
+  skip_on_cran()
+  clear_test_records()
+  base_id <- get_test_base()
+  ensure_notes_field()
+
+  initial <- tibble::tibble(
+    Name  = c("Alice", "Bob"),
+    Notes = c("Hello world", "Goodbye")
+  )
+  air_write(initial, "Contacts", base_id)
+
+  # Airtable returns richText with trailing \n; sync with the original
+  # (without \n) should detect no changes.
+  result <- air_sync(
+    initial, "Contacts",
+    key = "Name",
+    base_id = base_id,
+    hash_fields = c("Name", "Notes"),
+    delete_missing = FALSE
+  )
+  expect_equal(result$unchanged, 2L)
+  expect_equal(result$updated,   0L)
+})

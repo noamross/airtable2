@@ -260,6 +260,104 @@ ensure_formula_field <- function() {
   invisible(NULL)
 }
 
+#' Ensure a Notes (richText) field exists in the Contacts table
+#'
+#' Adds it once per session; subsequent calls are no-ops.
+#'
+#' @return Invisible NULL.
+ensure_notes_field <- function() {
+  if (isTRUE(test_env$notes_field_added)) {
+    return(invisible(NULL))
+  }
+
+  base_id  <- get_test_base()
+  table_id <- get_test_table_id("Contacts")
+
+  schema   <- at_get_schema(base_id)
+  contacts <- Filter(function(t) t$name == "Contacts", schema)[[1]]
+  field_names <- vapply(contacts$fields, function(f) f$name, character(1))
+
+  if (!"Notes" %in% field_names) {
+    at_create_field(
+      "Notes",
+      base_id  = base_id,
+      table_id = table_id,
+      type     = "richText"
+    )
+  }
+
+  test_env$notes_field_added <- TRUE
+  invisible(NULL)
+}
+
+#' Ensure a Birthday (date) field exists in the Contacts table
+#'
+#' Adds it once per session; subsequent calls are no-ops.
+#'
+#' @return Invisible NULL.
+ensure_birthday_field <- function() {
+  if (isTRUE(test_env$birthday_field_added)) {
+    return(invisible(NULL))
+  }
+
+  base_id  <- get_test_base()
+  table_id <- get_test_table_id("Contacts")
+
+  schema   <- at_get_schema(base_id)
+  contacts <- Filter(function(t) t$name == "Contacts", schema)[[1]]
+  field_names <- vapply(contacts$fields, function(f) f$name, character(1))
+
+  if (!"Birthday" %in% field_names) {
+    at_create_field(
+      "Birthday",
+      base_id  = base_id,
+      table_id = table_id,
+      type     = "date",
+      options  = list(dateFormat = list(name = "iso"))
+    )
+    schema_cache_invalidate(base_id)
+  }
+
+  test_env$birthday_field_added <- TRUE
+  invisible(NULL)
+}
+
+#' Ensure a LastSeen (dateTime) field exists in the Contacts table
+#'
+#' Adds it once per session; subsequent calls are no-ops.
+#'
+#' @return Invisible NULL.
+ensure_last_seen_field <- function() {
+  if (isTRUE(test_env$last_seen_field_added)) {
+    return(invisible(NULL))
+  }
+
+  base_id  <- get_test_base()
+  table_id <- get_test_table_id("Contacts")
+
+  schema   <- at_get_schema(base_id)
+  contacts <- Filter(function(t) t$name == "Contacts", schema)[[1]]
+  field_names <- vapply(contacts$fields, function(f) f$name, character(1))
+
+  if (!"LastSeen" %in% field_names) {
+    at_create_field(
+      "LastSeen",
+      base_id  = base_id,
+      table_id = table_id,
+      type     = "dateTime",
+      options  = list(
+        dateFormat = list(name = "iso"),
+        timeFormat = list(name = "24hour"),
+        timeZone   = "utc"
+      )
+    )
+    schema_cache_invalidate(base_id)
+  }
+
+  test_env$last_seen_field_added <- TRUE
+  invisible(NULL)
+}
+
 #' Standard test data for the Contacts table
 #' @return A tibble with Name, Email, Age, Active, Tags columns.
 test_contacts_data <- function() {

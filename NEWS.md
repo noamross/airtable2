@@ -6,7 +6,7 @@
   `data` contains **complex list-columns** (nested lists or data frames that
   Airtable cannot store directly). Previously these columns were silently
   problematic. Set `complex_fields = "warn"` to drop them or `complex_fields =
-  "json"` to serialise them as JSON text.
+  "json"` to serialize them as JSON text.
 
 * `add_fields = "yes"` in `air_write()`, `air_upsert()`, and `air_sync()` now
   **infers field types** from column class instead of always creating

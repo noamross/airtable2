@@ -50,7 +50,7 @@ directly:
 \itemize{
 \item \code{"error"} (default): abort with an informative message.
 \item \code{"warn"}: warn and drop those columns.
-\item \code{"json"}: serialise each complex value to a JSON text string and write
+\item \code{"json"}: serialize each complex value to a JSON text string and write
 it to a \code{singleLineText} field (creating the field first when
 \code{add_fields = "yes"}).
 }}

@@ -44,7 +44,7 @@ to match field types. Passed through to \code{\link[=air_upsert]{air_upsert()}}.
 
 \item{complex_fields}{What to do with complex (nested list or data-frame)
 columns: \code{"error"} (default) aborts, \code{"warn"} drops them, \code{"json"}
-serialises them as JSON text. Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
+serializes them as JSON text. Passed through to \code{\link[=air_upsert]{air_upsert()}}.}
 
 \item{progress}{Logical or \code{NULL}. If \code{TRUE}, shows a progress bar.
 Passed through to \code{\link[=air_upsert]{air_upsert()}}.}

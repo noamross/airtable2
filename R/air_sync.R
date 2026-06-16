@@ -70,9 +70,11 @@ air_sync <- function(
     cli_abort("Key column {.field {key}} not found in {.arg data}.")
   }
 
-  # Identify computed and attachment fields from schema
-  computed <- get_computed_fields(base_id, table, .token)
-  att_fields <- get_attachment_fields(base_id, table, .token)
+  # Single schema fetch (cached per-session); derive all field metadata from it
+  tbl_schema  <- get_table_schema(base_id, table, token = .token)
+  computed    <- computed_fields_from_schema(tbl_schema$fields)
+  att_fields  <- attachment_fields_from_schema(tbl_schema)
+  field_types <- field_types_from_schema(tbl_schema)
 
   meta_cols <- c("airtable_id", "airtable_created_time")
   data_fields <- setdiff(names(data), c(meta_cols, computed))
@@ -101,10 +103,12 @@ air_sync <- function(
   } else {
     character()
   }
-  existing_hashes <- compute_row_hashes(existing, hash_fields)
+  existing_norm   <- normalize_for_hash(existing, field_types)
+  existing_hashes <- compute_row_hashes(existing_norm, hash_fields)
 
   new_keys <- as.character(data[[key]])
-  new_hashes <- compute_row_hashes(data, hash_fields)
+  data_norm    <- normalize_for_hash(data, field_types)
+  new_hashes   <- compute_row_hashes(data_norm, hash_fields)
 
   # 4. Determine what changed
   to_create_idx <- which(!new_keys %in% existing_keys)

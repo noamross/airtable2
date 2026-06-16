@@ -372,6 +372,34 @@ get_attachment_fields <- function(base_id, table, .token = NULL) {
   )
 }
 
+#' Extract a named type vector from a full table schema object
+#'
+#' @param schema Full schema object as returned by `get_table_schema()`,
+#'   with a `$fields` list.
+#' @return Named character vector: `c(field_name = "airtable_type", ...)`.
+#' @noRd
+field_types_from_schema <- function(schema) {
+  if (is.null(schema) || length(schema$fields) == 0L) return(character())
+  setNames(
+    vapply(schema$fields, function(f) f$type %||% "unknown", character(1)),
+    vapply(schema$fields, function(f) f$name,                character(1))
+  )
+}
+
+#' Extract attachment field names from a full table schema object
+#'
+#' @param schema Full schema object as returned by `get_table_schema()`.
+#' @return Character vector of `multipleAttachments` field names.
+#' @noRd
+attachment_fields_from_schema <- function(schema) {
+  if (is.null(schema) || length(schema$fields) == 0L) return(character())
+  vapply(
+    Filter(function(f) (f$type %||% "") == "multipleAttachments", schema$fields),
+    function(f) f$name,
+    character(1)
+  )
+}
+
 # --------------------------------------------------------------------------- #
 #  Type map and coercion helpers
 # --------------------------------------------------------------------------- #
@@ -732,4 +760,72 @@ unclass_air <- function(x) {
     class(x) <- setdiff(class(x), air_classes)
   }
   x
+}
+
+#' Normalize a data frame to canonical form before row hashing
+#'
+#' Applies type-level normalizations so that values that are semantically
+#' identical (but differ in R representation vs Airtable's wire format) hash
+#' to the same string.  Normalizations applied:
+#'
+#' - `air_*` S3 classes stripped (so list dispatch works correctly).
+#' - List-columns flattened to SOH-joined character strings (preserves order).
+#' - `Date` → `"YYYY-MM-DD"`.
+#' - `POSIXct` → `"YYYY-MM-DDTHH:MM:SS.000Z"` UTC.
+#' - `integer` → `double` (prevents type-divergence in `as.matrix`).
+#' - `logical FALSE` → `NA` (Airtable omits unchecked checkboxes).
+#' - Trailing whitespace (including `\n`) stripped from character strings.
+#' - `""` → `NA` for character (Airtable omits empty text fields).
+#' - Character multipleSelects/multipleRecordLinks/multipleCollaborators
+#'   expanded via `air_expand_multiselect()` then NUL-joined.
+#'
+#' @param df Data frame to normalize.
+#' @param field_types Named character vector from `field_types_from_schema()`.
+#' @return Normalized data frame (same structure, types may differ).
+#' @noRd
+normalize_for_hash <- function(df, field_types = character()) {
+  list_field_types <- c("multipleSelects", "multipleRecordLinks",
+                        "multipleCollaborators")
+
+  for (col in names(df)) {
+    x  <- df[[col]]
+    ft <- if (col %in% names(field_types)) field_types[[col]] else ""
+
+    # Strip air_* S3 classes before type dispatch, preserving Date/POSIXct etc.
+    x <- unclass_air(x)
+
+    if (is.list(x)) {
+      x <- vapply(x, function(v) {
+        if (is.null(v) || length(v) == 0L) return(NA_character_)
+        paste(as.character(unlist(v)), collapse = "\x01")
+      }, character(1))
+
+    } else {
+      if (inherits(x, "Date")) {
+        x <- format(x, "%Y-%m-%d")
+      } else if (inherits(x, c("POSIXct", "POSIXt"))) {
+        x <- format(x, "%Y-%m-%dT%H:%M:%OS3Z", tz = "UTC")
+      }
+
+      if (is.integer(x))  x <- as.numeric(x)
+      if (is.logical(x))  x[!is.na(x) & !x] <- NA
+
+      if (is.character(x)) {
+        x <- trimws(x, which = "right")
+        x[!is.na(x) & !nzchar(x)] <- NA_character_
+      }
+
+      # Schema-aware: expand character multipleSelects to NUL-joined form
+      if (ft %in% list_field_types && is.character(x)) {
+        expanded <- air_expand_multiselect(x)
+        x <- vapply(expanded, function(v) {
+          if (is.null(v) || length(v) == 0L) return(NA_character_)
+          paste(as.character(v), collapse = "\x01")
+        }, character(1))
+      }
+    }
+
+    df[[col]] <- x
+  }
+  df
 }

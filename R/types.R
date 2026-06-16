@@ -379,10 +379,12 @@ get_attachment_fields <- function(base_id, table, .token = NULL) {
 #' @return Named character vector: `c(field_name = "airtable_type", ...)`.
 #' @noRd
 field_types_from_schema <- function(schema) {
-  if (is.null(schema) || length(schema$fields) == 0L) return(character())
-  setNames(
+  if (is.null(schema) || length(schema$fields) == 0L) {
+    return(character())
+  }
+  stats::setNames(
     vapply(schema$fields, function(f) f$type %||% "unknown", character(1)),
-    vapply(schema$fields, function(f) f$name,                character(1))
+    vapply(schema$fields, function(f) f$name, character(1))
   )
 }
 
@@ -392,9 +394,14 @@ field_types_from_schema <- function(schema) {
 #' @return Character vector of `multipleAttachments` field names.
 #' @noRd
 attachment_fields_from_schema <- function(schema) {
-  if (is.null(schema) || length(schema$fields) == 0L) return(character())
+  if (is.null(schema) || length(schema$fields) == 0L) {
+    return(character())
+  }
   vapply(
-    Filter(function(f) (f$type %||% "") == "multipleAttachments", schema$fields),
+    Filter(
+      function(f) (f$type %||% "") == "multipleAttachments",
+      schema$fields
+    ),
     function(f) f$name,
     character(1)
   )
@@ -784,22 +791,30 @@ unclass_air <- function(x) {
 #' @return Normalized data frame (same structure, types may differ).
 #' @noRd
 normalize_for_hash <- function(df, field_types = character()) {
-  list_field_types <- c("multipleSelects", "multipleRecordLinks",
-                        "multipleCollaborators")
+  list_field_types <- c(
+    "multipleSelects",
+    "multipleRecordLinks",
+    "multipleCollaborators"
+  )
 
   for (col in names(df)) {
-    x  <- df[[col]]
+    x <- df[[col]]
     ft <- if (col %in% names(field_types)) field_types[[col]] else ""
 
     # Strip air_* S3 classes before type dispatch, preserving Date/POSIXct etc.
     x <- unclass_air(x)
 
     if (is.list(x)) {
-      x <- vapply(x, function(v) {
-        if (is.null(v) || length(v) == 0L) return(NA_character_)
-        paste(as.character(unlist(v)), collapse = "\x01")
-      }, character(1))
-
+      x <- vapply(
+        x,
+        function(v) {
+          if (is.null(v) || length(v) == 0L) {
+            return(NA_character_)
+          }
+          paste(as.character(unlist(v)), collapse = "\x01")
+        },
+        character(1)
+      )
     } else {
       if (inherits(x, "Date")) {
         x <- format(x, "%Y-%m-%d")
@@ -807,8 +822,12 @@ normalize_for_hash <- function(df, field_types = character()) {
         x <- format(x, "%Y-%m-%dT%H:%M:%OS3Z", tz = "UTC")
       }
 
-      if (is.integer(x))  x <- as.numeric(x)
-      if (is.logical(x))  x[!is.na(x) & !x] <- NA
+      if (is.integer(x)) {
+        x <- as.numeric(x)
+      }
+      if (is.logical(x)) {
+        x[!is.na(x) & !x] <- NA
+      }
 
       if (is.character(x)) {
         x <- trimws(x, which = "right")
@@ -818,10 +837,16 @@ normalize_for_hash <- function(df, field_types = character()) {
       # Schema-aware: expand character multipleSelects to NUL-joined form
       if (ft %in% list_field_types && is.character(x)) {
         expanded <- air_expand_multiselect(x)
-        x <- vapply(expanded, function(v) {
-          if (is.null(v) || length(v) == 0L) return(NA_character_)
-          paste(as.character(v), collapse = "\x01")
-        }, character(1))
+        x <- vapply(
+          expanded,
+          function(v) {
+            if (is.null(v) || length(v) == 0L) {
+              return(NA_character_)
+            }
+            paste(as.character(v), collapse = "\x01")
+          },
+          character(1)
+        )
       }
     }
 

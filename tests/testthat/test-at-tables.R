@@ -27,6 +27,7 @@ test_that("at_update_field requires at least one argument", {
 test_that("at_create_table uses default id/singleLineText field when fields omitted", {
   captured_body <- NULL
   local_mocked_bindings(
+    air_token   = function(token = NULL) "fake_token",
     air_perform = function(req) {
       captured_body <<- req$body$data
       list(id = "tblNew", name = "Scratch", fields = list())
@@ -42,8 +43,9 @@ test_that("at_create_table uses default id/singleLineText field when fields omit
 test_that("at_create_base uses default table when tables omitted", {
   captured_body <- NULL
   local_mocked_bindings(
+    air_token            = function(token = NULL) "fake_token",
     default_workspace_id = function() "wspDEFAULT",
-    air_perform = function(req) {
+    air_perform          = function(req) {
       captured_body <<- req$body$data
       list(id = "appNew", name = "My Base", tables = list())
     }

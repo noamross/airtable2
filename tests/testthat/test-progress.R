@@ -58,8 +58,10 @@ existing_one_record <- function() {
 test_that("air_sync passes progress=TRUE to at_delete_records", {
   delete_calls <- list()
   local_mocked_bindings(
-    get_computed_fields   = function(base_id, table, ...) character(),
-    get_attachment_fields = function(base_id, table, ...) character(),
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "Contacts",
+      fields = list(list(name = "Name", type = "singleLineText"))
+    ),
     air_read              = function(table, base_id, ...) existing_one_record(),
     at_delete_records     = function(base_id, table_id, record_ids,
                                      token = NULL, progress = NULL) {
@@ -85,8 +87,10 @@ test_that("air_sync passes progress=TRUE to at_delete_records", {
 test_that("air_sync passes progress=FALSE to at_delete_records", {
   delete_calls <- list()
   local_mocked_bindings(
-    get_computed_fields   = function(base_id, table, ...) character(),
-    get_attachment_fields = function(base_id, table, ...) character(),
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "Contacts",
+      fields = list(list(name = "Name", type = "singleLineText"))
+    ),
     air_read              = function(table, base_id, ...) existing_one_record(),
     at_delete_records     = function(base_id, table_id, record_ids,
                                      token = NULL, progress = NULL) {
@@ -122,8 +126,10 @@ empty_existing <- function() {
 
 test_that("air_sync emits a 'Reading' step message when progress=TRUE", {
   local_mocked_bindings(
-    get_computed_fields   = function(base_id, table, ...) character(),
-    get_attachment_fields = function(base_id, table, ...) character(),
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "Contacts",
+      fields = list(list(name = "Name", type = "singleLineText"))
+    ),
     air_read              = function(table, base_id, ...) empty_existing(),
     .package = "airtable2"
   )
@@ -142,8 +148,10 @@ test_that("air_sync emits a 'Reading' step message when progress=TRUE", {
 
 test_that("air_sync does not emit 'Reading' message when progress=FALSE", {
   local_mocked_bindings(
-    get_computed_fields   = function(base_id, table, ...) character(),
-    get_attachment_fields = function(base_id, table, ...) character(),
+    get_table_schema = function(...) list(
+      id = "tbl1", name = "Contacts",
+      fields = list(list(name = "Name", type = "singleLineText"))
+    ),
     air_read              = function(table, base_id, ...) empty_existing(),
     .package = "airtable2"
   )

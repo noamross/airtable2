@@ -92,6 +92,22 @@ Attachment fields (\code{multipleAttachments}) are always excluded from the
 change-detection hash because their URLs are volatile (expire hourly).
 When \code{attachments} is \code{"file"} or \code{"blob"}, attachment content is uploaded
 for newly created records after the sync completes.
+
+Before hashing, both the local data and the existing Airtable records are
+normalized to a canonical form to prevent false-positive change detection
+caused by representation differences:
+\itemize{
+\item \code{richText} values have trailing whitespace stripped (Airtable appends \verb{\\n})
+\item Empty strings (\code{""}) are converted to \code{NA}
+\item Unchecked checkbox (\code{FALSE}) is converted to \code{NA}
+\item \code{Date} values are formatted as \code{"YYYY-MM-DD"} strings
+\item \code{POSIXct} values are formatted as \code{"YYYY-MM-DDTHH:MM:SS.000Z"} (UTC)
+\item \code{integer} columns are coerced to \code{double}
+\item List-columns (multipleSelects, multipleRecordLinks, multipleCollaborators)
+are collapsed per-element to a \verb{\\x01}-separated string
+\item Character \code{multipleSelects} values (e.g. \code{"R; Python"}) are expanded to
+list form before collapsing, so they hash identically to their list counterpart
+}
 }
 \examples{
 \dontrun{

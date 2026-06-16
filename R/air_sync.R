@@ -14,6 +14,20 @@
 #' When `attachments` is `"file"` or `"blob"`, attachment content is uploaded
 #' for newly created records after the sync completes.
 #'
+#' Before hashing, both the local data and the existing Airtable records are
+#' normalized to a canonical form to prevent false-positive change detection
+#' caused by representation differences:
+#' - `richText` values have trailing whitespace stripped (Airtable appends `\n`)
+#' - Empty strings (`""`) are converted to `NA`
+#' - Unchecked checkbox (`FALSE`) is converted to `NA`
+#' - `Date` values are formatted as `"YYYY-MM-DD"` strings
+#' - `POSIXct` values are formatted as `"YYYY-MM-DDTHH:MM:SS.000Z"` (UTC)
+#' - `integer` columns are coerced to `double`
+#' - List-columns (multipleSelects, multipleRecordLinks, multipleCollaborators)
+#'   are collapsed per-element to a `\x01`-separated string
+#' - Character `multipleSelects` values (e.g. `"R; Python"`) are expanded to
+#'   list form before collapsing, so they hash identically to their list counterpart
+#'
 #' @param data A data frame representing the desired state of the table.
 #'   May contain computed field columns (they are ignored).
 #' @inheritParams air_read

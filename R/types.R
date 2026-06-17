@@ -819,7 +819,14 @@ normalize_for_hash <- function(df, field_types = character()) {
       if (inherits(x, "Date")) {
         x <- format(x, "%Y-%m-%d")
       } else if (inherits(x, c("POSIXct", "POSIXt"))) {
-        x <- format(x, "%Y-%m-%dT%H:%M:%OS3Z", tz = "UTC")
+        # Airtable round-trips datetimes by WALL-CLOCK, not absolute instant: a
+        # POSIXct is uploaded as its naive local time (jsonlite ISO8601, no
+        # offset) and read back as that same wall-clock with a "Z" suffix.
+        # Format in the value's OWN timezone (not UTC) so a non-UTC POSIXct
+        # still matches the string Airtable returns; otherwise every datetime
+        # row in a non-UTC column reads back as changed.
+        fmt <- format(x, "%Y-%m-%dT%H:%M:%OS3")
+        x <- ifelse(is.na(x), NA_character_, paste0(fmt, "Z"))
       }
 
       if (is.integer(x)) {

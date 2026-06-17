@@ -360,6 +360,115 @@ ensure_last_seen_field <- function() {
   invisible(NULL)
 }
 
+#' Ensure the "SyncTypes" table exists in the main test base
+#'
+#' Provisions one table with a writable field of every type `air_sync()`
+#' hashes, so the live type-coverage tests have a stable target. Created once
+#' per workspace; subsequent calls are cheap lookups. Adds a self-referential
+#' link field and an attachment field after creation (these need the table's
+#' own id / can't be expressed in the initial create payload cleanly).
+#'
+#' @return Character scalar: the SyncTypes table ID.
+ensure_synctypes_table <- function() {
+  base_id <- get_test_base()
+
+  schema <- at_get_schema(base_id)
+  existing <- Filter(function(t) t$name == "SyncTypes", schema)
+
+  if (length(existing) > 0L) {
+    table_id <- existing[[1]]$id
+    have <- vapply(existing[[1]]$fields, function(f) f$name, character(1))
+    # Backfill the link / attachment fields if an older table lacks them.
+    added <- FALSE
+    if (!"Links" %in% have) {
+      at_create_field(
+        "Links", base_id = base_id, table_id = table_id,
+        type = "multipleRecordLinks",
+        options = list(linkedTableId = table_id)
+      )
+      added <- TRUE
+    }
+    if (!"Files" %in% have) {
+      at_create_field(
+        "Files", base_id = base_id, table_id = table_id,
+        type = "multipleAttachments"
+      )
+      added <- TRUE
+    }
+    if (added) schema_cache_invalidate(base_id)
+    return(table_id)
+  }
+
+  result <- at_create_table(
+    name = "SyncTypes",
+    base_id = base_id,
+    fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Notes", type = "multilineText"),
+      list(name = "Email", type = "email"),
+      list(name = "Site", type = "url"),
+      list(name = "Phone", type = "phoneNumber"),
+      list(name = "Num", type = "number", options = list(precision = 2L)),
+      list(name = "Pct", type = "percent", options = list(precision = 2L)),
+      list(
+        name = "Cost", type = "currency",
+        options = list(precision = 2L, symbol = "$")
+      ),
+      list(
+        name = "Dur", type = "duration",
+        options = list(durationFormat = "h:mm")
+      ),
+      list(
+        name = "Stars", type = "rating",
+        options = list(max = 5L, icon = "star", color = "yellowBright")
+      ),
+      list(
+        name = "Done", type = "checkbox",
+        options = list(icon = "check", color = "greenBright")
+      ),
+      list(
+        name = "Day", type = "date",
+        options = list(dateFormat = list(name = "iso"))
+      ),
+      list(
+        name = "When", type = "dateTime",
+        options = list(
+          dateFormat = list(name = "iso"),
+          timeFormat = list(name = "24hour"),
+          timeZone = "utc"
+        )
+      ),
+      list(
+        name = "Cat", type = "singleSelect",
+        options = list(choices = list(
+          list(name = "A"), list(name = "B"), list(name = "C")
+        ))
+      ),
+      list(
+        name = "Tags", type = "multipleSelects",
+        options = list(choices = list(
+          list(name = "R"), list(name = "Python"), list(name = "Julia")
+        ))
+      )
+    )
+  )
+  table_id <- result$id
+
+  # Self-referential link + attachment fields (added post-create).
+  at_create_field(
+    "Links", base_id = base_id, table_id = table_id,
+    type = "multipleRecordLinks",
+    options = list(linkedTableId = table_id)
+  )
+  at_create_field(
+    "Files", base_id = base_id, table_id = table_id,
+    type = "multipleAttachments"
+  )
+  schema_cache_invalidate(base_id)
+
+  table_id
+}
+
 #' Standard test data for the Contacts table
 #' @return A tibble with Name, Email, Age, Active, Tags columns.
 test_contacts_data <- function() {

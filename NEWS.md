@@ -1,10 +1,4 @@
-# airtable2 0.1.1.900
-
-* `air_sync()` now normalizes both local and remote tables to match before
-   hashing and diffing to reduce false-positive differences when comparing
-   tables.
-
-# airtable2 0.1.0.9000
+# airtable2 0.1.1.9000
 
 ## Breaking changes
 
@@ -41,6 +35,22 @@
   shown instead of one message per field.
 
 ## Bug fixes
+
+* `air_sync()` no longer reports unchanged rows as changed (#13). Change
+  detection now reduces each field to a canonical, type-aware representation
+  before hashing, so a local column compares equal to the value Airtable
+  actually stores and returns. Previously the hash relied on `format()`
+  happening to agree across representations, which produced spurious updates on
+  every sync for several field types:
+  - **dateTime** — compared the wrong moment (the hash used the absolute UTC
+    instant, but Airtable round-trips datetimes by wall-clock).
+  - **checkbox** — unchecked boxes read back as `NA` (Airtable omits them) and
+    never matched a local `FALSE`.
+  - **multipleSelects / linked records** and other list-columns — were padded
+    by `format()` so a list never matched the identical list read back.
+  - **number** — integer-vs-double and scientific-notation drift
+    (e.g. `1e+05` vs `100000`).
+  These are covered by live tests exercising every writable field type.
 
 * `air_restore()` now correctly handles tables containing multiselect,
   linked-record, attachment, or other list-type columns. Previously `air_write()`

@@ -21,6 +21,12 @@ test_that("air_dump/air_restore round-trip preserves table structure and record 
 
   # ── Dump source ─────────────────────────────────────────────────────────────
   dump1 <- air_dump(base_id, format = "list", attachments = "meta")
+  # The shared test base may also hold unrelated tables (e.g. SyncTypes from the
+  # type-coverage tests). Restrict the round-trip to the Contacts table so this
+  # test is independent of whatever else lives in the base.
+  expect_true(all(c("schema", "Contacts") %in% names(dump1)))
+  dump1$schema <- Filter(function(t) t$name == "Contacts", dump1$schema)
+  dump1 <- dump1[c("schema", "Contacts")]
   expect_named(dump1, c("schema", "Contacts"), ignore.order = TRUE)
 
   contacts1 <- dump1$Contacts

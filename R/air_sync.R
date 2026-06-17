@@ -21,7 +21,8 @@
 #' - Empty strings (`""`) are converted to `NA`
 #' - Unchecked checkbox (`FALSE`) is converted to `NA`
 #' - `Date` values are formatted as `"YYYY-MM-DD"` strings
-#' - `POSIXct` values are formatted as `"YYYY-MM-DDTHH:MM:SS.000Z"` (UTC)
+#' - `POSIXct` values are formatted as `"YYYY-MM-DDTHH:MM:SS.000Z"` using the
+#'   value's own timezone (wall-clock), matching how Airtable round-trips them
 #' - `integer` columns are coerced to `double`
 #' - List-columns (multipleSelects, multipleRecordLinks, multipleCollaborators)
 #'   are collapsed per-element to a `\x01`-separated string

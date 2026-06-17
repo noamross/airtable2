@@ -101,7 +101,8 @@ caused by representation differences:
 \item Empty strings (\code{""}) are converted to \code{NA}
 \item Unchecked checkbox (\code{FALSE}) is converted to \code{NA}
 \item \code{Date} values are formatted as \code{"YYYY-MM-DD"} strings
-\item \code{POSIXct} values are formatted as \code{"YYYY-MM-DDTHH:MM:SS.000Z"} (UTC)
+\item \code{POSIXct} values are formatted as \code{"YYYY-MM-DDTHH:MM:SS.000Z"} using the
+value's own timezone (wall-clock), matching how Airtable round-trips them
 \item \code{integer} columns are coerced to \code{double}
 \item List-columns (multipleSelects, multipleRecordLinks, multipleCollaborators)
 are collapsed per-element to a \verb{\\x01}-separated string

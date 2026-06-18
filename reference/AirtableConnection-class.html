@@ -9,7 +9,7 @@ airtable2() with DBI::dbConnect() to create connections."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">airtable2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,13 +111,10 @@ can also pass <code>"TableName WHERE &lt;formula&gt;"</code> as the name to filt
 using Airtable's formula syntax.</p></dd>
 
 <dt>Writing tables</dt>
-<dd><p><code><a href="https://dbi.r-dbi.org/reference/dbWriteTable.html" class="external-link">dbWriteTable()</a></code> works on <strong>existing</strong> tables only.
-With <code>append = TRUE</code> it creates new records; with <code>overwrite = TRUE</code> it
-syncs (upsert + delete-missing) using the first column as the key.</p></dd>
-
-<dt>No table creation via DBI</dt>
-<dd><p>Use <code><a href="at_create_table.html">at_create_table()</a></code> to create tables.
-<code><a href="https://dbi.r-dbi.org/reference/dbWriteTable.html" class="external-link">dbWriteTable()</a></code> errors if the table does not already exist.</p></dd>
+<dd><p><code><a href="https://dbi.r-dbi.org/reference/dbWriteTable.html" class="external-link">dbWriteTable()</a></code> creates the table if it does not
+exist (inferring field types from the data frame). When the table already
+exists, <code>append = TRUE</code> creates new records; <code>overwrite = TRUE</code> syncs
+(upsert + delete-missing) using the first column as the key.</p></dd>
 
 <dt>No table removal</dt>
 <dd><p>Airtable's API cannot delete tables. Use the

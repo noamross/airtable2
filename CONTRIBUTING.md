@@ -581,6 +581,59 @@ not bases. Some schema-mutation tests create new bases each run — use
 
 ------------------------------------------------------------------------
 
+### `richText` fields return with a trailing newline
+
+Airtable appends a `\n` to the value of every `richText` field in read
+responses, even when the value was written without one. This means a
+round-trip write → read → sync produces a false-positive change if the
+trailing newline is not stripped before comparison.
+
+[`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+normalizes `richText` values by right-trimming whitespace before
+hashing, so round-trips do not trigger spurious updates.
+
+------------------------------------------------------------------------
+
+### Empty and blank character values are absent from responses
+
+Airtable **omits** any field whose value is an empty string, `null`, or
+`false` (for checkboxes). This means:
+
+- Writing `""` or `NA` to a text field → Airtable stores nothing → read
+  back produces `NA`.
+- Writing `FALSE` to a checkbox → Airtable stores nothing → read back
+  produces `FALSE` only because
+  [`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+  fills checkbox columns from the schema.
+
+[`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+normalizes empty strings (`""`) to `NA` before hashing, so user data
+with `""` matches Airtable’s `NA` response.
+
+------------------------------------------------------------------------
+
+### `dateTime` fields require `timeFormat` and `timeZone` options on creation
+
+Unlike `date` fields (which only need `dateFormat`), creating a
+`dateTime` field via the API requires three option keys:
+
+``` r
+
+at_create_field(
+  "LastSeen", base_id = base_id, table_id = table_id,
+  type = "dateTime",
+  options = list(
+    dateFormat = list(name = "iso"),
+    timeFormat = list(name = "24hour"),
+    timeZone   = "utc"
+  )
+)
+```
+
+Omitting `timeFormat` or `timeZone` produces a schema validation error.
+
+------------------------------------------------------------------------
+
 ### `multipleAttachments` use a separate upload endpoint
 
 Attachments cannot be embedded in record create or update payloads. They

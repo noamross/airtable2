@@ -71,17 +71,10 @@ dbGetInfo(dbObj, ...)
 - Writing tables:
 
   [`dbWriteTable()`](https://dbi.r-dbi.org/reference/dbWriteTable.html)
-  works on **existing** tables only. With `append = TRUE` it creates new
-  records; with `overwrite = TRUE` it syncs (upsert + delete-missing)
-  using the first column as the key.
-
-- No table creation via DBI:
-
-  Use
-  [`at_create_table()`](https://noamross.github.io/airtable2/reference/at_create_table.md)
-  to create tables.
-  [`dbWriteTable()`](https://dbi.r-dbi.org/reference/dbWriteTable.html)
-  errors if the table does not already exist.
+  creates the table if it does not exist (inferring field types from the
+  data frame). When the table already exists, `append = TRUE` creates
+  new records; `overwrite = TRUE` syncs (upsert + delete-missing) using
+  the first column as the key.
 
 - No table removal:
 

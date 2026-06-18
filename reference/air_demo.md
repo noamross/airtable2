@@ -65,26 +65,33 @@ Steps covered:
 
 6.  Upsert a new `Engagement Score` column into Artists from R
 
-7.  Upload an image attachment to a Project record
+7.  Create a new table from a local data frame with inferred field types
+    (`create_table = TRUE`); then write a complex list-column as JSON
+    text (`complex_fields = "json"`)
 
-8.  Link artists to projects via `multipleRecordLinks`
+8.  Upload an image attachment to a Project record
 
-9.  Left-join Airtable columns into a local R tibble
+9.  Link artists to projects via `multipleRecordLinks`
 
-10. View the base schema
+10. Left-join Airtable columns into a local R tibble
 
-11. Seed a `_metadata` table with
+11. Push local scores back to Airtable with
+    [`air_left_join_upload()`](https://noamross.github.io/airtable2/reference/air_left_join_upload.md)
+
+12. View the base schema
+
+13. Seed a `_metadata` table with
     [`air_meta_init()`](https://noamross.github.io/airtable2/reference/air_meta_init.md),
     edit table/column names as rows in Airtable, then apply with
     [`air_meta_sync()`](https://noamross.github.io/airtable2/reference/air_meta_sync.md)
 
-12. Connect via the DBI interface:
+14. Connect via the DBI interface:
     [`DBI::dbConnect()`](https://dbi.r-dbi.org/reference/dbConnect.html),
     [`DBI::dbListTables()`](https://dbi.r-dbi.org/reference/dbListTables.html),
     [`DBI::dbReadTable()`](https://dbi.r-dbi.org/reference/dbReadTable.html),
     [`DBI::dbWriteTable()`](https://dbi.r-dbi.org/reference/dbWriteTable.html)
 
-13. View API usage
+15. View API usage
 
 All operations keyed on `Name` are idempotent; re-running will not
 accumulate duplicate records.

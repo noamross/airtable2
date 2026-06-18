@@ -13,7 +13,7 @@ air_demo_setup() first."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">airtable2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,9 +96,13 @@ visible; read back over 2 pages to demonstrate read pagination</p></li>
 <li><p>Bulk-upsert 30 artists with a progress bar</p></li>
 <li><p>Sync back to the original 15 with a progress bar (watch deletions)</p></li>
 <li><p>Upsert a new <code>Engagement Score</code> column into Artists from R</p></li>
+<li><p>Create a new table from a local data frame with inferred field types
+(<code>create_table = TRUE</code>); then write a complex list-column as JSON text
+(<code>complex_fields = "json"</code>)</p></li>
 <li><p>Upload an image attachment to a Project record</p></li>
 <li><p>Link artists to projects via <code>multipleRecordLinks</code></p></li>
 <li><p>Left-join Airtable columns into a local R tibble</p></li>
+<li><p>Push local scores back to Airtable with <code><a href="air_left_join_upload.html">air_left_join_upload()</a></code></p></li>
 <li><p>View the base schema</p></li>
 <li><p>Seed a <code>_metadata</code> table with <code><a href="air_meta_init.html">air_meta_init()</a></code>, edit table/column names
 as rows in Airtable, then apply with <code><a href="air_meta_sync.html">air_meta_sync()</a></code></p></li>

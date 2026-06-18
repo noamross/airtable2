@@ -15,6 +15,7 @@ air_sync(
   delete_missing = TRUE,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -67,6 +68,19 @@ air_sync(
   [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
   Default is `"error"`.
 
+- complex_fields:
+
+  What to do when `data` contains list-columns with complex (nested list
+  or data-frame) values that Airtable cannot store directly:
+
+  - `"error"` (default): abort with an informative message.
+
+  - `"warn"`: warn and drop those columns.
+
+  - `"json"`: serialize each complex value to a JSON text string and
+    write it to a `singleLineText` field (creating the field first when
+    `add_fields = "yes"`).
+
 - attachments:
 
   How to handle attachment fields: `"meta"` (default) keeps only
@@ -110,6 +124,33 @@ Attachment fields (`multipleAttachments`) are always excluded from the
 change-detection hash because their URLs are volatile (expire hourly).
 When `attachments` is `"file"` or `"blob"`, attachment content is
 uploaded for newly created records after the sync completes.
+
+Before hashing, both the local data and the existing Airtable records
+are normalized to a canonical form to prevent false-positive change
+detection caused by representation differences:
+
+- `richText` values have trailing whitespace stripped (Airtable appends
+  `\n`)
+
+- Empty strings (`""`) are converted to `NA`
+
+- Unchecked checkbox (`FALSE`) is converted to `NA`
+
+- `Date` values are formatted as `"YYYY-MM-DD"` strings
+
+- `POSIXct` values are formatted as `"YYYY-MM-DDTHH:MM:SS.000Z"` using
+  the value's own timezone (wall-clock), matching how Airtable
+  round-trips them
+
+- `integer` columns are coerced to `double`
+
+- List-columns (multipleSelects, multipleRecordLinks,
+  multipleCollaborators) are collapsed per-element to a `\x01`-separated
+  string
+
+- Character `multipleSelects` values (e.g. `"R; Python"`) are expanded
+  to list form before collapsing, so they hash identically to their list
+  counterpart
 
 ## Examples
 

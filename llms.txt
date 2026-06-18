@@ -233,6 +233,10 @@ Schema inspection, base metadata, and backup/restore
   : Build a field template specification
 - [`air_table_template()`](https://noamross.github.io/airtable2/reference/air_table_template.md)
   : Build a table template specification
+- [`air_infer_fields()`](https://noamross.github.io/airtable2/reference/air_infer_fields.md)
+  : Infer Airtable field specifications from a data frame
+- [`air_infer_table()`](https://noamross.github.io/airtable2/reference/air_infer_table.md)
+  : Infer an Airtable table specification from a data frame
 
 ## Request building & authentication
 

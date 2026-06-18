@@ -16,7 +16,10 @@ air_left_join_upload(
   base_id = NULL,
   by = NULL,
   fields = NULL,
-  add_fields = c("yes", "warn", "error"),
+  add_fields = "yes",
+  typecast = TRUE,
+  complex_fields = c("error", "warn", "json"),
+  progress = NULL,
   .token = NULL
 )
 ```
@@ -56,6 +59,24 @@ air_left_join_upload(
   What to do when an upload column does not exist in the table: `"yes"`
   (default) creates it, `"warn"` warns and drops it, `"error"` errors.
   Passed through to
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
+
+- typecast:
+
+  If `TRUE` (default), Airtable will attempt to coerce values to match
+  field types. Passed through to
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
+
+- complex_fields:
+
+  What to do with complex (nested list or data-frame) columns: `"error"`
+  (default) aborts, `"warn"` drops them, `"json"` serializes them as
+  JSON text. Passed through to
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
+
+- progress:
+
+  Logical or `NULL`. If `TRUE`, shows a progress bar. Passed through to
   [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
 
 - .token:

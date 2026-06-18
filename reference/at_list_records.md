@@ -84,7 +84,7 @@ at_list_records(
 
   Logical or `NULL`. If `TRUE`, shows a cli progress bar for batch
   operations. If `NULL` (default), uses option `airtable2.progress.bar`
-  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
+  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `TRUE`).
 
 ## Value
 

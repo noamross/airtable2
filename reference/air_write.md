@@ -16,6 +16,8 @@ air_write(
   base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
+  create_table = FALSE,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -55,7 +57,29 @@ air_write(
 
   - `"warn"`: warn and drop unknown columns.
 
-  - `"yes"`: create missing fields before writing (as `singleLineText`).
+  - `"yes"`: create missing fields before writing. Field types are
+    inferred from the column class: `numeric` → `number`, `logical` →
+    `checkbox`, `Date` → `date`, complex/JSON columns → `multilineText`,
+    all others → `singleLineText`.
+
+- complex_fields:
+
+  What to do when `data` contains list-columns with complex (nested list
+  or data-frame) values that Airtable cannot store directly:
+
+  - `"error"` (default): abort with an informative message.
+
+  - `"warn"`: warn and drop those columns.
+
+  - `"json"`: serialize each complex value to a JSON text string and
+    write it to a `singleLineText` field (creating the field first when
+    `add_fields = "yes"`).
+
+- create_table:
+
+  If `TRUE`, creates the table in the base if it does not already exist.
+  Field types are inferred from the data using the same rules as
+  `add_fields = "yes"`. Defaults to `FALSE`.
 
 - attachments:
 

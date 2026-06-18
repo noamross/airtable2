@@ -13,6 +13,7 @@ air_upsert(
   base_id = NULL,
   typecast = TRUE,
   add_fields = c("error", "warn", "yes"),
+  complex_fields = c("error", "warn", "json"),
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   progress = NULL,
@@ -56,8 +57,23 @@ air_upsert(
 
   - `"warn"`: warn and drop unknown columns.
 
-  - `"yes"`: create missing fields before upserting (as
-    `singleLineText`).
+  - `"yes"`: create missing fields before upserting. Field types are
+    inferred from the column class: `numeric` → `number`, `logical` →
+    `checkbox`, `Date` → `date`, complex/JSON columns → `multilineText`,
+    all others → `singleLineText`.
+
+- complex_fields:
+
+  What to do when `data` contains list-columns with complex (nested list
+  or data-frame) values that Airtable cannot store directly:
+
+  - `"error"` (default): abort with an informative message.
+
+  - `"warn"`: warn and drop those columns.
+
+  - `"json"`: serialize each complex value to a JSON text string and
+    write it to a `singleLineText` field (creating the field first when
+    `add_fields = "yes"`).
 
 - attachments:
 

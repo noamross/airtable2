@@ -40,7 +40,10 @@ at_update_records(
 
 - typecast:
 
-  If `TRUE`, Airtable will attempt to cast values.
+  If `TRUE`, Airtable will attempt to cast values. Defaults to `FALSE`
+  here (low-level, strict);
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md)
+  defaults to `TRUE`.
 
 - upsert_fields:
 
@@ -57,7 +60,7 @@ at_update_records(
 
   Logical or `NULL`. If `TRUE`, shows a cli progress bar for batch
   operations. If `NULL` (default), uses option `airtable2.progress.bar`
-  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
+  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `TRUE`).
 
 ## Value
 

@@ -5,7 +5,13 @@ Create a new base
 ## Usage
 
 ``` r
-at_create_base(name, tables, workspace_id = NULL, token = NULL)
+at_create_base(
+  name,
+  tables = list(list(name = "Table 1", fields = list(list(name = "id", type =
+    "singleLineText")))),
+  workspace_id = NULL,
+  token = NULL
+)
 ```
 
 ## Arguments

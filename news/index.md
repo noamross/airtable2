@@ -1,5 +1,87 @@
 # Changelog
 
+## airtable2 0.1.1.9001
+
+### Breaking changes
+
+- [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md),
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md),
+  and
+  [`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+  now error by default when `data` contains **complex list-columns**
+  (nested lists or data frames that Airtable cannot store directly).
+  Previously these columns were silently problematic. Set
+  `complex_fields = "warn"` to drop them or `complex_fields = "json"` to
+  serialize them as JSON text.
+
+- `add_fields = "yes"` in
+  [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md),
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md),
+  and
+  [`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+  now **infers field types** from column class instead of always
+  creating `singleLineText`. Mapping: `numeric` → `number`, `logical` →
+  `checkbox`, `Date` → `date`, complex/JSON columns → `multilineText`,
+  everything else → `singleLineText`. This changes which Airtable field
+  type is created when a new column is first written.
+
+### New features
+
+- [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+  gains a `create_table` argument. When `TRUE`, the table is created in
+  the base if it does not already exist; field types are inferred from
+  the data using the same rules as `add_fields = "yes"`.
+
+- `air_infer_fields(data)` maps R column types to Airtable field
+  specification lists suitable for
+  [`at_create_table()`](https://noamross.github.io/airtable2/reference/at_create_table.md)
+  /
+  [`at_create_base()`](https://noamross.github.io/airtable2/reference/at_create_base.md).
+  Factors become `singleSelect` fields with choices from
+  [`levels()`](https://rdrr.io/r/base/levels.html).
+
+- `air_infer_table(data, name)` wraps
+  [`air_infer_fields()`](https://noamross.github.io/airtable2/reference/air_infer_fields.md)
+  to produce a complete table specification in one call.
+
+- [`air_left_join_upload()`](https://noamross.github.io/airtable2/reference/air_left_join_upload.md)
+  gains `typecast`, `complex_fields`, and `progress` arguments, bringing
+  its API in line with
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md).
+
+- When `add_fields = "yes"` creates multiple new fields, a progress bar
+  is shown instead of one message per field.
+
+### Bug fixes
+
+- [`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)
+  no longer reports unchanged rows as changed
+  ([\#13](https://github.com/noamross/airtable2/issues/13)). Change
+  detection now reduces each field to a canonical, type-aware
+  representation before hashing, so a local column compares equal to the
+  value Airtable actually stores and returns. Previously the hash relied
+  on [`format()`](https://rdrr.io/r/base/format.html) happening to agree
+  across representations, which produced spurious updates on every sync
+  for several field types:
+  - **dateTime** — compared the wrong moment (the hash used the absolute
+    UTC instant, but Airtable round-trips datetimes by wall-clock).
+  - **checkbox** — unchecked boxes read back as `NA` (Airtable omits
+    them) and never matched a local `FALSE`.
+  - **multipleSelects / linked records** and other list-columns — were
+    padded by [`format()`](https://rdrr.io/r/base/format.html) so a list
+    never matched the identical list read back.
+  - **number** — integer-vs-double and scientific-notation drift
+    (e.g. `1e+05` vs `100000`). These are covered by live tests
+    exercising every writable field type.
+- [`air_restore()`](https://noamross.github.io/airtable2/reference/air_restore.md)
+  now correctly handles tables containing multiselect, linked-record,
+  attachment, or other list-type columns. Previously
+  [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+  would abort with a “complex columns” error because
+  [`air_dump()`](https://noamross.github.io/airtable2/reference/air_dump.md)
+  stores those columns as plain lists (without the `air_*` class); they
+  are now re-wrapped before writing.
+
 ## airtable2 0.0.0.9000
 
 Initial development release — complete rewrite of `airtabler` using

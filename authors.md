@@ -17,13 +17,13 @@ Source:
 [`DESCRIPTION`](https://github.com/noamross/airtable2/blob/main/DESCRIPTION)
 
 Ross N, Bergant D, Schwantes C (2026). *airtable2: Pure R Client for the
-'Airtable' REST API*. R package version 0.0.0.9000,
+'Airtable' REST API*. R package version 0.1.1.9001,
 <https://github.com/noamross/airtable2>.
 
     @Manual{,
       title = {airtable2: Pure R Client for the 'Airtable' REST API},
       author = {Noam Ross and Darko Bergant and Collin Schwantes},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.1.9001},
       url = {https://github.com/noamross/airtable2},
     }

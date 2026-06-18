@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">airtable2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -470,6 +470,35 @@ Airtable API quirks and gotchas (expand)
 <h3 id="base-deletion-not-available-on-free-tier">Base deletion not available on free tier<a class="anchor" aria-label="anchor" href="#base-deletion-not-available-on-free-tier"></a></h3>
 <p><code>DELETE /v0/meta/bases/{baseId}</code> returns 403 for free-tier accounts. There is no programmatic way to delete bases without an enterprise plan. Bases must be deleted manually through the Airtable web interface.</p>
 <p><strong>Impact on testing</strong>: Test bases cannot be automatically deleted. Tests share a fixed-name base per workspace and clean up by deleting records, not bases. Some schema-mutation tests create new bases each run — use <code>AIRTABLE_TEST_SCHEMA=false</code> to skip those and avoid accumulation.</p>
+<hr></div>
+<div class="section level3">
+<h3 id="richtext-fields-return-with-a-trailing-newline">
+<code>richText</code> fields return with a trailing newline<a class="anchor" aria-label="anchor" href="#richtext-fields-return-with-a-trailing-newline"></a></h3>
+<p>Airtable appends a <code>\n</code> to the value of every <code>richText</code> field in read responses, even when the value was written without one. This means a round-trip write → read → sync produces a false-positive change if the trailing newline is not stripped before comparison.</p>
+<p><code><a href="reference/air_sync.html">air_sync()</a></code> normalizes <code>richText</code> values by right-trimming whitespace before hashing, so round-trips do not trigger spurious updates.</p>
+<hr></div>
+<div class="section level3">
+<h3 id="empty-and-blank-character-values-are-absent-from-responses">Empty and blank character values are absent from responses<a class="anchor" aria-label="anchor" href="#empty-and-blank-character-values-are-absent-from-responses"></a></h3>
+<p>Airtable <strong>omits</strong> any field whose value is an empty string, <code>null</code>, or <code>false</code> (for checkboxes). This means:</p>
+<ul><li>Writing <code>""</code> or <code>NA</code> to a text field → Airtable stores nothing → read back produces <code>NA</code>.</li>
+<li>Writing <code>FALSE</code> to a checkbox → Airtable stores nothing → read back produces <code>FALSE</code> only because <code><a href="reference/air_read.html">air_read()</a></code> fills checkbox columns from the schema.</li>
+</ul><p><code><a href="reference/air_sync.html">air_sync()</a></code> normalizes empty strings (<code>""</code>) to <code>NA</code> before hashing, so user data with <code>""</code> matches Airtable’s <code>NA</code> response.</p>
+<hr></div>
+<div class="section level3">
+<h3 id="datetime-fields-require-timeformat-and-timezone-options-on-creation">
+<code>dateTime</code> fields require <code>timeFormat</code> and <code>timeZone</code> options on creation<a class="anchor" aria-label="anchor" href="#datetime-fields-require-timeformat-and-timezone-options-on-creation"></a></h3>
+<p>Unlike <code>date</code> fields (which only need <code>dateFormat</code>), creating a <code>dateTime</code> field via the API requires three option keys:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/at_create_field.html">at_create_field</a></span><span class="op">(</span></span>
+<span>  <span class="st">"LastSeen"</span>, base_id <span class="op">=</span> <span class="va">base_id</span>, table_id <span class="op">=</span> <span class="va">table_id</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"dateTime"</span>,</span>
+<span>  options <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    dateFormat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"iso"</span><span class="op">)</span>,</span>
+<span>    timeFormat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"24hour"</span><span class="op">)</span>,</span>
+<span>    timeZone   <span class="op">=</span> <span class="st">"utc"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Omitting <code>timeFormat</code> or <code>timeZone</code> produces a schema validation error.</p>
 <hr></div>
 <div class="section level3">
 <h3 id="multipleattachments-use-a-separate-upload-endpoint">

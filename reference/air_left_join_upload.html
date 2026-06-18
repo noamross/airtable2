@@ -15,7 +15,7 @@ new or changed field values."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">airtable2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,10 @@ new or changed field values.</p>
 <span>  base_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  fields <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  add_fields <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"yes"</span>, <span class="st">"warn"</span>, <span class="st">"error"</span><span class="op">)</span>,</span>
+<span>  add_fields <span class="op">=</span> <span class="st">"yes"</span>,</span>
+<span>  typecast <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  complex_fields <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"warn"</span>, <span class="st">"json"</span><span class="op">)</span>,</span>
+<span>  progress <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  .token <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -104,6 +107,22 @@ meta columns (<code>airtable_id</code>, <code>airtable_created_time</code>).</p>
 <dd><p>What to do when an upload column does not exist in the
 table: <code>"yes"</code> (default) creates it, <code>"warn"</code> warns and drops it,
 <code>"error"</code> errors. Passed through to <code><a href="air_upsert.html">air_upsert()</a></code>.</p></dd>
+
+
+<dt id="arg-typecast">typecast<a class="anchor" aria-label="anchor" href="#arg-typecast"></a></dt>
+<dd><p>If <code>TRUE</code> (default), Airtable will attempt to coerce values
+to match field types. Passed through to <code><a href="air_upsert.html">air_upsert()</a></code>.</p></dd>
+
+
+<dt id="arg-complex-fields">complex_fields<a class="anchor" aria-label="anchor" href="#arg-complex-fields"></a></dt>
+<dd><p>What to do with complex (nested list or data-frame)
+columns: <code>"error"</code> (default) aborts, <code>"warn"</code> drops them, <code>"json"</code>
+serializes them as JSON text. Passed through to <code><a href="air_upsert.html">air_upsert()</a></code>.</p></dd>
+
+
+<dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
+<dd><p>Logical or <code>NULL</code>. If <code>TRUE</code>, shows a progress bar.
+Passed through to <code><a href="air_upsert.html">air_upsert()</a></code>.</p></dd>
 
 
 <dt id="arg--token">.token<a class="anchor" aria-label="anchor" href="#arg--token"></a></dt>

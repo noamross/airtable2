@@ -34,6 +34,11 @@ at_create_records(
 - typecast:
 
   If `TRUE`, Airtable will attempt to cast values to the correct type.
+  Defaults to `FALSE` here (low-level, strict); the high-level
+  [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+  and
+  [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md)
+  default to `TRUE`.
 
 - token:
 
@@ -45,7 +50,7 @@ at_create_records(
 
   Logical or `NULL`. If `TRUE`, shows a cli progress bar for batch
   operations. If `NULL` (default), uses option `airtable2.progress.bar`
-  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `FALSE`).
+  or env var `AIRTABLE2_PROGRESS_BAR` (both default to `TRUE`).
 
 ## Value
 

@@ -5,7 +5,13 @@ Create a table in a base
 ## Usage
 
 ``` r
-at_create_table(name, fields, base_id = NULL, description = NULL, token = NULL)
+at_create_table(
+  name,
+  fields = list(list(name = "id", type = "singleLineText")),
+  base_id = NULL,
+  description = NULL,
+  token = NULL
+)
 ```
 
 ## Arguments

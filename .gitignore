@@ -13,4 +13,5 @@ NOTES.md
 agent-*/*
 */agent-*/*
 docs
+docs/*
 *.tar.gz

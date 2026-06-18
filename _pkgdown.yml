@@ -74,6 +74,8 @@ reference:
   - air_restore
   - air_field_template
   - air_table_template
+  - air_infer_fields
+  - air_infer_table
 - title: Request building & authentication
   desc: Low-level helpers for constructing and authenticating API requests
   contents:

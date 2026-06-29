@@ -278,3 +278,34 @@ test_that("air_sync is idempotent with richText trailing newline", {
   expect_equal(result$unchanged, 2L)
   expect_equal(result$updated,   0L)
 })
+
+test_that("air_sync with NA values clears existing field values (issue #17)", {
+  skip_on_cran()
+  clear_test_records()
+  base_id <- get_test_base()
+
+  initial <- tibble::tibble(
+    Name = c("Alice", "Bob"),
+    Age  = c(30L, 25L)
+  )
+  air_write(initial, "Contacts", base_id)
+
+  # Bob's Age is NA locally: should clear the existing value
+  desired <- tibble::tibble(
+    Name = c("Alice", "Bob"),
+    Age  = c(30L, NA_integer_)
+  )
+  result <- air_sync(
+    desired, "Contacts",
+    key         = "Name",
+    base_id     = base_id,
+    hash_fields = "Age"
+  )
+
+  expect_equal(result$updated,   1L)
+  expect_equal(result$unchanged, 1L)
+
+  final <- air_read("Contacts", base_id)
+  expect_equal(final$Age[final$Name == "Alice"], 30)
+  expect_true(is.na(final$Age[final$Name == "Bob"]))
+})

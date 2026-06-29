@@ -735,7 +735,7 @@ test_that("air_write complex_fields='json' NA rows produce NULL field (dropped)"
   )
   suppressMessages(air_write(data, "Table1", "appX", complex_fields = "json"))
   expect_type(captured[[1L]]$fields$info, "character")
-  expect_null(captured[[2L]]$fields$info) # NA serialized → dropped by compact
+  expect_equal(captured[[2L]]$fields$info, jsonlite::unbox(NA)) # NULL → JSON null to clear field
 })
 
 # ── add_fields='yes' field-type inference ─────────────────────────────────────
@@ -1046,4 +1046,87 @@ test_that("air_sync hash normalization: richText trailing newline is not a chang
   )
   expect_equal(result$unchanged, 1L)
   expect_equal(result$updated, 0L)
+})
+
+# ── NA field clearing (issue #17) ─────────────────────────────────────────────
+
+test_that("air_upsert includes JSON null for NA fields so PATCH clears them", {
+  captured <- NULL
+  local_mocked_bindings(
+    get_computed_fields = function(...) character(),
+    get_attachment_fields = function(...) character(),
+    at_get_schema = function(...) {
+      list(list(
+        id = "tbl1",
+        name = "Table1",
+        fields = list(
+          list(name = "Name", type = "singleLineText"),
+          list(name = "Age",  type = "number")
+        )
+      ))
+    },
+    at_update_records = function(base_id, table_id, records, ...) {
+      captured <<- records
+      list(
+        records        = records,
+        createdRecords = character(),
+        updatedRecords = "recA"
+      )
+    }
+  )
+
+  data <- tibble::tibble(airtable_id = "recA", Name = "Alice", Age = NA_real_)
+  suppressMessages(air_upsert(data, "Table1", "Name", "appX"))
+
+  expect_true("Age" %in% names(captured[[1]]$fields))
+  expect_equal(captured[[1]]$fields$Age, jsonlite::unbox(NA))
+})
+
+test_that("air_sync detects NA-vs-value diff and sends JSON null in PATCH body", {
+  existing <- tibble::tibble(
+    airtable_id            = c("recA", "recB"),
+    airtable_created_time  = as.POSIXct(rep("2024-01-01", 2)),
+    Name                   = c("Alice", "Bob"),
+    Age                    = c(30L, 25L)
+  )
+
+  captured <- NULL
+  mock_schema <- list(
+    id     = "tbl1",
+    fields = list(
+      list(name = "Name", type = "singleLineText"),
+      list(name = "Age",  type = "number")
+    )
+  )
+
+  local_mocked_bindings(
+    get_table_schema       = function(...) mock_schema,
+    get_computed_fields    = function(...) character(),
+    get_attachment_fields  = function(...) character(),
+    air_read               = function(...) existing,
+    at_update_records      = function(base_id, table_id, records, ...) {
+      captured <<- records
+      list(
+        records        = records,
+        createdRecords = character(),
+        updatedRecords = "recB"
+      )
+    }
+  )
+
+  # Bob's Age is NA locally — should trigger update and send null to clear it
+  desired <- tibble::tibble(Name = c("Alice", "Bob"), Age = c(30L, NA_integer_))
+
+  suppressMessages(
+    result <- air_sync(desired, "Table1", "Name", "appX", hash_fields = "Age")
+  )
+
+  expect_equal(result$updated, 1L)
+  expect_equal(result$unchanged, 1L)
+
+  bob_idx <- which(vapply(captured, function(r) identical(r$id, "recB"), logical(1)))
+  expect_length(bob_idx, 1L)
+  bob_fields <- captured[[bob_idx]]$fields
+  expect_true("Age" %in% names(bob_fields))
+  expect_equal(bob_fields$Age, jsonlite::unbox(NA))
 })

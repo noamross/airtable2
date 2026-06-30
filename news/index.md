@@ -1,8 +1,13 @@
 # Changelog
 
-## airtable2 0.1.1.9001
+## airtable2 0.1.2.9000
 
 ### Breaking changes
+
+- [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md)
+  and other upload functions now clear values from fields when the
+  corresponding column contains `NA` or `NULL`. Previously, these values
+  were ignored, leaving the existing field value unchanged.
 
 - [`air_write()`](https://noamross.github.io/airtable2/reference/air_write.md),
   [`air_upsert()`](https://noamross.github.io/airtable2/reference/air_upsert.md),

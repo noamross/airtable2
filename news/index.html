@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">airtable2</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,14 +40,15 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.1.9001" id="airtable2-0119001">airtable2 0.1.1.9001<a class="anchor" aria-label="anchor" href="#airtable2-0119001"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.2.9000" id="airtable2-0129000">airtable2 0.1.2.9000<a class="anchor" aria-label="anchor" href="#airtable2-0129000"></a></h2>
 <div class="section level3">
-<h3 id="breaking-changes-0-1-1-9001">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-1-1-9001"></a></h3>
-<ul><li><p><code><a href="../reference/air_write.html">air_write()</a></code>, <code><a href="../reference/air_upsert.html">air_upsert()</a></code>, and <code><a href="../reference/air_sync.html">air_sync()</a></code> now error by default when <code>data</code> contains <strong>complex list-columns</strong> (nested lists or data frames that Airtable cannot store directly). Previously these columns were silently problematic. Set <code>complex_fields = "warn"</code> to drop them or <code>complex_fields = "json"</code> to serialize them as JSON text.</p></li>
+<h3 id="breaking-changes-0-1-2-9000">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-1-2-9000"></a></h3>
+<ul><li><p><code><a href="../reference/air_write.html">air_write()</a></code> and other upload functions now clear values from fields when the corresponding column contains <code>NA</code> or <code>NULL</code>. Previously, these values were ignored, leaving the existing field value unchanged.</p></li>
+<li><p><code><a href="../reference/air_write.html">air_write()</a></code>, <code><a href="../reference/air_upsert.html">air_upsert()</a></code>, and <code><a href="../reference/air_sync.html">air_sync()</a></code> now error by default when <code>data</code> contains <strong>complex list-columns</strong> (nested lists or data frames that Airtable cannot store directly). Previously these columns were silently problematic. Set <code>complex_fields = "warn"</code> to drop them or <code>complex_fields = "json"</code> to serialize them as JSON text.</p></li>
 <li><p><code>add_fields = "yes"</code> in <code><a href="../reference/air_write.html">air_write()</a></code>, <code><a href="../reference/air_upsert.html">air_upsert()</a></code>, and <code><a href="../reference/air_sync.html">air_sync()</a></code> now <strong>infers field types</strong> from column class instead of always creating <code>singleLineText</code>. Mapping: <code>numeric</code> → <code>number</code>, <code>logical</code> → <code>checkbox</code>, <code>Date</code> → <code>date</code>, complex/JSON columns → <code>multilineText</code>, everything else → <code>singleLineText</code>. This changes which Airtable field type is created when a new column is first written.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="new-features-0-1-1-9001">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-1-9001"></a></h3>
+<h3 id="new-features-0-1-2-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-2-9000"></a></h3>
 <ul><li><p><code><a href="../reference/air_write.html">air_write()</a></code> gains a <code>create_table</code> argument. When <code>TRUE</code>, the table is created in the base if it does not already exist; field types are inferred from the data using the same rules as <code>add_fields = "yes"</code>.</p></li>
 <li><p><code>air_infer_fields(data)</code> maps R column types to Airtable field specification lists suitable for <code><a href="../reference/at_create_table.html">at_create_table()</a></code> / <code><a href="../reference/at_create_base.html">at_create_base()</a></code>. Factors become <code>singleSelect</code> fields with choices from <code><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels()</a></code>.</p></li>
 <li><p><code>air_infer_table(data, name)</code> wraps <code><a href="../reference/air_infer_fields.html">air_infer_fields()</a></code> to produce a complete table specification in one call.</p></li>
@@ -55,7 +56,7 @@
 <li><p>When <code>add_fields = "yes"</code> creates multiple new fields, a progress bar is shown instead of one message per field.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="bug-fixes-0-1-1-9001">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-1-9001"></a></h3>
+<h3 id="bug-fixes-0-1-2-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-2-9000"></a></h3>
 <ul><li>
 <code><a href="../reference/air_sync.html">air_sync()</a></code> no longer reports unchanged rows as changed (<a href="https://github.com/noamross/airtable2/issues/13" class="external-link">#13</a>). Change detection now reduces each field to a canonical, type-aware representation before hashing, so a local column compares equal to the value Airtable actually stores and returns. Previously the hash relied on <code><a href="https://rdrr.io/r/base/format.html" class="external-link">format()</a></code> happening to agree across representations, which produced spurious updates on every sync for several field types:
 <ul><li>

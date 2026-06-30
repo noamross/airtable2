@@ -85,10 +85,26 @@ test_that("tibble_to_records without id_col omits id", {
   expect_equal(records[[1]]$fields$Name, "Alice")
 })
 
-test_that("tibble_to_records converts NA fields to NULL (omitted)", {
+test_that("tibble_to_records sends JSON null for NA fields to clear Airtable values", {
   data <- tibble::tibble(Name = "Alice", Status = NA_character_)
   records <- tibble_to_records(data, id_col = NULL)
-  expect_false("Status" %in% names(records[[1]]$fields))
+  expect_true("Status" %in% names(records[[1]]$fields))
+  expect_equal(records[[1]]$fields$Status, jsonlite::unbox(NA))
+})
+
+test_that("tibble_to_records sends JSON null for list-column NULL to clear Airtable values", {
+  data <- tibble::tibble(Name = c("Alice", "Bob"), Tags = list(c("R", "Python"), NULL))
+  records <- tibble_to_records(data, id_col = NULL)
+  expect_equal(records[[1]]$fields$Tags, c("R", "Python"))
+  expect_true("Tags" %in% names(records[[2]]$fields))
+  expect_equal(records[[2]]$fields$Tags, jsonlite::unbox(NA))
+})
+
+test_that("tibble_to_records NA fields serialize to JSON null", {
+  data <- tibble::tibble(Name = "Alice", Age = NA_real_)
+  records <- tibble_to_records(data, id_col = NULL)
+  json <- jsonlite::toJSON(records[[1]]$fields, auto_unbox = TRUE)
+  expect_match(json, '"Age":null')
 })
 
 test_that("coerce_date works", {

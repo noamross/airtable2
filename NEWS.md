@@ -1,6 +1,10 @@
-# airtable2 0.1.1.9001
+# airtable2 0.1.2.9000
 
 ## Breaking changes
+
+* `air_write()` and other upload functions now clear values from fields when the
+   corresponding column contains `NA` or `NULL`. Previously, these values were
+   ignored, leaving the existing field value unchanged.
 
 * `air_write()`, `air_upsert()`, and `air_sync()` now error by default when
   `data` contains **complex list-columns** (nested lists or data frames that

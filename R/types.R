@@ -675,8 +675,11 @@ tibble_to_records <- function(
   lapply(seq_len(nrow(data)), function(i) {
     fields <- lapply(field_cols, function(col) {
       val <- data[[col]][[i]]
-      if (is.atomic(val) && length(val) == 1L && is.na(val)) {
-        return(NULL)
+      # NULL (list-column) and NA (any atomic) → JSON null, which tells the
+      # Airtable PATCH endpoint to clear the field. Omitting a field leaves it
+      # unchanged, so we must be explicit.
+      if (is.null(val) || (is.atomic(val) && length(val) == 1L && is.na(val))) {
+        return(jsonlite::unbox(NA))
       }
       # Auto-expand flat values to the API's expected shape, when we know
       # the field type from the schema.
@@ -687,7 +690,6 @@ tibble_to_records <- function(
       unclass_air(val)
     })
     names(fields) <- field_cols
-    fields <- compact(fields)
 
     rec <- list(fields = fields)
     if (has_id) {

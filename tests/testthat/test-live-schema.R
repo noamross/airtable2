@@ -273,3 +273,104 @@ test_that("live: air_meta returns flat field metadata", {
       names(result)
   ))
 })
+
+# --- Live: createdTime / lastModifiedTime coercion (date-only vs datetime) ---
+#
+# The Airtable API rejects programmatic creation of createdTime/lastModifiedTime
+# fields (UNSUPPORTED_FIELD_TYPE_FOR_CREATE), so these must be added by hand,
+# once, to the Scratch table in the schema test base. If absent, these tests
+# skip with setup instructions instead of failing.
+#
+# In the Scratch table of the schema test base, add via the Airtable UI:
+#   - "created_date"  : Created time field, formatted to show date only
+#   - "created_at"    : Created time field, formatted to show date + time
+#   - "modified_date" : Last modified time field, formatted to show date only
+#   - "modified_at"   : Last modified time field, formatted to show date + time
+
+test_that("live: air_read coerces date-only createdTime field to Date", {
+  skip_on_cran()
+  skip_if_no_schema_tests()
+  base_id <- get_schema_test_base()
+
+  schema <- at_get_schema(base_id)
+  scratch <- Filter(function(t) t$name == "Scratch", schema)
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
+  fields <- vapply(scratch[[1]]$fields, function(f) f$name, character(1))
+  if (!"created_date" %in% fields) {
+    skip(paste(
+      "Add a date-only 'Created time' field named 'created_date' to the",
+      "Scratch table (see comment above) to run this test"
+    ))
+  }
+
+  result <- air_read("Scratch", base_id)
+  expect_s3_class(result$created_date, "Date")
+})
+
+test_that("live: air_read keeps full-datetime createdTime field as POSIXct", {
+  skip_on_cran()
+  skip_if_no_schema_tests()
+  base_id <- get_schema_test_base()
+
+  schema <- at_get_schema(base_id)
+  scratch <- Filter(function(t) t$name == "Scratch", schema)
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
+  fields <- vapply(scratch[[1]]$fields, function(f) f$name, character(1))
+  if (!"created_at" %in% fields) {
+    skip(paste(
+      "Add a date+time 'Created time' field named 'created_at' to the",
+      "Scratch table (see comment above) to run this test"
+    ))
+  }
+
+  result <- air_read("Scratch", base_id)
+  expect_s3_class(result$created_at, "POSIXct")
+})
+
+test_that("live: air_read coerces date-only lastModifiedTime field to Date", {
+  skip_on_cran()
+  skip_if_no_schema_tests()
+  base_id <- get_schema_test_base()
+
+  schema <- at_get_schema(base_id)
+  scratch <- Filter(function(t) t$name == "Scratch", schema)
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
+  fields <- vapply(scratch[[1]]$fields, function(f) f$name, character(1))
+  if (!"modified_date" %in% fields) {
+    skip(paste(
+      "Add a date-only 'Last modified time' field named 'modified_date' to",
+      "the Scratch table (see comment above) to run this test"
+    ))
+  }
+
+  result <- air_read("Scratch", base_id)
+  expect_s3_class(result$modified_date, "Date")
+})
+
+test_that("live: air_read keeps full-datetime lastModifiedTime field as POSIXct", {
+  skip_on_cran()
+  skip_if_no_schema_tests()
+  base_id <- get_schema_test_base()
+
+  schema <- at_get_schema(base_id)
+  scratch <- Filter(function(t) t$name == "Scratch", schema)
+  if (length(scratch) == 0L) {
+    skip("Scratch table not found in schema base")
+  }
+  fields <- vapply(scratch[[1]]$fields, function(f) f$name, character(1))
+  if (!"modified_at" %in% fields) {
+    skip(paste(
+      "Add a date+time 'Last modified time' field named 'modified_at' to",
+      "the Scratch table (see comment above) to run this test"
+    ))
+  }
+
+  result <- air_read("Scratch", base_id)
+  expect_s3_class(result$modified_at, "POSIXct")
+})

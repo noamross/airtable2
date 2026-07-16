@@ -533,7 +533,25 @@ records_to_tibble <- function(records, schema = NULL) {
     } else {
       NULL
     }
+
+    field_def <- if (!is.null(schema)) {
+      Find(function(f) f$name == field_name, schema)
+    } else {
+      NULL
+    }
+
     coerce_fn <- if (!is.null(field_type)) type_map[[field_type]]
+
+    # createdTime/lastModifiedTime fields can be formatted to show only a
+    # date (no time-of-day); the API then returns a plain "YYYY-MM-DD"
+    # string that coerce_datetime() can't parse, so use coerce_date instead.
+    if (
+      !is.null(field_type) &&
+        field_type %in% c("createdTime", "lastModifiedTime") &&
+        identical(field_def$options$result$type, "date")
+    ) {
+      coerce_fn <- coerce_date
+    }
 
     col <- coerce_column(raw_values, coerce_fn, field_type)
 
@@ -543,17 +561,12 @@ records_to_tibble <- function(records, schema = NULL) {
     }
 
     # Attach label (field description from schema, or field name) and comment (Airtable type) for data viewer
-    field_label <- if (!is.null(schema)) {
-      field_def <- Find(function(f) f$name == field_name, schema)
-      if (
-        !is.null(field_def) &&
-          !is.null(field_def$description) &&
-          nzchar(field_def$description)
-      ) {
-        field_def$description
-      } else {
-        field_name
-      }
+    field_label <- if (
+      !is.null(field_def) &&
+        !is.null(field_def$description) &&
+        nzchar(field_def$description)
+    ) {
+      field_def$description
     } else {
       field_name
     }

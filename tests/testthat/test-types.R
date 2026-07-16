@@ -52,6 +52,86 @@ test_that("records_to_tibble with schema coerces types", {
   expect_type(result$Active, "logical")
 })
 
+test_that("records_to_tibble coerces date-only createdTime fields to Date", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T12:34:56.000Z",
+         fields = list(event_date = "2024-01-01")),
+    list(id = "rec2", createdTime = "2024-01-02T12:34:56.000Z",
+         fields = list(event_date = "2024-01-02"))
+  )
+  schema <- list(
+    list(
+      name = "event_date", type = "createdTime",
+      options = list(result = list(
+        type = "date",
+        options = list(dateFormat = list(name = "iso", format = "YYYY-MM-DD"))
+      ))
+    )
+  )
+  result <- records_to_tibble(records, schema = schema)
+  expect_s3_class(result$event_date, "Date")
+  expect_equal(
+    as.numeric(result$event_date),
+    as.numeric(as.Date(c("2024-01-01", "2024-01-02")))
+  )
+  # airtable_created_time (the meta column) always stays a full datetime
+  expect_s3_class(result$airtable_created_time, "POSIXct")
+})
+
+test_that("records_to_tibble coerces date-only lastModifiedTime fields to Date", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T12:34:56.000Z",
+         fields = list(last_touched = "2024-01-03")),
+    list(id = "rec2", createdTime = "2024-01-02T12:34:56.000Z",
+         fields = list(last_touched = "2024-01-04"))
+  )
+  schema <- list(
+    list(
+      name = "last_touched", type = "lastModifiedTime",
+      options = list(result = list(
+        type = "date",
+        options = list(dateFormat = list(name = "iso", format = "YYYY-MM-DD"))
+      ))
+    )
+  )
+  result <- records_to_tibble(records, schema = schema)
+  expect_s3_class(result$last_touched, "Date")
+  expect_equal(
+    as.numeric(result$last_touched),
+    as.numeric(as.Date(c("2024-01-03", "2024-01-04")))
+  )
+})
+
+test_that("records_to_tibble keeps full datetime lastModifiedTime fields as POSIXct", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T12:34:56.000Z",
+         fields = list(last_touched_at = "2024-01-01T12:34:56.000Z"))
+  )
+  schema <- list(
+    list(
+      name = "last_touched_at", type = "lastModifiedTime",
+      options = list(result = list(type = "dateTime"))
+    )
+  )
+  result <- records_to_tibble(records, schema = schema)
+  expect_s3_class(result$last_touched_at, "POSIXct")
+})
+
+test_that("records_to_tibble keeps full datetime createdTime fields as POSIXct", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T12:34:56.000Z",
+         fields = list(event_time = "2024-01-01T12:34:56.000Z"))
+  )
+  schema <- list(
+    list(
+      name = "event_time", type = "createdTime",
+      options = list(result = list(type = "dateTime"))
+    )
+  )
+  result <- records_to_tibble(records, schema = schema)
+  expect_s3_class(result$event_time, "POSIXct")
+})
+
 test_that("records_to_tibble keeps list-columns for multi-select", {
   records <- list(
     list(id = "rec1", createdTime = "2024-01-01T00:00:00.000Z",

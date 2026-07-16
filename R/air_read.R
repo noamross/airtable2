@@ -16,6 +16,10 @@
 #' @param page_size Records per page (max 100).
 #' @param coerce If `TRUE` (default), fetches schema and coerces types. If
 #'   `FALSE`, returns raw values (faster but untyped).
+#' @param na Character vector of string values to treat as missing (`NA`),
+#'   applied to every field before type coercion (e.g. `na = "NA"` turns the
+#'   literal text `"NA"` into a real `NA` instead of a string). Default `NULL`
+#'   performs no conversion, preserving raw Airtable values.
 #' @param attachments How to handle attachment fields: `"meta"` (default) keeps
 #'   only metadata (filename, url, size, type); `"file"` downloads to
 #'   `attachment_dir`; `"blob"` downloads as in-memory raw vectors.
@@ -47,6 +51,9 @@
 #'   attachments = "file",
 #'   attachment_dir = "downloads/"
 #' )
+#'
+#' # Treat the literal text "NA" as a real missing value
+#' df <- air_read("Contacts", "appXXXXXX", na = "NA")
 #' }
 #' @export
 air_read <- function(
@@ -59,6 +66,7 @@ air_read <- function(
   max_records = Inf,
   page_size = 100L,
   coerce = TRUE,
+  na = NULL,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   parallel = NULL,
@@ -69,6 +77,7 @@ air_read <- function(
   check_string(base_id)
   check_string(table)
   check_bool(coerce)
+  check_character(na, allow_null = TRUE)
   attachments <- match.arg(attachments)
 
   # Fetch schema for type coercion if requested (uses session cache)
@@ -94,7 +103,7 @@ air_read <- function(
     progress = progress
   )
 
-  tbl <- records_to_tibble(records, schema = schema)
+  tbl <- records_to_tibble(records, schema = schema, na = na)
 
   # Download attachments if requested
   if (attachments != "meta" && nrow(tbl) > 0L) {

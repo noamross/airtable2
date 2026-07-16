@@ -481,10 +481,13 @@ coerce_datetime <- function(x) {
 #'   `fields`).
 #' @param schema List of field definitions (each with `name`, `type`). If
 #'   `NULL`, no type coercion is performed beyond assembling into a tibble.
+#' @param na Character vector of string values to treat as missing (`NA`),
+#'   applied to raw field values before type coercion. `NULL` (default)
+#'   performs no conversion.
 #' @return A tibble with `airtable_id`, `airtable_created_time`, and one
 #'   column per field.
 #' @noRd
-records_to_tibble <- function(records, schema = NULL) {
+records_to_tibble <- function(records, schema = NULL, na = NULL) {
   if (length(records) == 0L) {
     tbl <- tibble::tibble(
       airtable_id = structure(
@@ -525,6 +528,7 @@ records_to_tibble <- function(records, schema = NULL) {
 
   cols <- lapply(all_fields, function(field_name) {
     raw_values <- lapply(records, function(r) r$fields[[field_name]])
+    raw_values <- apply_na_strings(raw_values, na)
 
     field_type <- if (
       !is.null(type_lookup) && field_name %in% names(type_lookup)
@@ -613,6 +617,30 @@ list_column_types <- function() {
     "createdBy",
     "lastModifiedBy"
   )
+}
+
+#' Convert matching scalar string values to missing (`NULL`)
+#'
+#' Applied to raw field values before type coercion, so downstream coercion
+#' (`as.numeric`, `as.logical`, etc.) treats them as missing like any other
+#' `NULL`/absent value. Only scalar atomic values are matched; list-column
+#' values (e.g. `multipleSelects`) are left untouched.
+#'
+#' @param values List of raw values (one per record, may contain NULLs).
+#' @param na Character vector of strings to treat as missing, or `NULL`/empty
+#'   to perform no conversion.
+#' @noRd
+apply_na_strings <- function(values, na) {
+  if (is.null(na) || length(na) == 0L) {
+    return(values)
+  }
+  lapply(values, function(v) {
+    is_na_string <- !is.null(v) &&
+      is.atomic(v) &&
+      length(v) == 1L &&
+      as.character(v) %in% na
+    if (is_na_string) NULL else v
+  })
 }
 
 #' Coerce a single column of values

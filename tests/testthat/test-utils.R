@@ -31,6 +31,15 @@ test_that("check_count validates input", {
   expect_invisible(check_count(Inf, allow_inf = TRUE))
 })
 
+test_that("check_character validates input", {
+  expect_invisible(check_character("NA"))
+  expect_invisible(check_character(c("NA", "N/A")))
+  expect_invisible(check_character(NULL, allow_null = TRUE))
+  expect_error(check_character(NULL), "must be a character vector")
+  expect_error(check_character(1), "must be a character vector")
+  expect_error(check_character(TRUE), "must be a character vector")
+})
+
 test_that("chunk splits correctly", {
   expect_equal(chunk(1:10, 3), list(`1` = 1:3, `2` = 4:6, `3` = 7:9, `4` = 10L))
   expect_equal(chunk(1:5, 5), list(`1` = 1:5))

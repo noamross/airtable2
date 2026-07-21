@@ -145,6 +145,47 @@ test_that("records_to_tibble keeps list-columns for multi-select", {
   expect_equal(result$Tags[[1]], list("R", "Python"))
 })
 
+test_that("records_to_tibble converts na strings to NA (no schema)", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T00:00:00.000Z",
+         fields = list(Name = "Alice", SubprojectId = "NA")),
+    list(id = "rec2", createdTime = "2024-01-02T00:00:00.000Z",
+         fields = list(Name = "Bob", SubprojectId = "sub123"))
+  )
+  result <- records_to_tibble(records, schema = NULL, na = "NA")
+  expect_equal(result$SubprojectId, c(NA, "sub123"), ignore_attr = TRUE)
+})
+
+test_that("records_to_tibble na conversion applies before schema coercion", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T00:00:00.000Z",
+         fields = list(Score = "N/A"))
+  )
+  schema <- list(list(name = "Score", type = "number"))
+  result <- records_to_tibble(records, schema = schema, na = c("N/A", "NA"))
+  expect_true(is.na(result$Score))
+  expect_type(result$Score, "double")
+})
+
+test_that("records_to_tibble na = NULL leaves values untouched", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T00:00:00.000Z",
+         fields = list(Name = "NA"))
+  )
+  result <- records_to_tibble(records, schema = NULL, na = NULL)
+  expect_equal(result$Name, "NA", ignore_attr = TRUE)
+})
+
+test_that("records_to_tibble na conversion does not touch list-columns", {
+  records <- list(
+    list(id = "rec1", createdTime = "2024-01-01T00:00:00.000Z",
+         fields = list(Tags = list("NA", "Python")))
+  )
+  schema <- list(list(name = "Tags", type = "multipleSelects"))
+  result <- records_to_tibble(records, schema = schema, na = "NA")
+  expect_equal(result$Tags[[1]], list("NA", "Python"))
+})
+
 test_that("tibble_to_records converts correctly", {
   data <- tibble::tibble(
     airtable_id = c("rec1", "rec2"),

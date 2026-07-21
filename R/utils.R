@@ -39,6 +39,23 @@ check_bool <- function(
   invisible(x)
 }
 
+#' Assert a character vector (or NULL)
+#' @noRd
+check_character <- function(
+  x,
+  allow_null = FALSE,
+  arg = rlang::caller_arg(x),
+  call = rlang::caller_env()
+) {
+  if (allow_null && is.null(x)) {
+    return(invisible(NULL))
+  }
+  if (!is.character(x)) {
+    cli_abort("{.arg {arg}} must be a character vector.", call = call)
+  }
+  invisible(x)
+}
+
 #' Assert a positive integer scalar
 #' @noRd
 check_count <- function(

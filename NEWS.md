@@ -38,6 +38,14 @@
 * When `add_fields = "yes"` creates multiple new fields, a progress bar is
   shown instead of one message per field.
 
+* `air_read()` gains an `na` argument (similar to `readr::read_csv(na = ...)`)
+  that converts matching string values (e.g. the literal text `"NA"`) to a
+  real `NA` before type coercion (#19). Default `NULL` performs no
+  conversion, so existing behavior is unchanged unless opted into.
+  Functions that forward `...`/arguments to `air_read()` internally
+  (`air_left_join()`/`air_inner_join()`/`air_full_join()`, `dbReadTable()`,
+  `dbGetQuery()` on an Airtable DBI connection) support `na` as well.
+
 ## Bug fixes
 
 * `air_sync()` no longer reports unchanged rows as changed (#13). Change

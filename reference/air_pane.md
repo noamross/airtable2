@@ -15,7 +15,8 @@ air_pane(base = NULL, bases = NULL, .token = NULL, include_views = FALSE)
 - base:
 
   Character. A Base ID (starts with `app`) or a Base Name. If `NULL`,
-  connects to all accessible bases.
+  connects to all accessible bases. Does not respect
+  [`air_set_base()`](https://noamross.github.io/airtable2/reference/air_set_base.md).
 
 - bases:
 

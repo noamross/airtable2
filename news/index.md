@@ -1,5 +1,14 @@
 # Changelog
 
+## airtable2 (development version)
+
+## airtable2 0.1.2.9001
+
+### Bug fixes
+
+- all air\_\* functions that have a base_id parameter use the
+  resolve_base_id function so that air_set_base() is respected.
+
 ## airtable2 0.1.2.9000
 
 ### Breaking changes

@@ -59,6 +59,7 @@ and returns a properly typed tibble.</p>
 <span>  max_records <span class="op">=</span> <span class="cn">Inf</span>,</span>
 <span>  page_size <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>  coerce <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  na <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  attachments <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"meta"</span>, <span class="st">"file"</span>, <span class="st">"blob"</span><span class="op">)</span>,</span>
 <span>  attachment_dir <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -109,6 +110,13 @@ values = <code>"asc"</code> or <code>"desc"</code>).</p></dd>
 <dt id="arg-coerce">coerce<a class="anchor" aria-label="anchor" href="#arg-coerce"></a></dt>
 <dd><p>If <code>TRUE</code> (default), fetches schema and coerces types. If
 <code>FALSE</code>, returns raw values (faster but untyped).</p></dd>
+
+
+<dt id="arg-na">na<a class="anchor" aria-label="anchor" href="#arg-na"></a></dt>
+<dd><p>Character vector of string values to treat as missing (<code>NA</code>),
+applied to every field before type coercion (e.g. <code>na = "NA"</code> turns the
+literal text <code>"NA"</code> into a real <code>NA</code> instead of a string). Default <code>NULL</code>
+performs no conversion, preserving raw Airtable values.</p></dd>
 
 
 <dt id="arg-attachments">attachments<a class="anchor" aria-label="anchor" href="#arg-attachments"></a></dt>
@@ -162,6 +170,9 @@ one column per field.</p>
 <span class="r-in"><span>  attachments <span class="op">=</span> <span class="st">"file"</span>,</span></span>
 <span class="r-in"><span>  attachment_dir <span class="op">=</span> <span class="st">"downloads/"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Treat the literal text "NA" as a real missing value</span></span></span>
+<span class="r-in"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu">air_read</span><span class="op">(</span><span class="st">"Contacts"</span>, <span class="st">"appXXXXXX"</span>, na <span class="op">=</span> <span class="st">"NA"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

@@ -66,6 +66,20 @@
 - When `add_fields = "yes"` creates multiple new fields, a progress bar
   is shown instead of one message per field.
 
+- [`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+  gains an `na` argument (similar to `readr::read_csv(na = ...)`) that
+  converts matching string values (e.g. the literal text `"NA"`) to a
+  real `NA` before type coercion
+  ([\#19](https://github.com/noamross/airtable2/issues/19)). Default
+  `NULL` performs no conversion, so existing behavior is unchanged
+  unless opted into. Functions that forward `...`/arguments to
+  [`air_read()`](https://noamross.github.io/airtable2/reference/air_read.md)
+  internally
+  ([`air_left_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)/[`air_inner_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md)/[`air_full_join()`](https://noamross.github.io/airtable2/reference/air_left_join.md),
+  [`dbReadTable()`](https://dbi.r-dbi.org/reference/dbReadTable.html),
+  [`dbGetQuery()`](https://dbi.r-dbi.org/reference/dbGetQuery.html) on
+  an Airtable DBI connection) support `na` as well.
+
 ### Bug fixes
 
 - [`air_sync()`](https://noamross.github.io/airtable2/reference/air_sync.md)

@@ -16,6 +16,7 @@ air_read(
   max_records = Inf,
   page_size = 100L,
   coerce = TRUE,
+  na = NULL,
   attachments = c("meta", "file", "blob"),
   attachment_dir = NULL,
   parallel = NULL,
@@ -66,6 +67,13 @@ air_read(
 
   If `TRUE` (default), fetches schema and coerces types. If `FALSE`,
   returns raw values (faster but untyped).
+
+- na:
+
+  Character vector of string values to treat as missing (`NA`), applied
+  to every field before type coercion (e.g. `na = "NA"` turns the
+  literal text `"NA"` into a real `NA` instead of a string). Default
+  `NULL` performs no conversion, preserving raw Airtable values.
 
 - attachments:
 
@@ -121,5 +129,8 @@ df <- air_read("Projects", "appXXXXXX",
   attachments = "file",
   attachment_dir = "downloads/"
 )
+
+# Treat the literal text "NA" as a real missing value
+df <- air_read("Contacts", "appXXXXXX", na = "NA")
 } # }
 ```

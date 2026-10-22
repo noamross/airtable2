@@ -1,11 +1,14 @@
 # airtable2 (development version)
 
 # airtable2 0.1.2.9001
+## New Features
+* Adds a descriptive metadata routine. This allows users to create durable descriptive metadata that can be exported from Airtable and over comes some limitations within airtable (e.g. cannot export base descriptions from the api, record history persists for a certain period of time). 
+
+# airtable2 0.1.2.9001
 
 ## Bug fixes
 * all air_* functions that have a base_id parameter use the resolve_base_id function so that air_set_base() is respected. 
-
-
+* 
 # airtable2 0.1.2.9000
 
 ## Breaking changes

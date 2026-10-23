@@ -4,7 +4,7 @@
 \alias{air_meta_push}
 \title{Push metadata changes back to the base}
 \usage{
-air_meta_push(base_id, meta, .token = NULL)
+air_meta_push(base_id = NULL, meta, .token = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session

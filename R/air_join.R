@@ -364,7 +364,7 @@ empty_upload_summary <- function(by_remote, upload_local) {
 }
 
 #' @noRd
-air_join_impl <- function(x, table, base_id, by, all.x, all.y, ..., .token) {
+air_join_impl <- function(x, table, base_id = NULL, by, all.x, all.y, ..., .token) {
   if (!is.data.frame(x)) {
     cli_abort("{.arg x} must be a data frame.", call = rlang::caller_env())
   }

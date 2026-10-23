@@ -28,7 +28,7 @@
 #' }
 #' @export
 air_dump <- function(
-  base_id,
+  base_id = NULL,
   dir = NULL,
   format = c("list", "json", "csv"),
   attachments = c("file", "meta", "blob"),

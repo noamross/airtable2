@@ -4,7 +4,7 @@
 \alias{air_schema}
 \title{Get schema for a base as a tidy tibble}
 \usage{
-air_schema(base_id, .token = NULL)
+air_schema(base_id = NULL, .token = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session

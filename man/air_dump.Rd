@@ -5,7 +5,7 @@
 \title{Dump an entire base (schema + data) for backup}
 \usage{
 air_dump(
-  base_id,
+  base_id = NULL,
   dir = NULL,
   format = c("list", "json", "csv"),
   attachments = c("file", "meta", "blob"),

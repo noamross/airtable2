@@ -117,7 +117,7 @@ air_attachment_preview_url <- function(attachment) {
 #'   (raw list-column) or `local_path` (character).
 #' @export
 air_read_attachments <- function(
-  base_id,
+  base_id = NULL,
   table,
   field,
   record_ids = NULL,
@@ -126,6 +126,7 @@ air_read_attachments <- function(
   parallel = NULL,
   .token = NULL
 ) {
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
   check_string(field)
@@ -243,8 +244,9 @@ air_read_attachments <- function(
 #' @param data A tibble with `airtable_id` and `file_path` columns.
 #' @return Invisible `NULL`. Side effect: uploads attachments.
 #' @export
-air_write_attachments <- function(base_id, table, field, data,
+air_write_attachments <- function(base_id = NULL, table, field, data,
                                    parallel = NULL, .token = NULL) {
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
   check_string(field)
@@ -285,7 +287,7 @@ air_write_attachments <- function(base_id, table, field, data,
 #' @return A list with counts: `uploaded`, `skipped` (invisibly).
 #' @export
 air_sync_attachments <- function(
-  base_id,
+  base_id = NULL,
   table,
   field,
   data,
@@ -293,6 +295,7 @@ air_sync_attachments <- function(
   parallel = NULL,
   .token = NULL
 ) {
+  base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(table)
   check_string(field)
@@ -472,7 +475,7 @@ download_attachments_in_tibble <- function(tbl, att_fields, mode, dir = NULL,
 #' @return Invisible NULL.
 #' @noRd
 upload_attachments_from_tibble <- function(
-  base_id,
+  base_id = NULL,
   table,
   record_ids,
   data,
@@ -482,6 +485,8 @@ upload_attachments_from_tibble <- function(
   attachment_dir = NULL,
   .token = NULL
 ) {
+  base_id <- resolve_base_id(base_id)
+  check_string(base_id)
   n_uploaded <- 0L
   for (field in att_fields) {
     if (!field %in% names(data)) {

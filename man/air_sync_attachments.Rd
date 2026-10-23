@@ -5,7 +5,7 @@
 \title{Smart sync attachments}
 \usage{
 air_sync_attachments(
-  base_id,
+  base_id = NULL,
   table,
   field,
   data,

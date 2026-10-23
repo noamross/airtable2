@@ -12,7 +12,7 @@
 #' meta
 #' }
 #' @export
-air_meta <- function(base_id, .token = NULL) {
+air_meta <- function(base_id = NULL, .token = NULL) {
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
 
@@ -55,7 +55,7 @@ air_meta <- function(base_id, .token = NULL) {
 #'   `field_name`, or `description`.
 #' @return Invisible `NULL`. Side effect: updates table and field metadata.
 #' @export
-air_meta_push <- function(base_id, meta, .token = NULL) {
+air_meta_push <- function(base_id = NULL, meta, .token = NULL) {
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
 
@@ -160,7 +160,7 @@ air_meta_push <- function(base_id, meta, .token = NULL) {
 #' air_meta_sync("appXXXXXX", source = "my_meta.csv")
 #' }
 #' @export
-air_meta_sync <- function(base_id, source = "_metadata", ..., .token = NULL) {
+air_meta_sync <- function(base_id = NULL, source = "_metadata", ..., .token = NULL) {
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
 
@@ -196,7 +196,7 @@ air_meta_sync <- function(base_id, source = "_metadata", ..., .token = NULL) {
 #' air_meta_init("appXXXXXX", meta_table = "_docs")
 #' }
 #' @export
-air_meta_init <- function(base_id, meta_table = "_metadata", .token = NULL) {
+air_meta_init <- function(base_id = NULL, meta_table = "_metadata", .token = NULL) {
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
   check_string(meta_table)

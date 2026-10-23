@@ -5,7 +5,7 @@
 \title{Read attachments from records}
 \usage{
 air_read_attachments(
-  base_id,
+  base_id = NULL,
   table,
   field,
   record_ids = NULL,

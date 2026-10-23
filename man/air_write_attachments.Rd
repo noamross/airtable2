@@ -5,7 +5,7 @@
 \title{Upload attachments to records}
 \usage{
 air_write_attachments(
-  base_id,
+  base_id = NULL,
   table,
   field,
   data,

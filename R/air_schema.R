@@ -17,7 +17,7 @@
 #' @param refresh If `TRUE`, bypass the cache and force a fresh API call.
 #' @return List of table definitions (raw API format).
 #' @noRd
-get_base_schema <- function(base_id, token = NULL, refresh = FALSE) {
+get_base_schema <- function(base_id = NULL, token = NULL, refresh = FALSE) {
   base_id <- resolve_base_id(base_id)
   if (!refresh && exists(base_id, envir = .schema_cache, inherits = FALSE)) {
     cached <- get(base_id, envir = .schema_cache, inherits = FALSE)
@@ -44,7 +44,7 @@ get_base_schema <- function(base_id, token = NULL, refresh = FALSE) {
 #' @param refresh If `TRUE`, force a schema refresh.
 #' @return List of field definitions, or `NULL` if the table is not found.
 #' @noRd
-get_table_schema <- function(base_id, table, token = NULL, refresh = FALSE) {
+get_table_schema <- function(base_id = NULL, table, token = NULL, refresh = FALSE) {
   tables <- get_base_schema(base_id, token = token, refresh = refresh)
   Find(function(t) t$name == table || t$id == table, tables)
 }
@@ -83,7 +83,7 @@ schema_cache_invalidate <- function(base_id = NULL) {
 #' schema$fields[[1]]
 #' }
 #' @export
-air_schema <- function(base_id, .token = NULL) {
+air_schema <- function(base_id = NULL, .token = NULL) {
   base_id <- resolve_base_id(base_id)
   check_string(base_id)
 

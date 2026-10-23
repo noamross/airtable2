@@ -4,7 +4,7 @@
 \alias{air_meta_sync}
 \title{Sync a metadata source to patch the base schema}
 \usage{
-air_meta_sync(base_id, source = "_metadata", ..., .token = NULL)
+air_meta_sync(base_id = NULL, source = "_metadata", ..., .token = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session

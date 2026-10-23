@@ -4,7 +4,7 @@
 \alias{air_meta_init}
 \title{Seed the _metadata table from the live schema}
 \usage{
-air_meta_init(base_id, meta_table = "_metadata", .token = NULL)
+air_meta_init(base_id = NULL, meta_table = "_metadata", .token = NULL)
 }
 \arguments{
 \item{base_id}{Base ID (e.g., \code{"appXXXXXX"}). If \code{NULL}, uses the session

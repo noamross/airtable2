@@ -11,7 +11,7 @@ to push changes back.
 ## Usage
 
 ``` r
-air_meta_init(base_id, meta_table = "_metadata", .token = NULL)
+air_meta_init(base_id = NULL, meta_table = "_metadata", .token = NULL)
 ```
 
 ## Arguments

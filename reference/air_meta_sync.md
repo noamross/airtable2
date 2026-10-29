@@ -7,7 +7,7 @@ compare against the live schema, and PATCH any changed fields.
 ## Usage
 
 ``` r
-air_meta_sync(base_id, source = "_metadata", ..., .token = NULL)
+air_meta_sync(base_id = NULL, source = "_metadata", ..., .token = NULL)
 ```
 
 ## Arguments

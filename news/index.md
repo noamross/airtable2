@@ -2,6 +2,12 @@
 
 ## airtable2 (development version)
 
+### airtable2 0.1.2.9002
+
+- hotfix that adds default nulls to functions that should respect
+  [`air_set_base()`](https://noamross.github.io/airtable2/reference/air_set_base.md)
+  allowing them to properly resolve the base id.
+
 ## airtable2 0.1.2.9001
 
 ### Bug fixes

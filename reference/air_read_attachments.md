@@ -7,7 +7,7 @@ either in-memory blobs or saved files.
 
 ``` r
 air_read_attachments(
-  base_id,
+  base_id = NULL,
   table,
   field,
   record_ids = NULL,

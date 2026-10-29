@@ -9,7 +9,7 @@ or `description` rename or re-describe the field.
 ## Usage
 
 ``` r
-air_meta_push(base_id, meta, .token = NULL)
+air_meta_push(base_id = NULL, meta, .token = NULL)
 ```
 
 ## Arguments

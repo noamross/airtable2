@@ -6,7 +6,7 @@ editing base structure as a data frame.
 ## Usage
 
 ``` r
-air_meta(base_id, .token = NULL)
+air_meta(base_id = NULL, .token = NULL)
 ```
 
 ## Arguments

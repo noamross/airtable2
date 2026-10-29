@@ -5,7 +5,7 @@ Returns table and field metadata in a structured tibble format.
 ## Usage
 
 ``` r
-air_schema(base_id, .token = NULL)
+air_schema(base_id = NULL, .token = NULL)
 ```
 
 ## Arguments

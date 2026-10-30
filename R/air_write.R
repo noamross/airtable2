@@ -37,11 +37,63 @@
 #' data <- data.frame(Name = c("Alice", "Bob"), Age = c(30, 25))
 #' ids <- air_write(data, "Contacts", "appXXXXXX")
 #'
-#' # Write records and upload attachments from list-column
-#' ids <- air_write(data, "Projects", "appXXXXXX",
+#' # Write records and upload attachments from list-column files must be stored
+#' # in nested lists.
+#' works_data <- tibble(
+#'  DOI = "fake.doi/123",
+#'  PMID = "8675309",
+#'  Title = "An Example to be deleted",
+#'  Attachment = list(
+#'   list(list(filename = "schneider_2007.pdf"))
+#'  )
+#' )
+#'
+#' ids <- air_write(data = works_data,
+#'   table = "Works",
+#'   base_id = "appXXXXXX",
 #'   attachments = "file",
 #'   attachment_dir = "files/"
 #' )
+#'
+#' # Multiple attachments per record
+#' works_data <- tibble(
+#'  DOI = "fake.doi/123",
+#'  PMID = "8675309",
+#'  Title = "An Example to be deleted",
+#'  Attachment = list(
+#'   list(list(filename = "schneider_2007.pdf"),
+#'        list(filename = "schneider_2007_annotated_cjs.pdf")
+#'        )
+#'  )
+#' )
+#'
+#' ids <- air_write(data = works_data,
+#'   table = "Works",
+#'   base_id = "appXXXXXX",
+#'   attachments = "file",
+#'   attachment_dir = "files/"
+#' )
+#'
+#' ## writes one record, adds two attachments
+#'
+#' # Single attachment per record, multiple records
+#' works_data <- tibble(
+#'  DOI = c("fake.doi/123","fake.doi/456"),
+#'  PMID = c("8675309","41426220"),
+#'  Title = c("An Example to be deleted","Another Title"),
+#'  Attachment = list(
+#'   list(list(filename = "schneider_2007.pdf")),
+#'   list(list(filename = "sanchez_2007.pdf"))
+#'  )
+#' )
+#'
+#' ids <- air_write(data = works_data,
+#'   table = "Works",
+#'   base_id = "appXXXXXX",
+#'   attachments = "file",
+#'   attachment_dir = "files/"
+#' )
+#' ## writes two records, adds two attachments
 #'
 #' # Write records and add new columns if they don't exist
 #' ids <- air_write(data, "Contacts", "appXXXXXX", add_fields = "yes")

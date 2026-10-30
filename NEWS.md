@@ -1,5 +1,7 @@
 # airtable2 (development version)
 
+## airtable2 0.1.2.9003
+* Add examples to air_write show the structure of attachment fields for files.
 
 ## airtable2 0.1.2.9003
 * build query so it can have multiple fields

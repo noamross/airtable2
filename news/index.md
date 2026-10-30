@@ -2,6 +2,11 @@
 
 ## airtable2 (development version)
 
+### airtable2 0.1.2.9003
+
+- build query so it can have multiple fields
+- subset tbl_schema to the values in fields
+
 ### airtable2 0.1.2.9002
 
 - hotfix that adds default nulls to functions that should respect

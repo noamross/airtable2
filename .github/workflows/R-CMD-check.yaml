@@ -2,7 +2,7 @@
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
 
 name: R-CMD-check.yaml
@@ -61,6 +61,11 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
     environment: protected-testing
+
+    # Live tests share one Airtable base; run them one at a time.
+    concurrency:
+      group: airtable-live-tests
+      cancel-in-progress: false
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}

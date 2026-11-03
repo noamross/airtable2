@@ -1,5 +1,7 @@
 # airtable2 (development version)
 
+## airtable2 0.1.2.9003
+* Add examples to air_write show the structure of attachment fields for files.
 
 ## airtable2 0.1.2.9004
 * Adds `air_describe()` and `air_describe_init()`, a durable descriptive metadata routine. It stores base-level metadata (creator, contact, license, etc.) in a `_description` table, since the Airtable API cannot export base descriptions and record history is time-limited.

@@ -43,7 +43,7 @@
 #'  DOI = "fake.doi/123",
 #'  PMID = "8675309",
 #'  Title = "An Example to be deleted",
-#'  Attachment = list(
+#'  Document = list(
 #'   list(list(filename = "schneider_2007.pdf"))
 #'  )
 #' )
@@ -60,7 +60,7 @@
 #'  DOI = "fake.doi/123",
 #'  PMID = "8675309",
 #'  Title = "An Example to be deleted",
-#'  Attachment = list(
+#'  Document = list(
 #'   list(list(filename = "schneider_2007.pdf"),
 #'        list(filename = "schneider_2007_annotated_cjs.pdf")
 #'        )
@@ -81,7 +81,7 @@
 #'  DOI = c("fake.doi/123","fake.doi/456"),
 #'  PMID = c("8675309","41426220"),
 #'  Title = c("An Example to be deleted","Another Title"),
-#'  Attachment = list(
+#'  Document = list(
 #'   list(list(filename = "schneider_2007.pdf")),
 #'   list(list(filename = "sanchez_2007.pdf"))
 #'  )
